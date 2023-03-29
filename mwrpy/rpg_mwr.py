@@ -146,6 +146,7 @@ def save_rpg(rpg: Rpg, output_file: str, att: dict, data_type: str) -> None:
             "frequency": len(rpg.data["tb"][:].T),
             "receiver_nb": len(rpg.data["receiver_nb"][:]),
             "bnds": 2,
+            "t_amb_nb": 2,
         }
     elif data_type == "1B11":
         dims = {
@@ -162,6 +163,7 @@ def save_rpg(rpg: Rpg, output_file: str, att: dict, data_type: str) -> None:
                 "receiver_nb": len(rpg.data["receiver_nb"][:]),
                 "ir_wavelength": len(rpg.data["irt"][:].T),
                 "bnds": 2,
+                "t_amb_nb": 2,
             }
         else:
             dims = {
@@ -169,6 +171,7 @@ def save_rpg(rpg: Rpg, output_file: str, att: dict, data_type: str) -> None:
                 "frequency": len(rpg.data["tb"][:].T),
                 "receiver_nb": len(rpg.data["receiver_nb"][:]),
                 "bnds": 2,
+                "t_amb_nb": 2,
             }
     elif data_type in ("2P01", "2P02", "2P03", "2P04", "2P07", "2P08"):
         dims = {
@@ -245,7 +248,7 @@ def _write_vars2nc(nc: netCDF4.Dataset, mwr_variables: dict) -> None:
         if obj.name == "ir_wavelength":
             size = "ir_wavelength"
         if obj.name == "t_amb":
-            size = ("time", "bnds")
+            size = ("time", "t_amb_nb")
         nc_variable = nc.createVariable(
             obj.name, obj.data_type, size, zlib=True, fill_value=fill_value
         )
