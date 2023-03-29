@@ -147,7 +147,7 @@ def prepare_data(
                         rpg_bin.data, rpg_irt.data["ir_ele"], rpg_irt.data["time"], "ir_ele"
                     )
                     add_interpol1d(
-                        rpg_bin.data, rpg_irt.data["ir_azi"], rpg_irt.data["time"], "ir_azi"
+                        rpg_bin.data, rpg_irt.data["ir_azimuth_anglemuth_angle"], rpg_irt.data["time"], "ir_azimuth_angle"
                     )
                 except:
                     print(

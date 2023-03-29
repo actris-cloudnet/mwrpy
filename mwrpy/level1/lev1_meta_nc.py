@@ -110,7 +110,7 @@ ATTRIBUTES_1B01 = {
         "nominal frequency of some channels, frequency+freq_shift gives more accurate values.",
     ),
     "receiver_nb": MetaData(
-        long_name="Number of the microwave receiver",
+        long_name="Microwave receiver number",
         units="1",
     ),
     "receiver": MetaData(
@@ -118,30 +118,32 @@ ATTRIBUTES_1B01 = {
         units="1"
     ),
     "bandwidth": MetaData(
-        long_name="Bandwidth of the microwave channels",
+        long_name="Bandwidth of microwave channels",
         units="GHz",
     ),
     "n_sidebands": MetaData(
         long_name="Number of sidebands",
+        units="1",
         comment="0: direct-detection receivers, 1: single-sideband, 2: double-sideband.\n"
         "The frequency separation of sidebands is indicated in sideband_IF_separation.",
     ),
     "sideband_IF_separation": MetaData(
-        long_name="For double sideband channels, this is the positive and negative IF range\n"
+        long_name="Sideband IF separation",
+        comment="For double sideband channels, this is the positive and negative IF range\n"
         "distance of the two band passes around the centre frequency (which is the LO frqeuency)",
         units="GHz",
-        comment="ositive number for IF centre frequency",
     ),
     "beamwidth": MetaData(
         long_name="Beam width (FWHM) of the microwave radiometer",
-        units="degrees",
+        units="degree",
     ),
     "freq_shift": MetaData(
-        long_name="For more accurate frequency values use frequency+freq_shift.",
+        long_name="Frequency shift of the microwave channels",
+        comment="For more accurate frequency values use frequency + freq_shift.",
         units="GHz",
     ),
     "tb": MetaData(
-        long_name="Microwave brightness temperatures",
+        long_name="Microwave brightness temperature",
         standard_name="brightness_temperature",
         units="K",
     ),
@@ -153,8 +155,7 @@ ATTRIBUTES_1B01 = {
     ),
     "ele": MetaData(
         long_name="Sensor elevation angle",
-        #standard_name="sensor_elevation_angle",
-        units="degrees",
+        units="degree",
         comment="0=horizon, 90=zenith",
     ),
     "tb_accuracy": MetaData(
@@ -231,26 +232,24 @@ ATTRIBUTES_1B11 = {
         units="µm",
     ),
     "ir_bandwidth": MetaData(
-        long_name="Bandwidth of the infrared channel",
-        #standard_name="sensor_band_spectral_width",
+        long_name="Bandwidth of infrared channels",
         units="µm",
-        comment="channel centre frequency",
+        comment="Channel centre frequency.",
     ),
     "ir_beamwidth": MetaData(
         long_name="Beam width of the infrared radiometer",
-        units="degrees",
+        units="degree",
     ),
     "irt": MetaData(long_name="Infrared brightness temperatures", units="K"),
-    "ir_azi": MetaData(
+    "ir_azimuth_angle": MetaData(
         long_name="Infrared sensor azimuth angle",
         standard_name="sensor_azimuth_angle",
-        units="degrees",
+        units="degree",
         comment="0=North, 90=East, 180=South, 270=West",
     ),
     "ir_ele": MetaData(
         long_name="Infrared sensor elevation angle",
-        #standard_name="sensor_elevation_angle",
-        units="degrees",
+        units="degree",
         comment="0=horizon, 90=zenith",
     ),
 }
