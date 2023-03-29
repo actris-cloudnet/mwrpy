@@ -393,7 +393,7 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
             def e_sys(x):
                 return np.array([coeff["err_sys"][(np.abs(coeff["ele"] - v)).argmin()] for v in x])
 
-        elif prefix in ("tpt", "hpt"):
+        elif prefix in ("tze", "hze"):
 
             c_file = nc.Dataset(c_list[0])
             n_height_grid = c_file.dimensions["n_height_grid"].size
@@ -452,7 +452,7 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                     [coeff["err_sys"][:, (np.abs(coeff["ele"] - v)).argmin()] for v in x]
                 )
 
-        elif prefix == "tpb":
+        elif prefix == "tel":
 
             c_file = nc.Dataset(c_list[0])
             _, freq_ind, freq_coeff = np.intersect1d(
