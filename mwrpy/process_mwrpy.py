@@ -109,7 +109,7 @@ def plot_product(prod: str, date, site: str):
             )
             _link_quicklook(link_dir, fig_name)
             fig_name = generate_figure(
-                lev1_data, ["ele", "azimuth_angle"], save_path=data_out_l1, image_name="sen"
+                lev1_data, ["elevation_angle", "azimuth_angle"], save_path=data_out_l1, image_name="sen"
             )
             _link_quicklook(link_dir, fig_name)
             fig_name = generate_figure(

@@ -407,7 +407,7 @@ def read_bls(file_name: str) -> dict:
                 "rain": np.ones(header["n"] * header["_n_ang"], np.byte) * Fill_Value_Int,
                 "tb": np.ones([header["n"] * header["_n_ang"], header["_n_f"]], np.float32)
                 * Fill_Value_Float,
-                "ele": np.ones(header["n"] * header["_n_ang"], np.float32) * Fill_Value_Float,
+                "elevation_angle": np.ones(header["n"] * header["_n_ang"], np.float32) * Fill_Value_Float,
                 "azimuth_angle": np.ones(header["n"] * header["_n_ang"], np.float32) * Fill_Value_Float,
             }
             return vrs
@@ -440,7 +440,7 @@ def read_bls(file_name: str) -> dict:
                     sample,
                 ] = np.fromfile(file, np.float32, header["_n_f"])
                 ang = np.fromfile(file, np.int32, 1)
-                data["ele"][sample], data["azimuth_angle"][sample] = _angle_calc(ang, code)
+                data["elevation_angle"][sample], data["azimuth_angle"][sample] = _angle_calc(ang, code)
             file.close()
             return data
 
@@ -480,7 +480,7 @@ def read_brt(file_name: str) -> dict:
                 "time": np.ones(header["n"], np.int32) * Fill_Value_Int,
                 "rain": np.ones(header["n"], np.byte) * Fill_Value_Int,
                 "tb": np.ones([header["n"], header["_n_f"]], np.float32) * Fill_Value_Float,
-                "ele": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "elevation_angle": np.ones(header["n"], np.float32) * Fill_Value_Float,
                 "azimuth_angle": np.ones(header["n"], np.float32) * Fill_Value_Float,
             }
             return vrs
@@ -523,7 +523,7 @@ def read_brt(file_name: str) -> dict:
                     ang = np.fromfile(file, np.float32, 1)
                 elif code == 666000:
                     ang = np.fromfile(file, np.int32, 1)
-                data["ele"][sample], data["azimuth_angle"][sample] = _angle_calc(ang, code)
+                data["elevation_angle"][sample], data["azimuth_angle"][sample] = _angle_calc(ang, code)
             file.close()
             return data
 
@@ -639,7 +639,7 @@ def read_irt(file_name: str) -> dict:
                 "time": np.ones(header["n"], np.int32) * Fill_Value_Int,
                 "rain": np.ones(header["n"], np.byte) * Fill_Value_Int,
                 "irt": np.ones([header["n"], header["_n_f"]], np.float32) * Fill_Value_Float,
-                "ir_ele": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "ir_elevation_angle": np.ones(header["n"], np.float32) * Fill_Value_Float,
                 "ir_azimuth_angle": np.ones(header["n"], np.float32) * Fill_Value_Float,
             }
             return vrs
@@ -683,7 +683,7 @@ def read_irt(file_name: str) -> dict:
                     ang = np.fromfile(file, np.float32, 1)
                 elif code == 671112000:
                     ang = np.fromfile(file, np.int32, 1)
-                data["ir_ele"][sample], data["ir_azimuth_angle"][sample] = _angle_calc(ang, code)
+                data["ir_elevation_angle"][sample], data["ir_azimuth_angle"][sample] = _angle_calc(ang, code)
             file.close()
             return data
 
@@ -872,7 +872,7 @@ def read_spc(file_name: str) -> dict:
                 "time": np.ones(header["n"], np.int32) * Fill_Value_Int,
                 "rain": np.ones(header["n"], np.byte) * Fill_Value_Int,
                 "tb": np.ones([header["n"], header["_n_f"]], np.float32) * Fill_Value_Float,
-                "ele": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "elevation_angle": np.ones(header["n"], np.float32) * Fill_Value_Float,
                 "azimuth_angle": np.ones(header["n"], np.float32) * Fill_Value_Float,
             }
             return vrs
@@ -908,7 +908,7 @@ def read_spc(file_name: str) -> dict:
                     ang = np.fromfile(file, np.float32, 1)
                 elif code == 667000:
                     ang = np.fromfile(file, np.int32, 1)
-                data["ele"][sample], data["azimuth_angle"][sample] = _angle_calc(ang, code)
+                data["elevation_angle"][sample], data["azimuth_angle"][sample] = _angle_calc(ang, code)
             file.close()
             return data
 

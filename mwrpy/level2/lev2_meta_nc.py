@@ -66,12 +66,12 @@ ATTRIBUTES_COM = {
     "station_latitude": MetaData(
         long_name="Latitude of measurement station",
         standard_name="latitude",
-        units="degrees_north",
+        units="degree_north",
     ),
     "station_longitude": MetaData(
         long_name="Longitude of measurement station",
         standard_name="longitude",
-        units="degrees_east",
+        units="degree_east",
     ),
     "station_altitude": MetaData(
         long_name="Altitude above mean sea level of measurement station",
@@ -81,13 +81,12 @@ ATTRIBUTES_COM = {
     "azimuth_angle": MetaData(
         long_name="Sensor azimuth angle",
         standard_name="sensor_azimuth_angle",
-        units="degrees",
+        units="degree",
         comment="0=North, 90=East, 180=South, 270=West",
     ),
-    "ele": MetaData(
+    "elevation_angle": MetaData(
         long_name="Sensor elevation angle",
-        standard_name="sensor_elevation_angle",
-        units="degrees",
+        units="degree",
         comment="0=horizon, 90=zenith",
     ),
 }
@@ -96,10 +95,12 @@ ATTRIBUTES_COM = {
 ATTRIBUTES_2P01 = {
     "altitude": MetaData(
         long_name="Altitude above sea level",
+        standard_name="altitude",        
         units="m",
     ),
     "temperature": MetaData(
         long_name="Retrieved temperature profile (single pointing)",
+        standard_name="air_temperature",
         units="K",
     ),
     "temperature_random_error": MetaData(
@@ -118,10 +119,12 @@ ATTRIBUTES_2P01 = {
 ATTRIBUTES_2P02 = {
     "altitude": MetaData(
         long_name="Altitude above sea level",
+        standard_name="altitude",        
         units="m",
     ),
     "temperature": MetaData(
         long_name="Retrieved temperature profile (multiple pointing)",
+        standard_name="air_temperature",
         units="K",
     ),
     "temperature_random_error": MetaData(
@@ -140,20 +143,21 @@ ATTRIBUTES_2P02 = {
 ATTRIBUTES_2P03 = {
     "altitude": MetaData(
         long_name="Altitude above sea level",
+        standard_name="altitude",        
         units="m",
     ),
-    "water_vapor_vmr": MetaData(
-        long_name="Retrieved water vapour profile",
-        units="ppm",
+    "absolute_humidity": MetaData(
+        long_name="Absolute Humidity",
+        units="kg m-3",
     ),
-    "water_vapor_vmr_random_error": MetaData(
-        long_name="Random uncertainty of retrieved water vapour profile",
-        units="ppm",
+    "absolute_humidity_random_error": MetaData(
+        long_name="Random uncertainty of absolute humidity",
+        units="kg m-3",
         comment="specify here source of this variable",
     ),
-    "water_vapor_vmr_systematic_error": MetaData(
-        long_name="Systematic uncertainty of retrieved water vapour profile",
-        units="ppm",
+    "absolute_humidity_systematic_error": MetaData(
+        long_name="Systematic uncertainty of absolute humidity",
+        units="kg m-3",
         comment="specify here source of this variable",
     ),
 }
@@ -162,10 +166,12 @@ ATTRIBUTES_2P03 = {
 ATTRIBUTES_2P04 = {
     "altitude": MetaData(
         long_name="Altitude above sea level",
+        standard_name="altitude",        
         units="m",
     ),
     "relative_humidity": MetaData(
         long_name="Relative Humidity",
+        standard_name="relative_humidity",
         units="1",
     ),
     "relative_humidity_random_error": MetaData(
@@ -184,10 +190,12 @@ ATTRIBUTES_2P04 = {
 ATTRIBUTES_2P07 = {
     "altitude": MetaData(
         long_name="Altitude above sea level",
+        standard_name="altitude",        
         units="m",
     ),
     "potential_temperature": MetaData(
         long_name="Potential Temperature",
+        standard_name="air_potential_temperature",
         units="K",
     ),
     "potential_temperature_random_error": MetaData(
@@ -206,10 +214,12 @@ ATTRIBUTES_2P07 = {
 ATTRIBUTES_2P08 = {
     "altitude": MetaData(
         long_name="Altitude above sea level",
+        standard_name="altitude",
         units="m",
     ),
     "equivalent_potential_temperature": MetaData(
         long_name="Equivalent Potential Temperature",
+        standard_name="air_equivalent_potential_temperature",
         units="K",
     ),
     "equivalent_potential_temperature_random_error": MetaData(
@@ -228,21 +238,22 @@ ATTRIBUTES_2P08 = {
 ATTRIBUTES_2I01 = {
     "lwp": MetaData(
         long_name="Retrieved column-integrated liquid water path",
-        units="mm",
+        standard_name="atmosphere_cloud_liquid_water_content",
+        units="kg m-2",
     ),
     "lwp_random_error": MetaData(
         long_name="Random uncertainty of retrieved column-integrated liquid water path",
-        units="mm",
+        units="kg m-2",
         comment="specify here source of this variable",
     ),
     "lwp_systematic_error": MetaData(
         long_name="Systematic uncertainty of retrieved column-integrated liquid water path",
-        units="mm",
+        units="kg m-2",
         comment="specify here source of this variable",
     ),
     "lwp_offset": MetaData(
         long_name="Subtracted offset correction of retrieved column-integrated liquid water path",
-        units="mm",
+        units="kg m-2",
         comment="specify here source of this variable",
     ),
 }
@@ -251,16 +262,17 @@ ATTRIBUTES_2I01 = {
 ATTRIBUTES_2I02 = {
     "iwv": MetaData(
         long_name="Retrieved column-integrated water vapour",
-        units="mm",
+        standard_name="atmosphere_mass_content_of_water_vapor",
+        units="kg m-2",
     ),
     "iwv_random_error": MetaData(
         long_name="Random uncertainty of retrieved column-integrated water vapour",
-        units="mm",
+        units="kg m-2",
         comment="specify here source of this variable",
     ),
     "iwv_systematic_error": MetaData(
         long_name="Systematic uncertainty of retrieved column-integrated water vapour",
-        units="mm",
+        units="kg m-2",
         comment="specify here source of this variable",
     ),
 }

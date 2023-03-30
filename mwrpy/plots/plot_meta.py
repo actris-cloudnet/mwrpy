@@ -107,8 +107,8 @@ ATTRIBUTES = {
         plot_type="bar",
         source="int",
     ),
-    "water_vapor_vmr": PlotMeta(
-        name="Retrieved water vapour profile",
+    "absolute_humidity": PlotMeta(
+        name="Absolute Humidity",
         cbar="Spectral_r",
         clabel=_KGM3,
         plot_range=(-0.00000000000001, 0.02),
@@ -201,7 +201,7 @@ ATTRIBUTES = {
         plot_type="bar",
         source="tb",
     ),
-    "ele": PlotMeta(
+    "elevation_angle": PlotMeta(
         name="Sensor elevation angle",
         ylabel=_DEG,
         plot_range=(-1, 93),

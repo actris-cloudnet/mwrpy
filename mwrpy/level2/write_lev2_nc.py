@@ -143,7 +143,7 @@ def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
             (lev1["pointing_flag"][:] == 0)
             & np.any(
                 np.abs(
-                    (np.ones((len(lev1["ele"][:]), len(coeff["ele"]))) * coeff["ele"])
+                    (np.ones((len(lev1["elevation_angle"][:]), len(coeff["ele"]))) * coeff["ele"])
                     - np.transpose(
                         np.ones((len(coeff["ele"]), len(lev1["ele"][:]))) * lev1["ele"][:]
                     )
@@ -157,13 +157,13 @@ def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
                 ["No suitable data found for processing for data type: " + data_type]
             )
         coeff["retrieval_elevation_angles"] = str(
-            np.sort(np.unique(ele_retrieval(lev1["ele"][index], coeff)))
+            np.sort(np.unique(ele_retrieval(lev1["elevation_angle"][index], coeff)))
         )
 
         if coeff["ret_type"] < 2:
-            coeff_offset = offset(lev1["ele"][index])
-            coeff_lin = lin(lev1["ele"][index])
-            coeff_quad = quad(lev1["ele"][index])
+            coeff_offset = offset(lev1["elevation_angle"][index])
+            coeff_lin = lin(lev1["elevation_angle"][index])
+            coeff_quad = quad(lev1["elevation_angle"][index])
             tmp_product = (
                 coeff_offset
                 + np.sum(coeff_lin * ret_in[index, :], axis=1)
@@ -173,12 +173,12 @@ def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
         else:
             tmp_product = np.ones(len(index), np.float32) * Fill_Value_Float
             c_w1, c_w2, fac = (
-                weights1(lev1["ele"][index]),
-                weights2(lev1["ele"][index]),
-                factor(lev1["ele"][index]),
+                weights1(lev1["elevation_angle"][index]),
+                weights2(lev1["elevation_angle"][index]),
+                factor(lev1["elevation_angle"][index]),
             )
-            in_sc, in_os = input_scale(lev1["ele"][index]), input_offset(lev1["ele"][index])
-            op_sc, op_os = output_scale(lev1["ele"][index]), output_offset(lev1["ele"][index])
+            in_sc, in_os = input_scale(lev1["elevation_angle"][index]), input_offset(lev1["elevation_angle"][index])
+            op_sc, op_os = output_scale(lev1["elevation_angle"][index]), output_offset(lev1["elevation_angle"][index])
             for ix, iv in enumerate(index):
                 ret_in[iv, 1:] = (ret_in[iv, 1:] - in_os[ix, :]) * in_sc[ix, :]
                 hidden_layer = np.ones(c_w1.shape[2] + 1, np.float32)
@@ -205,7 +205,7 @@ def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
         if data_type == "2P01":
             product, ret = "temperature", "tpt"
         else:
-            product, ret = "water_vapor_vmr", "hpt"
+            product, ret = "absolute_humidity", "hpt"
 
         coeff = get_mvr_coeff(site, ret, lev1["frequency"][:])
         if coeff[0]["ret_type"] < 2:
@@ -229,9 +229,9 @@ def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
             (lev1["pointing_flag"][:] == 0)
             & np.any(
                 np.abs(
-                    (np.ones((len(lev1["ele"][:]), len(coeff["ele"]))) * coeff["ele"])
+                    (np.ones((len(lev1["elevation_angle"][:]), len(coeff["ele"]))) * coeff["ele"])
                     - np.transpose(
-                        np.ones((len(coeff["ele"]), len(lev1["ele"][:]))) * lev1["ele"][:]
+                        np.ones((len(coeff["ele"]), len(lev1["elevation_angle"][:]))) * lev1["elevation_angle"][:]
                     )
                 )
                 < 0.5,
@@ -243,16 +243,16 @@ def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
                 ["No suitable data found for processing for data type: " + data_type]
             )
         coeff["retrieval_elevation_angles"] = str(
-            np.sort(np.unique(ele_retrieval(lev1["ele"][index], coeff)))
+            np.sort(np.unique(ele_retrieval(lev1["elevation_angle"][index], coeff)))
         )
 
         rpg_dat["altitude"] = coeff["height_grid"][:] + params["station_altitude"]
         rpg_dat[product] = ma.masked_all((len(index), coeff["n_height_grid"]))
 
         if coeff["ret_type"] < 2:
-            coeff_offset = offset(lev1["ele"][index])
-            coeff_lin = lin(lev1["ele"][index])
-            coeff_quad = quad(lev1["ele"][index])
+            coeff_offset = offset(lev1["elevation_angle"][index])
+            coeff_lin = lin(lev1["elevation_angle"][index])
+            coeff_quad = quad(lev1["elevation_angle"][index])
 
             for ialt, _ in enumerate(rpg_dat["altitude"]):
                 rpg_dat[product][:, ialt] = (
@@ -263,12 +263,12 @@ def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
 
         else:
             c_w1, c_w2, fac = (
-                weights1(lev1["ele"][index]),
-                weights2(lev1["ele"][index]),
-                factor(lev1["ele"][index]),
+                weights1(lev1["elevation_angle"][index]),
+                weights2(lev1["elevation_angle"][index]),
+                factor(lev1["elevation_angle"][index]),
             )
-            in_sc, in_os = input_scale(lev1["ele"][index]), input_offset(lev1["ele"][index])
-            op_sc, op_os = output_scale(lev1["ele"][index]), output_offset(lev1["ele"][index])
+            in_sc, in_os = input_scale(lev1["elevation_angle"][index]), input_offset(lev1["elevation_angle"][index])
+            op_sc, op_os = output_scale(lev1["elevation_angle"][index]), output_offset(lev1["elevation_angle"][index])
 
             for ix, iv in enumerate(index):
                 hidden_in = np.concatenate(([1.0], (ret_in[iv, 1:] - in_os[ix, :]) * in_sc[ix, :]))
@@ -279,7 +279,7 @@ def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
                     np.tanh(fac[ix] * hidden_layer.dot(c_w2[ix, :, :])) * op_sc[ix, :]
                     + op_os[ix, :]
                 )
-                if product == "water_vapor_vmr":
+                if product == "absolue_humidity":
                     rpg_dat[product][ix, :] = rpg_dat[product][ix, :] / 1000.0
 
     elif data_type == "2P02":
@@ -305,8 +305,8 @@ def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
         )
 
         ix0 = np.where(
-            (lev1["ele"][:] > coeff["ele"][0] - 0.5)
-            & (lev1["ele"][:] < coeff["ele"][0] + 0.5)
+            (lev1["elevation_angle"][:] > coeff["ele"][0] - 0.5)
+            & (lev1["elevation_angle"][:] < coeff["ele"][0] + 0.5)
             & (lev1["pointing_flag"][:] == 1)
             & (np.arange(len(lev1["time"])) + len(coeff["ele"]) < len(lev1["time"]))
         )[0]
@@ -316,7 +316,7 @@ def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
         )
 
         for ix0v in ix0:
-            if (ix0v + len(coeff["ele"]) < len(lev1["time"])) & (np.allclose(lev1["ele"][ix0v : ix0v + len(coeff["ele"])], coeff["ele"], atol=0.5)):
+            if (ix0v + len(coeff["ele"]) < len(lev1["time"])) & (np.allclose(lev1["elevation_angle"][ix0v : ix0v + len(coeff["ele"])], coeff["ele"], atol=0.5)):
                 ibl = np.append(ibl, [np.array(range(ix0v, ix0v + len(coeff["ele"])))], axis=0)
                 tb = np.concatenate(
                     (
@@ -387,7 +387,7 @@ def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
 
         hum_int = interpol_2d(
             hum_dat.variables["time"][:],
-            hum_dat.variables["water_vapor_vmr"][:, :],
+            hum_dat.variables["absolute_humidity"][:, :],
             tem_dat.variables["time"][:],
         )
 
@@ -424,8 +424,8 @@ def _combine_lev1(
         "time_bnds",
         "station_latitude",
         "station_longitude",
-        "azi",
-        "ele",
+        "azimuth_angle",
+        "elevation_angle",
     ]
     if index != []:
         for ivars in lev1_vars:
@@ -486,8 +486,8 @@ def _test_BL_scan(site: str, lev1: dict) -> bool:
     BL_scan = True
     coeff = get_mvr_coeff(site, "tpb", lev1["frequency"][:])
     BL_ind = np.where(
-        (lev1["ele"][:] > coeff[0]["ele"][0] - 0.5)
-        & (lev1["ele"][:] < coeff[0]["ele"][0] + 0.5)
+        (lev1["elevation_angle"][:] > coeff[0]["ele"][0] - 0.5)
+        & (lev1["elevation_angle"][:] < coeff[0]["ele"][0] + 0.5)
         & (lev1["pointing_flag"][:] == 1)
     )[0]
     if len(BL_ind) == 0:

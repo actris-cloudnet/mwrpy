@@ -102,10 +102,10 @@ def orbpos(data: dict, params: dict) -> np.ndarray:
 
     sun = {}
     sun["azimuth_angle"] = np.zeros(data["time"].shape) * Fill_Value_Float
-    sun["ele"] = np.zeros(data["time"].shape) * Fill_Value_Float
+    sun["elevation_angle"] = np.zeros(data["time"].shape) * Fill_Value_Float
     moon = dict()
     moon["azimuth_angle"] = np.zeros(data['time'].shape) * Fill_Value_Float
-    moon['ele'] = np.zeros(data['time'].shape) * Fill_Value_Float
+    moon['elevation_angle'] = np.zeros(data['time'].shape) * Fill_Value_Float
 
     sol = ephem.Sun()
     lun = ephem.Moon()
@@ -119,37 +119,37 @@ def orbpos(data: dict, params: dict) -> np.ndarray:
         obs_loc.elevation = data["station_altitude"][ind]
         obs_loc.date = datetime.datetime.utcfromtimestamp(time).strftime("%Y/%m/%d %H:%M:%S")
         sol.compute(obs_loc)
-        sun["ele"][ind] = np.rad2deg(sol.alt)
+        sun["elevation_angle"][ind] = np.rad2deg(sol.alt)
         sun["azimuth_angle"][ind] = np.rad2deg(sol.az)
         lun.compute(obs_loc)
-        moon['ele'][ind] = np.rad2deg(lun.alt)
+        moon['elevation_angle'][ind] = np.rad2deg(lun.alt)
         moon["azimuth_angle"][ind] = np.rad2deg(lun.az)
 
     sun["rise"], moon["rise"] = data["time"][0], data["time"][0]
     sun["set"], moon["set"] = data["time"][0] + 24.0 * 3600.0, data["time"][0] + 24.0 * 3600.0
-    i_sun = np.where(sun["ele"] > 0.0)[0]
+    i_sun = np.where(sun["elevation_angle"] > 0.0)[0]
     if len(i_sun) > 0:
         sun["rise"] = data["time"][i_sun[0]]
         sun["set"] = data["time"][i_sun[-1]]       
-    i_moon = np.where(moon["ele"] > 0.0)[0]
+    i_moon = np.where(moon["elevation_angle"] > 0.0)[0]
     if len(i_moon) > 0:
         moon["rise"] = data["time"][i_moon[0]]
         moon["set"] = data["time"][i_moon[-1]]        
 
     flag_ind = np.where(
-        ((data["ele"] != Fill_Value_Float)
-        & (data["ele"] <= np.max(sun["ele"]) + 10.0)
+        ((data["elevation_angle"] != Fill_Value_Float)
+        & (data["elevation_angle"] <= np.max(sun["elevation_angle"]) + 10.0)
         & (data["time"] >= sun["rise"])
         & (data["time"] <= sun["set"])
-        & (data["ele"] >= sun["ele"] - params["saf"])
-        & (data["ele"] <= sun["ele"] + params["saf"])
+        & (data["elevation_angle"] >= sun["elevation_angle"] - params["saf"])
+        & (data["elevation_angle"] <= sun["elevation_angle"] + params["saf"])
         & (data["azimuth_angle"] >= sun["azimuth_angle"] - params["saf"])
         & (data["azimuth_angle"] <= sun["azimuth_angle"] + params["saf"]))
-        | ((data["ele"] <= np.max(moon["ele"]) + 10.0)
+        | ((data["elevation_angle"] <= np.max(moon["elevation_angle"]) + 10.0)
         & (data["time"] >= moon["rise"])
         & (data["time"] <= moon["set"])
-        & (data["ele"] >= moon["ele"] - params["saf"])
-        & (data["ele"] <= moon["ele"] + params["saf"])
+        & (data["elevation_angle"] >= moon["elevation_angle"] - params["saf"])
+        & (data["elevation_angle"] <= moon["elevation_angle"] + params["saf"])
         & (data["azimuth_angle"] >= moon["azimuth_angle"] - params["saf"])
         & (data["azimuth_angle"] <= moon["azimuth_angle"] + params["saf"]))
     )
@@ -174,8 +174,8 @@ def spectral_consistency(data: dict, c_file: list) -> np.ndarray:
                 return_indices=True,
             )
             ele_ind = np.where(
-                (data["ele"][:] > coeff["elevation_predictand"][:] - 0.6)
-                & (data["ele"][:] < coeff["elevation_predictand"][:] + 0.6)
+                (data["elevation_angle"][:] > coeff["elevation_predictand"][:] - 0.6)
+                & (data["elevation_angle"][:] < coeff["elevation_predictand"][:] + 0.6)
                 & (data["pointing_flag"][:] == 0)
             )[0]
 

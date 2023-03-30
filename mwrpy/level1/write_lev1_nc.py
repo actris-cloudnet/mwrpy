@@ -144,7 +144,7 @@ def prepare_data(
                     rpg_bin.data["ir_beamwidth"] = params["ir_beamwidth"]
                     add_interpol1d(rpg_bin.data, rpg_irt.data["irt"], rpg_irt.data["time"], "irt")
                     add_interpol1d(
-                        rpg_bin.data, rpg_irt.data["ir_ele"], rpg_irt.data["time"], "ir_ele"
+                        rpg_bin.data, rpg_irt.data["ir_elevation_angle"], rpg_irt.data["time"], "ir_elevation_angle"
                     )
                     add_interpol1d(
                         rpg_bin.data, rpg_irt.data["ir_azimuth_anglemuth_angle"], rpg_irt.data["time"], "ir_azimuth_angle"
@@ -314,7 +314,7 @@ def find_lwcl_free(lev1: dict, ix: np.ndarray) -> tuple:
     if len(freq_31) == 1:
         time = lev1["time"][ix]
         tb = np.squeeze(lev1["tb"][ix, freq_31])
-        tb[(lev1["pointing_flag"][ix] == 1) | (lev1["ele"][ix] < 89.0)] = np.nan
+        tb[(lev1["pointing_flag"][ix] == 1) | (lev1["elevation_angle"][ix] < 89.0)] = np.nan
         tb_df = pd.DataFrame({"Tb": tb}, index=pd.to_datetime(time, unit="s"))
         tb_std = tb_df.rolling("2min", center=True, min_periods=10).std()
         tb_mx = tb_std.rolling("20min", center=True, min_periods=100).max()
@@ -324,7 +324,7 @@ def find_lwcl_free(lev1: dict, ix: np.ndarray) -> tuple:
             irt = lev1["irt"][ix, :]
             irt[irt == Fill_Value_Float] = np.nan
             irt = np.nanmean(irt, axis=1)
-            irt[(lev1["pointing_flag"][ix] == 1) | (lev1["ele"][ix] < 89.0)] = np.nan
+            irt[(lev1["pointing_flag"][ix] == 1) | (lev1["elevation_angle"][ix] < 89.0)] = np.nan
             irt_df = pd.DataFrame({"Irt": irt[:]}, index=pd.to_datetime(time, unit="s"))
             irt_mx = irt_df.rolling("20min", center=True, min_periods=100).max()
             index[(irt_mx["Irt"] > 263.15) & (tb_mx["Tb"] > tb_thres)] = 1
@@ -337,7 +337,7 @@ def find_lwcl_free(lev1: dict, ix: np.ndarray) -> tuple:
         df = df.fillna(method="ffill", limit=120)
         index = np.array(df["index"])
         index[(tb_mx["Tb"] < tb_thres) & (index != 1.0)] = 0.0
-        index[(lev1["ele"][ix] < 89.0) & (index != 1.0)] = 2.0
+        index[(lev1["elevation_angle"][ix] < 89.0) & (index != 1.0)] = 2.0
 
     return np.nan_to_num(index, nan=2).astype(int), status
 
@@ -363,7 +363,7 @@ def _add_bls(brt: dict, bls: dict, hkd: dict, params: dict, site: str) -> None:
     brt.data["time"] = brt.data["time"][ind]
     names = [
         "time_bnds",
-        "ele",
+        "elevation_angle",
         "azimuth_angle",
         "rain",
         "tb",
@@ -384,7 +384,7 @@ def _add_bls(brt: dict, bls: dict, hkd: dict, params: dict, site: str) -> None:
 def _add_blb(brt: dict, blb: dict, hkd: dict, params: dict, site: str) -> None:
     """Add BLB boundary-layer scans using a linear time axis"""
 
-    time_add, time_bnds_add, ele_add, azimuth_angle_add, rain_add, tb_add, status_add = (
+    time_add, time_bnds_add, elevation_angle_add, azimuth_angle_add, rain_add, tb_add, status_add = (
         np.empty([0], dtype=np.int32),
         [],
         [],
@@ -469,7 +469,7 @@ def _add_blb(brt: dict, blb: dict, hkd: dict, params: dict, site: str) -> None:
                     * int(isbit(blb.data["rf_mod"][time_ind], 0)),
                 )
             )
-            ele_add = np.concatenate((ele_add, blb.header["_ang"]))
+            elevation_angle_add = np.concatenate((elevation_angle_add, blb.header["_ang"]))
 
             for ang in range(blb.header["_n_ang"]):
                 if len(tb_add) == 0:
@@ -511,7 +511,7 @@ def _add_blb(brt: dict, blb: dict, hkd: dict, params: dict, site: str) -> None:
         brt.data["time"] = brt.data["time"][ind]
         names = [
             "time_bnds",
-            "ele",
+            "elevation_angle",
             "azimuth_angle",
             "rain",
             "tb",

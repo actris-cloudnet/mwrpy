@@ -117,7 +117,7 @@ def generate_figure(
             if ATTRIBUTES[name].ele is not None:
                 ele_range = ATTRIBUTES[name].ele
             ax.set_facecolor(_COLORS["lightgray"])
-            if name not in ("ele", "azimuth_angle"):
+            if name not in ("elevation_angle", "azimuth_angle"):
                 time = _elevation_filter(nc_file, time, ele_range)
                 field = _elevation_filter(nc_file, field, ele_range)
             if title:
@@ -256,8 +256,8 @@ def _is_height_dimension(full_path: str) -> bool:
 def _elevation_filter(full_path: str, data_field: ndarray, ele_range: tuple) -> ndarray:
     """Filters data for specified range of elevation angles."""
     with netCDF4.Dataset(full_path) as nc:
-        if "ele" in nc.variables:
-            elevation = read_nc_fields(full_path, "ele")
+        if "elevation_angle" in nc.variables:
+            elevation = read_nc_fields(full_path, "elevation_angle")
             if data_field.ndim > 1:
                 data_field = data_field[
                     (elevation >= ele_range[0]) & (elevation <= ele_range[1]), :
@@ -443,7 +443,7 @@ def _plot_colormesh_data(ax, data_in: ma.MaskedArray, name: str, axes: tuple, nc
         nlev1 = 41
         hum_file = nc_file.replace("2P08", "2P03")
 
-    if name == "water_vapor_vmr":
+    if name == "absolute_humidity":
         nbin = 6
 
     if name == "relative_humidity":
@@ -708,7 +708,7 @@ def _plot_sen(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
         label="single pointing",
         linewidth=0.8,
     )
-    if name == "ele":
+    if name == "elevation_angle":
         time1 = time[(pointing_flag == 1) & (data_in > 0.0)]
         time1 = _nan_time_gaps(time1, 15.0 / 60.0)
         ax.plot(

@@ -153,7 +153,7 @@ ATTRIBUTES_1B01 = {
         units="degree",
         comment="0=North, 90=East, 180=South, 270=West",
     ),
-    "ele": MetaData(
+    "elevation_angle": MetaData(
         long_name="Sensor elevation angle",
         units="degree",
         comment="0=horizon, 90=zenith",
@@ -247,7 +247,7 @@ ATTRIBUTES_1B11 = {
         units="degree",
         comment="0=North, 90=East, 180=South, 270=West",
     ),
-    "ir_ele": MetaData(
+    "ir_elevation_angle": MetaData(
         long_name="Infrared sensor elevation angle",
         units="degree",
         comment="0=horizon, 90=zenith",
