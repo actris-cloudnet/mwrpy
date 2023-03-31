@@ -3,9 +3,9 @@
 type: hatpro
 
 params:
-    station_altitude: 174.
-    station_longitude: 24.288
-    station_latitude: 61.844
+    altitude: 174.
+    longitude: 24.288
+    latitude: 61.844
     
     # path to level1 data and path for processed files
     data_in: /home/tmarke/Dokumente/ACTRIS/mwr_pro_actris/data/

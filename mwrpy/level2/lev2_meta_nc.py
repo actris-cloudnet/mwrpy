@@ -63,17 +63,17 @@ ATTRIBUTES_COM = {
         long_name="Start and end time (UTC) of the measurements",
         units="seconds since 1970-01-01 00:00:00.000",
     ),
-    "station_latitude": MetaData(
+    "latitude": MetaData(
         long_name="Latitude of measurement station",
         standard_name="latitude",
         units="degree_north",
     ),
-    "station_longitude": MetaData(
+    "longitude": MetaData(
         long_name="Longitude of measurement station",
         standard_name="longitude",
         units="degree_east",
     ),
-    "station_altitude": MetaData(
+    "altitude": MetaData(
         long_name="Altitude above mean sea level of measurement station",
         standard_name="altitude",
         units="m",
@@ -93,9 +93,9 @@ ATTRIBUTES_COM = {
 
 
 ATTRIBUTES_2P01 = {
-    "altitude": MetaData(
-        long_name="Altitude above sea level",
-        standard_name="altitude",        
+    "height": MetaData(
+        long_name="Height above mean sea level",
+        standard_name="height_above_mean_sea_level",
         units="m",
     ),
     "temperature": MetaData(
@@ -117,9 +117,9 @@ ATTRIBUTES_2P01 = {
 
 
 ATTRIBUTES_2P02 = {
-    "altitude": MetaData(
-        long_name="Altitude above sea level",
-        standard_name="altitude",        
+    "height": MetaData(
+        long_name="Height above mean sea level",
+        standard_name="height_above_mean_sea_level",
         units="m",
     ),
     "temperature": MetaData(
@@ -141,9 +141,9 @@ ATTRIBUTES_2P02 = {
 
 
 ATTRIBUTES_2P03 = {
-    "altitude": MetaData(
-        long_name="Altitude above sea level",
-        standard_name="altitude",        
+    "height": MetaData(
+        long_name="Height above mean sea level",
+        standard_name="height_above_mean_sea_level",
         units="m",
     ),
     "absolute_humidity": MetaData(
@@ -164,9 +164,9 @@ ATTRIBUTES_2P03 = {
 
 
 ATTRIBUTES_2P04 = {
-    "altitude": MetaData(
-        long_name="Altitude above sea level",
-        standard_name="altitude",        
+    "height": MetaData(
+        long_name="Height above mean sea level",
+        standard_name="height_above_mean_sea_level",
         units="m",
     ),
     "relative_humidity": MetaData(
@@ -188,9 +188,9 @@ ATTRIBUTES_2P04 = {
 
 
 ATTRIBUTES_2P07 = {
-    "altitude": MetaData(
-        long_name="Altitude above sea level",
-        standard_name="altitude",        
+    "height": MetaData(
+        long_name="Height above mean sea level",
+        standard_name="height_above_mean_sea_level",
         units="m",
     ),
     "potential_temperature": MetaData(
@@ -212,9 +212,9 @@ ATTRIBUTES_2P07 = {
 
 
 ATTRIBUTES_2P08 = {
-    "altitude": MetaData(
-        long_name="Altitude above sea level",
-        standard_name="altitude",
+    "height": MetaData(
+        long_name="Height above mean sea level",
+        standard_name="height_above_mean_sea_level",
         units="m",
     ),
     "equivalent_potential_temperature": MetaData(

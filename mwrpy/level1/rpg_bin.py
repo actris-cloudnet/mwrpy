@@ -799,8 +799,8 @@ def read_hkd(file_name: str) -> dict:
             vrs = {
                 "time": np.ones(header["n"], np.int32) * Fill_Value_Int,
                 "alarm": np.ones(header["n"], np.byte) * Fill_Value_Int,
-                "station_longitude": np.ones(header["n"], np.float32) * Fill_Value_Float,
-                "station_latitude": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "longitude": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "latitude": np.ones(header["n"], np.float32) * Fill_Value_Float,
                 "temp": np.ones([header["n"], 4], np.float32) * Fill_Value_Float,
                 "stab": np.ones([header["n"], 2], np.float32) * Fill_Value_Float,
                 "flash": np.ones(header["n"], np.int32) * Fill_Value_Int,
@@ -817,8 +817,8 @@ def read_hkd(file_name: str) -> dict:
                 data["time"][sample] = np.fromfile(file, np.int32, 1)
                 data["alarm"][sample] = np.fromfile(file, np.byte, count=1)
                 if header["_sel"] & 1:
-                    data["station_longitude"][sample] = np.fromfile(file, np.float32, count=1)
-                    data["station_latitude"][sample] = np.fromfile(file, np.float32, count=1)
+                    data["longitude"][sample] = np.fromfile(file, np.float32, count=1)
+                    data["latitude"][sample] = np.fromfile(file, np.float32, count=1)
                 if header["_sel"] & 2:
                     data["temp"][
                         sample,

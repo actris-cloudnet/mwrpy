@@ -236,9 +236,9 @@ def get_file_list(path_to_files: str, extension: str):
 def read_yaml_config(site: str) -> tuple[dict, dict]:
     """Reads config yaml files."""
     params = {
-        "station_altitude": 108.0,
-        "station_longitude": 6.407,
-        "station_latitude": 50.906,
+        "altitude": 108.0,
+        "longitude": 6.407,
+        "latitude": 50.906,
         "scan_time": 50.,
         "int_time": 1,
         "azi_cor": -999.,

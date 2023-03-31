@@ -2,6 +2,7 @@
 import datetime
 from itertools import groupby
 
+import netCDF4
 import numpy as np
 import pandas as pd
 from numpy import ma
@@ -137,6 +138,9 @@ def prepare_data(
             if params["ir_flag"]:
                 try:
                     file_list_irt = get_file_list(path_to_files, "IRT")
+                except RuntimeError as err:
+                    print(err)
+                if len(file_list_irt) > 0:
                     rpg_irt = get_rpg_bin(file_list_irt)
                     rpg_irt.data["irt"][rpg_irt.data["irt"] <= 125.5] = Fill_Value_Float
                     rpg_bin.data["ir_wavelength"] = rpg_irt.header["_f"]
@@ -147,11 +151,7 @@ def prepare_data(
                         rpg_bin.data, rpg_irt.data["ir_elevation_angle"], rpg_irt.data["time"], "ir_elevation_angle"
                     )
                     add_interpol1d(
-                        rpg_bin.data, rpg_irt.data["ir_azimuth_anglemuth_angle"], rpg_irt.data["time"], "ir_azimuth_angle"
-                    )
-                except:
-                    print(
-                        ["No binary files with extension irt found in directory " + path_to_files]
+                        rpg_bin.data, rpg_irt.data["ir_azimuth_angle"], rpg_irt.data["time"], "ir_azimuth_angle"
                     )
 
             (
@@ -227,8 +227,8 @@ def prepare_data(
 
     file_list_hkd = get_file_list(path_to_files, "HKD")
     _append_hkd(file_list_hkd, rpg_bin, data_type, params)
-    rpg_bin.data["station_altitude"] = (
-        np.ones(len(rpg_bin.data["time"]), np.float32) * params["station_altitude"]
+    rpg_bin.data["altitude"] = (
+        np.ones(len(rpg_bin.data["time"]), np.float32) * params["altitude"]
     )
 
     return rpg_bin
@@ -239,35 +239,35 @@ def _append_hkd(file_list_hkd: list, rpg_bin: dict, data_type: str, params: dict
 
     hkd = get_rpg_bin(file_list_hkd)
 
-    if all(hkd.data["station_latitude"] == Fill_Value_Float):
+    if all(hkd.data["latitude"] == Fill_Value_Float):
         add_interpol1d(
             rpg_bin.data,
-            np.ones(len(hkd.data["time"])) * params["station_latitude"],
+            np.ones(len(hkd.data["time"])) * params["latitude"],
             hkd.data["time"],
-            "station_latitude",
+            "latitude",
         )
     else:
-        idx = np.where(hkd.data["station_latitude"] != Fill_Value_Float)[0]
+        idx = np.where(hkd.data["latitude"] != Fill_Value_Float)[0]
         add_interpol1d(
             rpg_bin.data,
-            hkd.data["station_latitude"][idx],
+            hkd.data["latitude"][idx],
             hkd.data["time"][idx],
-            "station_latitude",
+            "latitude",
         )
-    if all(hkd.data["station_longitude"] == Fill_Value_Float):
+    if all(hkd.data["longitude"] == Fill_Value_Float):
         add_interpol1d(
             rpg_bin.data,
-            np.ones(len(hkd.data["time"])) * params["station_longitude"],
+            np.ones(len(hkd.data["time"])) * params["longitude"],
             hkd.data["time"],
-            "station_longitude",
+            "longitude",
         )
     else:
-        idx = np.where(hkd.data["station_longitude"] != Fill_Value_Float)[0]
+        idx = np.where(hkd.data["longitude"] != Fill_Value_Float)[0]
         add_interpol1d(
             rpg_bin.data,
-            hkd.data["station_longitude"][idx],
+            hkd.data["longitude"][idx],
             hkd.data["time"][idx],
-            "station_longitude",
+            "longitude",
         )
 
     if data_type in ("1B01", "1C01"):
@@ -308,13 +308,18 @@ def find_lwcl_free(lev1: dict, ix: np.ndarray) -> tuple:
     """Identification of liquid water cloud free periods using TB variability at 31.4 GHz and IRT.
     Uses pre-defined time index and additionally returns status of IRT availability"""
 
+    if "elevation_angle" in lev1:
+        elevation_angle = lev1["elevation_angle"][:]
+    else:
+        elevation_angle = 90 - lev1["zenith_angle"][:]
+
     index = np.ones(len(ix)) * np.nan
     status = np.ones(len(ix), dtype=np.int32)
     freq_31 = np.where(np.round(lev1["frequency"][:], 1) == 31.4)[0]
     if len(freq_31) == 1:
         time = lev1["time"][ix]
         tb = np.squeeze(lev1["tb"][ix, freq_31])
-        tb[(lev1["pointing_flag"][ix] == 1) | (lev1["elevation_angle"][ix] < 89.0)] = np.nan
+        tb[(lev1["pointing_flag"][ix] == 1) | (elevation_angle[ix] < 89.0)] = np.nan
         tb_df = pd.DataFrame({"Tb": tb}, index=pd.to_datetime(time, unit="s"))
         tb_std = tb_df.rolling("2min", center=True, min_periods=10).std()
         tb_mx = tb_std.rolling("20min", center=True, min_periods=100).max()
@@ -324,7 +329,7 @@ def find_lwcl_free(lev1: dict, ix: np.ndarray) -> tuple:
             irt = lev1["irt"][ix, :]
             irt[irt == Fill_Value_Float] = np.nan
             irt = np.nanmean(irt, axis=1)
-            irt[(lev1["pointing_flag"][ix] == 1) | (lev1["elevation_angle"][ix] < 89.0)] = np.nan
+            irt[(lev1["pointing_flag"][ix] == 1) | (elevation_angle[ix] < 89.0)] = np.nan
             irt_df = pd.DataFrame({"Irt": irt[:]}, index=pd.to_datetime(time, unit="s"))
             irt_mx = irt_df.rolling("20min", center=True, min_periods=100).max()
             index[(irt_mx["Irt"] > 263.15) & (tb_mx["Tb"] > tb_thres)] = 1
@@ -337,7 +342,7 @@ def find_lwcl_free(lev1: dict, ix: np.ndarray) -> tuple:
         df = df.fillna(method="ffill", limit=120)
         index = np.array(df["index"])
         index[(tb_mx["Tb"] < tb_thres) & (index != 1.0)] = 0.0
-        index[(lev1["elevation_angle"][ix] < 89.0) & (index != 1.0)] = 2.0
+        index[(elevation_angle[ix] < 89.0) & (index != 1.0)] = 2.0
 
     return np.nan_to_num(index, nan=2).astype(int), status
 

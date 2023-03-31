@@ -56,17 +56,17 @@ ATTRIBUTES_COM = {
         long_name="Start and end time (UTC) of the measurements",
         units="seconds since 1970-01-01 00:00:00.000",
     ),
-    "station_latitude": MetaData(
+    "latitude": MetaData(
         long_name="Latitude of measurement station",
         standard_name="latitude",
         units="degrees_north",
     ),
-    "station_longitude": MetaData(
+    "longitude": MetaData(
         long_name="Longitude of measurement station",
         standard_name="longitude",
         units="degrees_east",
     ),
-    "station_altitude": MetaData(
+    "altitude": MetaData(
         long_name="Altitude above mean sea level of measurement station",
         standard_name="altitude",
         units="m",

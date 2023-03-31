@@ -113,10 +113,10 @@ def orbpos(data: dict, params: dict) -> np.ndarray:
 
     for ind, time in enumerate(data["time"]):
 
-        obs_loc.lat, obs_loc.lon = str(data["station_latitude"][ind]), str(
-            data["station_longitude"][ind]
+        obs_loc.lat, obs_loc.lon = str(data["latitude"][ind]), str(
+            data["longitude"][ind]
         )
-        obs_loc.elevation = data["station_altitude"][ind]
+        obs_loc.elevation = data["altitude"][ind]
         obs_loc.date = datetime.datetime.utcfromtimestamp(time).strftime("%Y/%m/%d %H:%M:%S")
         sol.compute(obs_loc)
         sun["elevation_angle"][ind] = np.rad2deg(sol.alt)

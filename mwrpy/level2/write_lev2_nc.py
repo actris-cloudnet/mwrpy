@@ -2,11 +2,14 @@
 import os
 from datetime import datetime
 
+import netCDF4
 import netCDF4 as nc
 import numpy as np
 import pytz
 from numpy import ma
 from timezonefinder import TimezoneFinder
+
+import logging
 
 from mwrpy import rpg_mwr
 from mwrpy.atmos import eq_pot_tem, pot_tem, rel_hum, rh_err
@@ -27,7 +30,7 @@ Fill_Value_Float = -999.0
 Fill_Value_Int = -99
 
 
-def lev2_to_nc(date_in: str, site: str, data_type: str, lev1_path: str, lev2_path: str) -> dict:
+def lev2_to_nc(date_in: str | None, site: str, data_type: str, lev1_path: str, output_file: str):
     """This function reads Level 1 files,
     applies retrieval coefficients for Level 2 products and writes it into a netCDF file.
 
@@ -65,31 +68,31 @@ def lev2_to_nc(date_in: str, site: str, data_type: str, lev1_path: str, lev2_pat
                 T_product = "2P01"
             for d_type in [T_product, "2P03"]:
                 global_attributes, params = read_yaml_config(site)
-                if not os.path.isfile(
-                    lev2_path
-                    + "MWR_"
-                    + d_type
-                    + "_"
-                    + global_attributes["wigos_station_id"]
-                    + "_"
-                    + date_in
-                    + ".nc"
-                ):
-                    rpg_dat, coeff, index = get_products(site, lev1, d_type, params)
-                    _combine_lev1(lev1, rpg_dat, index, d_type, params)
-                    hatpro = rpg_mwr.Rpg(rpg_dat)
-                    hatpro.data = get_data_attributes(hatpro.data, d_type)
-                    output_file = (
-                        lev2_path
-                        + "MWR_"
-                        + d_type
-                        + "_"
-                        + global_attributes["wigos_station_id"]
-                        + "_"
-                        + date_in
-                        + ".nc"
-                    )
-                    rpg_mwr.save_rpg(hatpro, output_file, global_attributes, d_type)
+                # if not os.path.isfile(
+                #     lev2_path
+                #     + "MWR_"
+                #     + d_type
+                #     + "_"
+                #     + global_attributes["wigos_station_id"]
+                #     + "_"
+                #     + date_in
+                #     + ".nc"
+                # ):
+                rpg_dat, coeff, index = get_products(site, lev1, d_type, params)
+                _combine_lev1(lev1, rpg_dat, index, d_type, params)
+                hatpro = rpg_mwr.Rpg(rpg_dat)
+                hatpro.data = get_data_attributes(hatpro.data, d_type)
+                # output_file = (
+                #     lev2_path
+                #     + "MWR_"
+                #     + d_type
+                #     + "_"
+                #     + global_attributes["wigos_station_id"]
+                #     + "_"
+                #     + date_in
+                #     + ".nc"
+                # )
+                rpg_mwr.save_rpg(hatpro, output_file, global_attributes, d_type)
 
         global_attributes, params = read_yaml_config(site)
         rpg_dat, coeff, index = get_products(site, lev1, data_type, params)
@@ -97,21 +100,26 @@ def lev2_to_nc(date_in: str, site: str, data_type: str, lev1_path: str, lev2_pat
         _add_att(global_attributes, coeff, lev1)
         hatpro = rpg_mwr.Rpg(rpg_dat)
         hatpro.data = get_data_attributes(hatpro.data, data_type)
-        output_file = (
-            lev2_path
-            + "MWR_"
-            + data_type
-            + "_"
-            + global_attributes["wigos_station_id"]
-            + "_"
-            + date_in
-            + ".nc"
-        )
+        # output_file = (
+        #     lev2_path
+        #     + "MWR_"
+        #     + data_type
+        #     + "_"
+        #     + global_attributes["wigos_station_id"]
+        #     + "_"
+        #     + date_in
+        #     + ".nc"
+        # )
         rpg_mwr.save_rpg(hatpro, output_file, global_attributes, data_type)
 
 
-def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
+def get_products(site: str, lev1: netCDF4.Dataset, data_type: str, params: dict) -> dict:
     "Derive specified Level 2 products."
+
+    if "elevation_angle" in lev1.variables:
+        elevation_angle = lev1["elevation_angle"][:]
+    else:
+        elevation_angle = 90 - lev1["zenith_angle"][:]
 
     rpg_dat = {}
 
@@ -143,9 +151,9 @@ def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
             (lev1["pointing_flag"][:] == 0)
             & np.any(
                 np.abs(
-                    (np.ones((len(lev1["elevation_angle"][:]), len(coeff["ele"]))) * coeff["ele"])
+                    (np.ones((len(elevation_angle), len(coeff["ele"]))) * coeff["ele"])
                     - np.transpose(
-                        np.ones((len(coeff["ele"]), len(lev1["ele"][:]))) * lev1["ele"][:]
+                        np.ones((len(coeff["ele"]), len(elevation_angle))) * elevation_angle
                     )
                 )
                 < 0.5,
@@ -157,13 +165,13 @@ def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
                 ["No suitable data found for processing for data type: " + data_type]
             )
         coeff["retrieval_elevation_angles"] = str(
-            np.sort(np.unique(ele_retrieval(lev1["elevation_angle"][index], coeff)))
+            np.sort(np.unique(ele_retrieval(elevation_angle[index], coeff)))
         )
 
         if coeff["ret_type"] < 2:
-            coeff_offset = offset(lev1["elevation_angle"][index])
-            coeff_lin = lin(lev1["elevation_angle"][index])
-            coeff_quad = quad(lev1["elevation_angle"][index])
+            coeff_offset = offset(elevation_angle[index])
+            coeff_lin = lin(elevation_angle[index])
+            coeff_quad = quad(elevation_angle[index])
             tmp_product = (
                 coeff_offset
                 + np.sum(coeff_lin * ret_in[index, :], axis=1)
@@ -173,12 +181,12 @@ def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
         else:
             tmp_product = np.ones(len(index), np.float32) * Fill_Value_Float
             c_w1, c_w2, fac = (
-                weights1(lev1["elevation_angle"][index]),
-                weights2(lev1["elevation_angle"][index]),
-                factor(lev1["elevation_angle"][index]),
+                weights1(elevation_angle[index]),
+                weights2(elevation_angle[index]),
+                factor(elevation_angle[index]),
             )
-            in_sc, in_os = input_scale(lev1["elevation_angle"][index]), input_offset(lev1["elevation_angle"][index])
-            op_sc, op_os = output_scale(lev1["elevation_angle"][index]), output_offset(lev1["elevation_angle"][index])
+            in_sc, in_os = input_scale(elevation_angle[index]), input_offset(elevation_angle[index])
+            op_sc, op_os = output_scale(elevation_angle[index]), output_offset(elevation_angle[index])
             for ix, iv in enumerate(index):
                 ret_in[iv, 1:] = (ret_in[iv, 1:] - in_os[ix, :]) * in_sc[ix, :]
                 hidden_layer = np.ones(c_w1.shape[2] + 1, np.float32)
@@ -229,9 +237,9 @@ def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
             (lev1["pointing_flag"][:] == 0)
             & np.any(
                 np.abs(
-                    (np.ones((len(lev1["elevation_angle"][:]), len(coeff["ele"]))) * coeff["ele"])
+                    (np.ones((len(elevation_angle), len(coeff["ele"]))) * coeff["ele"])
                     - np.transpose(
-                        np.ones((len(coeff["ele"]), len(lev1["elevation_angle"][:]))) * lev1["elevation_angle"][:]
+                        np.ones((len(coeff["ele"]), len(elevation_angle))) * elevation_angle
                     )
                 )
                 < 0.5,
@@ -243,18 +251,18 @@ def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
                 ["No suitable data found for processing for data type: " + data_type]
             )
         coeff["retrieval_elevation_angles"] = str(
-            np.sort(np.unique(ele_retrieval(lev1["elevation_angle"][index], coeff)))
+            np.sort(np.unique(ele_retrieval(elevation_angle[index], coeff)))
         )
 
-        rpg_dat["altitude"] = coeff["height_grid"][:] + params["station_altitude"]
+        rpg_dat["height"] = coeff["height_grid"][:] + params["altitude"]
         rpg_dat[product] = ma.masked_all((len(index), coeff["n_height_grid"]))
 
         if coeff["ret_type"] < 2:
-            coeff_offset = offset(lev1["elevation_angle"][index])
-            coeff_lin = lin(lev1["elevation_angle"][index])
-            coeff_quad = quad(lev1["elevation_angle"][index])
+            coeff_offset = offset(elevation_angle[index])
+            coeff_lin = lin(elevation_angle[index])
+            coeff_quad = quad(elevation_angle[index])
 
-            for ialt, _ in enumerate(rpg_dat["altitude"]):
+            for ialt, _ in enumerate(rpg_dat["height"]):
                 rpg_dat[product][:, ialt] = (
                     coeff_offset[:, ialt]
                     + np.sum(coeff_lin[:, ialt, :] * ret_in[index, :], axis=1)
@@ -263,12 +271,12 @@ def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
 
         else:
             c_w1, c_w2, fac = (
-                weights1(lev1["elevation_angle"][index]),
-                weights2(lev1["elevation_angle"][index]),
-                factor(lev1["elevation_angle"][index]),
+                weights1(elevation_angle[index]),
+                weights2(elevation_angle[index]),
+                factor(elevation_angle[index]),
             )
-            in_sc, in_os = input_scale(lev1["elevation_angle"][index]), input_offset(lev1["elevation_angle"][index])
-            op_sc, op_os = output_scale(lev1["elevation_angle"][index]), output_offset(lev1["elevation_angle"][index])
+            in_sc, in_os = input_scale(elevation_angle[index]), input_offset(elevation_angle[index])
+            op_sc, op_os = output_scale(elevation_angle[index]), output_offset(elevation_angle[index])
 
             for ix, iv in enumerate(index):
                 hidden_in = np.concatenate(([1.0], (ret_in[iv, 1:] - in_os[ix, :]) * in_sc[ix, :]))
@@ -305,8 +313,8 @@ def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
         )
 
         ix0 = np.where(
-            (lev1["elevation_angle"][:] > coeff["ele"][0] - 0.5)
-            & (lev1["elevation_angle"][:] < coeff["ele"][0] + 0.5)
+            (elevation_angle[:] > coeff["ele"][0] - 0.5)
+            & (elevation_angle[:] < coeff["ele"][0] + 0.5)
             & (lev1["pointing_flag"][:] == 1)
             & (np.arange(len(lev1["time"])) + len(coeff["ele"]) < len(lev1["time"]))
         )[0]
@@ -316,7 +324,7 @@ def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
         )
 
         for ix0v in ix0:
-            if (ix0v + len(coeff["ele"]) < len(lev1["time"])) & (np.allclose(lev1["elevation_angle"][ix0v : ix0v + len(coeff["ele"])], coeff["ele"], atol=0.5)):
+            if (ix0v + len(coeff["ele"]) < len(lev1["time"])) & (np.allclose(elevation_angle[ix0v : ix0v + len(coeff["ele"])], coeff["ele"], atol=0.5)):
                 ibl = np.append(ibl, [np.array(range(ix0v, ix0v + len(coeff["ele"])))], axis=0)
                 tb = np.concatenate(
                     (
@@ -332,7 +340,7 @@ def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
             )
 
         index = ibl[:, -1]
-        rpg_dat["altitude"] = coeff["height_grid"][:] + params["station_altitude"]
+        rpg_dat["height"] = coeff["height_grid"][:] + params["altitude"]
         rpg_dat["temperature"] = ma.masked_all((len(index), coeff["n_height_grid"]))
 
         if coeff["ret_type"] < 2:
@@ -342,7 +350,7 @@ def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
             for ifq, _ in enumerate(coeff["freq_bl"]):
                 tb_alg = np.append(tb_alg, np.squeeze(tb[freq_bl[ifq], :, :]), axis=0)
 
-            for ialt, _ in enumerate(rpg_dat["altitude"]):
+            for ialt, _ in enumerate(rpg_dat["height"]):
                 rpg_dat["temperature"][:, ialt] = offset[ialt] + np.sum(
                     lin[:, ialt] * tb_alg[:, :].T, axis=1
                 )
@@ -391,17 +399,17 @@ def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
             tem_dat.variables["time"][:],
         )
 
-        rpg_dat["altitude"] = tem_dat.variables["altitude"][:]
+        rpg_dat["height"] = tem_dat.variables["height"][:]
         pres = np.interp(tem_dat.variables["time"][:], lev1["time"][:], lev1["air_pressure"][:])
         if data_type == "2P04":
             rpg_dat["relative_humidity"] = rel_hum(tem_dat.variables["temperature"][:, :], hum_int)
         if data_type == "2P07":
             rpg_dat["potential_temperature"] = pot_tem(
-                tem_dat.variables["temperature"][:, :], hum_int, pres, rpg_dat["altitude"]
+                tem_dat.variables["temperature"][:, :], hum_int, pres, rpg_dat["height"]
             )
         if data_type == "2P08":
             rpg_dat["equivalent_potential_temperature"] = eq_pot_tem(
-                tem_dat.variables["temperature"][:, :], hum_int, pres, rpg_dat["altitude"]
+                tem_dat.variables["temperature"][:, :], hum_int, pres, rpg_dat["height"]
             )
 
         _combine_lev1(
@@ -416,19 +424,24 @@ def get_products(site: str, lev1: dict, data_type: str, params: dict) -> dict:
 
 
 def _combine_lev1(
-    lev1: dict, rpg_dat: dict, index: np.ndarray, data_type: str, params: dict
+    lev1: netCDF4.Dataset, rpg_dat: dict, index: np.ndarray, data_type: str, params: dict
 ) -> None:
-    "add level1 data"
+    """add level1 data"""
     lev1_vars = [
         "time",
         "time_bnds",
-        "station_latitude",
-        "station_longitude",
         "azimuth_angle",
         "elevation_angle",
+        "zenith_angle",
+        "altitude",
+        "latitude",
+        "longitude",
     ]
     if index != []:
         for ivars in lev1_vars:
+            if ivars not in lev1.variables:
+                logging.info("Skipping %s", ivars)
+                continue
             if (ivars == "time_bnds") & (data_type == "2P02"):
                 rpg_dat[ivars] = add_time_bounds(lev1["time"][index], params["scan_time"])
             elif (ivars == "time_bnds") & (data_type in ("2P04", "2P07", "2P08")):
@@ -481,13 +494,19 @@ def load_product(site: str, date_in: str, product: str):
     return file, ret_freq, ret_ang, product
 
 
-def _test_BL_scan(site: str, lev1: dict) -> bool:
-    "Check for existing BL scans in lev1 data"
+def _test_BL_scan(site: str, lev1: netCDF4.Dataset) -> bool:
+    """Check for exiEsting BL scans in lev1 data"""
+
+    if "elevation_angle" in lev1.variables:
+        elevation_angle = lev1["elevation_angle"][:]
+    else:
+        elevation_angle = 90 - lev1["zenith_angle"][:]
+
     BL_scan = True
     coeff = get_mvr_coeff(site, "tpb", lev1["frequency"][:])
     BL_ind = np.where(
-        (lev1["elevation_angle"][:] > coeff[0]["ele"][0] - 0.5)
-        & (lev1["elevation_angle"][:] < coeff[0]["ele"][0] + 0.5)
+        (elevation_angle > coeff[0]["ele"][0] - 0.5)
+        & (elevation_angle < coeff[0]["ele"][0] + 0.5)
         & (lev1["pointing_flag"][:] == 1)
     )[0]
     if len(BL_ind) == 0:
@@ -513,7 +532,7 @@ def retrieval_input(lev1: dict, coeff: list) -> np.ndarray:
 
     for ind, time in enumerate(lev1["time"][:].data):
         timezone_str = tf.timezone_at(
-            lng=lev1["station_longitude"][ind], lat=lev1["station_latitude"][ind]
+            lng=lev1["longitude"][ind], lat=lev1["latitude"][ind]
         )
         timezone = pytz.timezone(timezone_str)
         dtime = datetime.fromtimestamp(time, timezone)

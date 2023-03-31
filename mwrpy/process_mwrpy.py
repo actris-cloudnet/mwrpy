@@ -63,6 +63,8 @@ def process_product(
             input_dir,
             output_filename,
         )
+    else:
+        lev2_to_nc(None, site, prod, input_dir, output_filename)
 
     # Level 2
 
