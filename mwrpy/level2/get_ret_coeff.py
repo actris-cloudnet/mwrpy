@@ -77,27 +77,27 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                             coeff["aux_flg"][ii] = int(l_split[1])
                     if l_split[0] == "OS":
                         for jj in range(N):
-                            if ":" in lines[il + jj]:
-                                cll = lines[il + jj].split(":")
+                            if ":" in lines[jj]:
+                                cll = lines[jj].split(":")
                             else:
-                                cll = lines[il + jj].split("=")
-                                coeff["offset"][i + jj] = float(cll[1].split("#")[0])
+                                cll = lines[jj].split("=")
+                                coeff["offset"][jj] = float(cll[1].split("#")[0])
                     if l_split[0] == "TL":
                         for jj in range(N):
-                            if ":" in lines[il + jj]:
-                                cll = lines[il + jj].split(":")
+                            if ":" in lines[jj]:
+                                cll = lines[jj].split(":")
                             else:
-                                cll = lines[il + jj].split("=")
-                            coeff["coeff_lin"][i + jj, freq_ind] = np.array(
+                                cll = lines[jj].split("=")
+                            coeff["coeff_lin"][jj, freq_ind] = np.array(
                             [float(idx) for idx in cll[1].split()[0 : len(freq_coeff)]],
                             np.float32,
                             )
                     if (l_split[0] == "TQ") & (coeff["ret_type"] == 1):
                         for jj in range(N):
-                            if ":" in lines[il + jj]:
-                                cll = lines[il + jj].split(":")
+                            if ":" in lines[jj]:
+                                cll = lines[jj].split(":")
                             else:
-                                cll = lines[il + jj].split("=")
+                                cll = lines[jj].split("=")
                             coeff["coeff_quad"][i + jj, freq_ind] = np.array(
                             [float(idx) for idx in cll[1].split()[0 : len(freq_coeff)]],
                             np.float32,
