@@ -34,7 +34,7 @@ def correct_lwp_offset(lev1: dict, lwp_org: np.ndarray, index: np.ndarray, site:
     lwp = np.copy(lwp_org)
     lwp[(lwcl_i != 0) | (lwp > 0.04) | (elevation_angle[index] < 89.0)] = np.nan
     time = lev1["time"][index]
-    lwp_df = pd.DataFrame({"Lwp": lwp}, index=pd.to_datetime(time, unit="s"))
+    lwp_df = pd.DataFrame({"Lwp": lwp}, index=pd.to_datetime(time, unit="hours"))
     lwp_std = lwp_df.rolling("2min", center=True, min_periods=10).std()
     lwp_max = lwp_std.rolling("20min", center=True, min_periods=100).max()
     lwp_df[lwp_max > 0.002] = np.nan

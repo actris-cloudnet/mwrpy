@@ -130,6 +130,7 @@ def get_products(site: str, lev1: netCDF4.Dataset, data_type: str, params: dict)
             product = "iwv"
 
         coeff = get_mvr_coeff(site, product, lev1["frequency"][:])
+
         if coeff[0]["ret_type"] < 2:
             coeff, offset, lin, quad, e_ran, e_sys = get_mvr_coeff(
                 site, product, lev1["frequency"][:]
@@ -179,14 +180,18 @@ def get_products(site: str, lev1: netCDF4.Dataset, data_type: str, params: dict)
             )
 
         else:
+
             tmp_product = np.ones(len(index), np.float32) * Fill_Value_Float
+
             c_w1, c_w2, fac = (
                 weights1(elevation_angle[index]),
                 weights2(elevation_angle[index]),
                 factor(elevation_angle[index]),
             )
+
             in_sc, in_os = input_scale(elevation_angle[index]), input_offset(elevation_angle[index])
             op_sc, op_os = output_scale(elevation_angle[index]), output_offset(elevation_angle[index])
+
             for ix, iv in enumerate(index):
                 ret_in[iv, 1:] = (ret_in[iv, 1:] - in_os[ix, :]) * in_sc[ix, :]
                 hidden_layer = np.ones(c_w1.shape[2] + 1, np.float32)
@@ -208,6 +213,7 @@ def get_products(site: str, lev1: netCDF4.Dataset, data_type: str, params: dict)
                 )
         else:
             rpg_dat["iwv"] = tmp_product
+
 
     elif data_type in ("2P01", "2P03"):
         if data_type == "2P01":
@@ -522,8 +528,8 @@ def ele_retrieval(ele_obs: np.ndarray, coeff: dict) -> np.ndarray:
     return np.array([ele_ret[(np.abs(ele_ret - v)).argmin()] for v in ele_obs])
 
 
-def retrieval_input(lev1: dict, coeff: list) -> np.ndarray:
-    "Get retrieval input"
+def retrieval_input(lev1: netCDF4.Dataset, coeff: dict) -> np.ndarray:
+    """Get retrieval input"""
     bias = np.ones((len(lev1["time"][:]), 1), np.float32)
     doy = np.ones((len(lev1["time"][:]), 2), np.float32) * Fill_Value_Float
     sun = np.ones((len(lev1["time"][:]), 2), np.float32) * Fill_Value_Float
@@ -531,11 +537,18 @@ def retrieval_input(lev1: dict, coeff: list) -> np.ndarray:
     tf = TimezoneFinder()
 
     for ind, time in enumerate(lev1["time"][:].data):
+
+        if time < 24:
+            date = [lev1.year, lev1.month, lev1.day]
+            time = decimal_hour2unix(date, time)
+
+        # Make me faster
         timezone_str = tf.timezone_at(
             lng=lev1["longitude"][ind], lat=lev1["latitude"][ind]
         )
         timezone = pytz.timezone(timezone_str)
         dtime = datetime.fromtimestamp(time, timezone)
+
         dyear = datetime(dtime.year, 12, 31, 0, 0).timetuple().tm_yday
         doy[ind, 0] = np.cos(datetime.fromtimestamp(time).timetuple().tm_yday / dyear * 2 * np.pi)
         doy[ind, 1] = np.sin(datetime.fromtimestamp(time).timetuple().tm_yday / dyear * 2 * np.pi)
@@ -557,7 +570,8 @@ def retrieval_input(lev1: dict, coeff: list) -> np.ndarray:
     
     _, freq_ind, _ = np.intersect1d(
         lev1["frequency"][:], coeff["freq"][:, 0], assume_unique=False, return_indices=True
-    )    
+    )
+
     if coeff["ret_type"] < 2:
         ret_in = lev1["tb"][:, :]
     else:
@@ -583,7 +597,7 @@ def retrieval_input(lev1: dict, coeff: list) -> np.ndarray:
                 ret_in = np.concatenate(
                     (
                         ret_in,
-                        np.reshape(lev1["air_pressure"][:].data * 100.0, (len(lev1["time"][:]), 1)),
+                        np.reshape(lev1["air_pressure"][:].data, (len(lev1["time"][:]), 1)),
                     ),
                     axis=1,
                 )
@@ -613,3 +627,8 @@ def retrieval_input(lev1: dict, coeff: list) -> np.ndarray:
                 ret_in = np.concatenate((ret_in, sun), axis=1)
 
     return ret_in
+
+
+def decimal_hour2unix(date: list, time: np.ndarray) -> np.ndarray:
+    unix_timestamp = np.datetime64("-".join(date)).astype("datetime64[s]").astype("int")
+    return (time * 60 * 60 + unix_timestamp).astype(int)

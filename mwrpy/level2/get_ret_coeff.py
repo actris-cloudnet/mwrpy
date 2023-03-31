@@ -23,6 +23,7 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
     """
 
     c_list = get_coeff_list(site, prefix)
+
     coeff = {}
     coeff["ret_type"] = Fill_Value_Int
 
