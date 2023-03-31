@@ -74,7 +74,7 @@ def calc_p_baro(T: np.ndarray, q: np.ndarray, p: np.ndarray, z: np.ndarray) -> n
     ).magnitude
     p_baro = ma.masked_all(T.shape)
     p_baro[(~ma.getmaskarray(q).any(axis=1)) & (~ma.getmaskarray(T).any(axis=1)), 0] = (
-        p[(~ma.getmaskarray(q).any(axis=1)) & (~ma.getmaskarray(T).any(axis=1))] * HPA_TO_P
+        p[(~ma.getmaskarray(q).any(axis=1)) & (~ma.getmaskarray(T).any(axis=1))]
     )
     for ialt in np.arange(len(z) - 1) + 1:
         p_baro[:, ialt] = p_baro[:, ialt - 1] * np.exp(
