@@ -23,10 +23,14 @@ def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
         attributes = dict(ATTRIBUTES_COM, **eval("ATTRIBUTES_" + data_type))
 
     elif data_type == "1C01":
-        attributes = dict(ATTRIBUTES_COM, **ATTRIBUTES_1B01, **ATTRIBUTES_1B11, **ATTRIBUTES_1B21)
+        attributes = dict(
+            ATTRIBUTES_COM, **ATTRIBUTES_1B01, **ATTRIBUTES_1B11, **ATTRIBUTES_1B21
+        )
 
     else:
-        raise RuntimeError(["Data type " + data_type + " not supported for file writing."])
+        raise RuntimeError(
+            ["Data type " + data_type + " not supported for file writing."]
+        )
 
     for key in list(rpg_variables):
         if key in attributes:
@@ -35,7 +39,9 @@ def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
             del rpg_variables[key]
 
     index_map = {v: i for i, v in enumerate(attributes)}
-    rpg_variables = dict(sorted(rpg_variables.items(), key=lambda pair: index_map[pair[0]]))
+    rpg_variables = dict(
+        sorted(rpg_variables.items(), key=lambda pair: index_map[pair[0]])
+    )
 
     return rpg_variables
 
@@ -114,8 +120,7 @@ ATTRIBUTES_1B01 = {
         units="1",
     ),
     "receiver": MetaData(
-        long_name="Corresponding microwave receiver for each channel",
-        units="1"
+        long_name="Corresponding microwave receiver for each channel", units="1"
     ),
     "bandwidth": MetaData(
         long_name="Bandwidth of microwave channels",

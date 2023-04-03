@@ -1,9 +1,10 @@
 """Module for atmsopheric functions."""
-import numpy as np
-from numpy import ma
 import metpy.calc as mpcalc
-from metpy.units import masked_array
+import numpy as np
 import scipy.constants
+from metpy.units import masked_array
+from numpy import ma
+
 import mwrpy.constants as con
 
 HPA_TO_P = 100
@@ -37,12 +38,19 @@ def pot_tem(T: np.ndarray, q: np.ndarray, p: np.ndarray, z: np.ndarray) -> np.nd
     ).magnitude
 
 
-def eq_pot_tem(T: np.ndarray, q: np.ndarray, p: np.ndarray, z: np.ndarray) -> np.ndarray:
+def eq_pot_tem(
+    T: np.ndarray, q: np.ndarray, p: np.ndarray, z: np.ndarray
+) -> np.ndarray:
     "Equivalent potential temperature (K)"
     e = vap_pres(q, T)
     p_baro = calc_p_baro(T, q, p, z)
     Theta = pot_tem(T, q, p, z)
-    return Theta + (spec_heat(T) * con.MW_RATIO * e / (p_baro - e) / con.SPECIFIC_HEAT) * Theta / T
+    return (
+        Theta
+        + (spec_heat(T) * con.MW_RATIO * e / (p_baro - e) / con.SPECIFIC_HEAT)
+        * Theta
+        / T
+    )
 
 
 def rel_hum(T: np.ndarray, q: np.ndarray) -> np.ndarray:
@@ -67,15 +75,17 @@ def abs_hum(T: np.ndarray, rh: np.ndarray) -> np.ndarray:
     return (rh * es) / (con.RW * T)
 
 
-def calc_p_baro(T: np.ndarray, q: np.ndarray, p: np.ndarray, z: np.ndarray) -> np.ndarray:
+def calc_p_baro(
+    T: np.ndarray, q: np.ndarray, p: np.ndarray, z: np.ndarray
+) -> np.ndarray:
     "Calculate pressure (Pa) in each level using barometric height formula"
     Tv = mpcalc.virtual_temperature(
         masked_array(T, data_units="K"), masked_array(q, data_units="")
     ).magnitude
     p_baro = ma.masked_all(T.shape)
-    p_baro[(~ma.getmaskarray(q).any(axis=1)) & (~ma.getmaskarray(T).any(axis=1)), 0] = (
-        p[(~ma.getmaskarray(q).any(axis=1)) & (~ma.getmaskarray(T).any(axis=1))]
-    )
+    p_baro[
+        (~ma.getmaskarray(q).any(axis=1)) & (~ma.getmaskarray(T).any(axis=1)), 0
+    ] = p[(~ma.getmaskarray(q).any(axis=1)) & (~ma.getmaskarray(T).any(axis=1))]
     for ialt in np.arange(len(z) - 1) + 1:
         p_baro[:, ialt] = p_baro[:, ialt - 1] * np.exp(
             -scipy.constants.g

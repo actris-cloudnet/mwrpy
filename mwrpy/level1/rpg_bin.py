@@ -43,7 +43,19 @@ def stack_files(file_list):
                 target[name] = value
 
     ext = str(file_list[0][-3:]).lower()
-    if ext not in ("brt", "irt", "met", "hkd", "blb", "bls", "spc", "his", "iwv", "tpb", "tpc"):
+    if ext not in (
+        "brt",
+        "irt",
+        "met",
+        "hkd",
+        "blb",
+        "bls",
+        "spc",
+        "his",
+        "iwv",
+        "tpb",
+        "tpc",
+    ):
         raise RuntimeError(["Error: no reader for file type " + ext])
     reader_name = str("read_" + ext)
     data, header = {}, {}
@@ -65,7 +77,9 @@ class RpgBin:
 
     def __init__(self, file_list):
         self.header, self.raw_data = stack_files(file_list)
-        self.raw_data["time"] = utils.epoch2unix(self.raw_data["time"], self.header["_time_ref"])
+        self.raw_data["time"] = utils.epoch2unix(
+            self.raw_data["time"], self.header["_time_ref"]
+        )
         self.date = self._get_date()
         self.data = {}
         self._init_data()
@@ -89,7 +103,9 @@ class RpgBin:
         if float(date[0]) > today:
             date = (
                 datetime.datetime.utcfromtimestamp(
-                    utils.epoch2unix(time_median, self.header["_time_ref"], (1970, 1, 1))
+                    utils.epoch2unix(
+                        time_median, self.header["_time_ref"], (1970, 1, 1)
+                    )
                 )
                 .strftime("%Y %m %d")
                 .split()
@@ -168,13 +184,15 @@ def read_tpc(file_name: str) -> dict:
                 vrs = {
                     "time": np.ones(header["n"], np.int32) * Fill_Value_Int,
                     "rain": np.ones(header["n"], np.byte) * Fill_Value_Int,
-                    "T": np.ones((header["n"], header["_alt_anz"]), np.float32) * Fill_Value_Float,
+                    "T": np.ones((header["n"], header["_alt_anz"]), np.float32)
+                    * Fill_Value_Float,
                 }
             else:
                 vrs = {
                     "time": np.ones(header["n"], np.int32) * Fill_Value_Int,
                     "rain": np.ones(header["n"], np.byte) * Fill_Value_Int,
-                    "T": np.ones((header["n"], header["_alt_anz"]), np.float32) * Fill_Value_Float,
+                    "T": np.ones((header["n"], header["_alt_anz"]), np.float32)
+                    * Fill_Value_Float,
                     "T_ele": np.ones(header["n"], np.float32) * Fill_Value_Float,
                     "T_azi": np.ones(header["n"], np.float32) * Fill_Value_Float,
                     "T_ra": np.ones(header["n"], np.float32) * Fill_Value_Float,
@@ -204,9 +222,7 @@ def read_tpc(file_name: str) -> dict:
             for sample in range(header["n"]):
                 data["time"][sample] = np.fromfile(file, np.int32, 1)
                 data["rain"][sample] = np.fromfile(file, np.byte, 1)
-                data["T"][
-                    sample,
-                ] = np.fromfile(file, np.float32, header["_alt_anz"])
+                data["T"][sample,] = np.fromfile(file, np.float32, header["_alt_anz"])
                 if code == 780798066:
                     ang = np.fromfile(file, np.int32, 1)
                     data["T_ele"][sample], data["T_azi"][sample] = _angle_calc(ang)
@@ -260,7 +276,8 @@ def read_tpb(file_name: str) -> dict:
             vrs = {
                 "time": np.ones(header["n"], np.int32) * Fill_Value_Int,
                 "rain": np.ones(header["n"], np.byte) * Fill_Value_Int,
-                "T": np.ones((header["n"], header["_alt_anz"]), np.float32) * Fill_Value_Float,
+                "T": np.ones((header["n"], header["_alt_anz"]), np.float32)
+                * Fill_Value_Float,
             }
             return vrs
 
@@ -271,9 +288,7 @@ def read_tpb(file_name: str) -> dict:
             for sample in range(header["n"]):
                 data["time"][sample] = np.fromfile(file, np.int32, 1)
                 data["rain"][sample] = np.fromfile(file, np.byte, 1)
-                data["T"][
-                    sample,
-                ] = np.fromfile(file, np.float32, header["_alt_anz"])
+                data["T"][sample,] = np.fromfile(file, np.float32, header["_alt_anz"])
             file.close()
             return data
 
@@ -286,7 +301,6 @@ def read_iwv(file_name: str) -> dict:
     """This function reads RPG MWR .IWV binary files."""
 
     with open(file_name, "rb") as file:
-
         code = np.fromfile(file, np.int32, 1)
         if code not in (594811068, 594811000):
             raise RuntimeError(["Error: IWV file code " + str(code) + " not suported"])
@@ -354,7 +368,9 @@ def read_iwv(file_name: str) -> dict:
                     ang = np.fromfile(file, np.float32, 1)
                 elif code == 594811000:
                     ang = np.fromfile(file, np.int32, 1)
-                data["iwv_ele"][sample], data["iwv_azi"][sample] = _angle_calc(ang, code)
+                data["iwv_ele"][sample], data["iwv_azi"][sample] = _angle_calc(
+                    ang, code
+                )
             file.close()
             return data
 
@@ -367,7 +383,6 @@ def read_bls(file_name: str) -> dict:
     """This function reads RPG MWR .BLS binary files."""
 
     with open(file_name, "rb") as file:
-
         code = np.fromfile(file, np.int32, 1)
         if code != 567846000:
             raise RuntimeError(["Error: BLS file code " + str(code) + " not suported"])
@@ -403,12 +418,18 @@ def read_bls(file_name: str) -> dict:
             """Initialize data arrays"""
 
             vrs = {
-                "time": np.ones(header["n"] * header["_n_ang"], np.int32) * Fill_Value_Int,
-                "rain": np.ones(header["n"] * header["_n_ang"], np.byte) * Fill_Value_Int,
-                "tb": np.ones([header["n"] * header["_n_ang"], header["_n_f"]], np.float32)
+                "time": np.ones(header["n"] * header["_n_ang"], np.int32)
+                * Fill_Value_Int,
+                "rain": np.ones(header["n"] * header["_n_ang"], np.byte)
+                * Fill_Value_Int,
+                "tb": np.ones(
+                    [header["n"] * header["_n_ang"], header["_n_f"]], np.float32
+                )
                 * Fill_Value_Float,
-                "elevation_angle": np.ones(header["n"] * header["_n_ang"], np.float32) * Fill_Value_Float,
-                "azimuth_angle": np.ones(header["n"] * header["_n_ang"], np.float32) * Fill_Value_Float,
+                "elevation_angle": np.ones(header["n"] * header["_n_ang"], np.float32)
+                * Fill_Value_Float,
+                "azimuth_angle": np.ones(header["n"] * header["_n_ang"], np.float32)
+                * Fill_Value_Float,
             }
             return vrs
 
@@ -432,15 +453,15 @@ def read_bls(file_name: str) -> dict:
 
             data = _create_variables()
             for sample in range(header["n"] * header["_n_ang"]):
-
                 data["time"][sample] = np.fromfile(file, np.int32, 1)
                 data["rain"][sample] = np.fromfile(file, np.byte, 1)
                 temp_sfc = np.fromfile(file, np.float32, 1)
-                data["tb"][
-                    sample,
-                ] = np.fromfile(file, np.float32, header["_n_f"])
+                data["tb"][sample,] = np.fromfile(file, np.float32, header["_n_f"])
                 ang = np.fromfile(file, np.int32, 1)
-                data["elevation_angle"][sample], data["azimuth_angle"][sample] = _angle_calc(ang, code)
+                (
+                    data["elevation_angle"][sample],
+                    data["azimuth_angle"][sample],
+                ) = _angle_calc(ang, code)
             file.close()
             return data
 
@@ -453,7 +474,6 @@ def read_brt(file_name: str) -> dict:
     """This function reads RPG MWR .BRT binary files."""
 
     with open(file_name, "rb") as file:
-
         code = np.fromfile(file, np.int32, 1)
         if code not in (666000, 666666):
             raise RuntimeError(["Error: BRT file code " + str(code) + " not suported"])
@@ -479,7 +499,8 @@ def read_brt(file_name: str) -> dict:
             vrs = {
                 "time": np.ones(header["n"], np.int32) * Fill_Value_Int,
                 "rain": np.ones(header["n"], np.byte) * Fill_Value_Int,
-                "tb": np.ones([header["n"], header["_n_f"]], np.float32) * Fill_Value_Float,
+                "tb": np.ones([header["n"], header["_n_f"]], np.float32)
+                * Fill_Value_Float,
                 "elevation_angle": np.ones(header["n"], np.float32) * Fill_Value_Float,
                 "azimuth_angle": np.ones(header["n"], np.float32) * Fill_Value_Float,
             }
@@ -513,17 +534,17 @@ def read_brt(file_name: str) -> dict:
 
             data = _create_variables()
             for sample in range(header["n"]):
-
                 data["time"][sample] = np.fromfile(file, np.int32, 1)
                 data["rain"][sample] = np.fromfile(file, np.byte, 1)
-                data["tb"][
-                    sample,
-                ] = np.fromfile(file, np.float32, header["_n_f"])
+                data["tb"][sample,] = np.fromfile(file, np.float32, header["_n_f"])
                 if code == 666666:
                     ang = np.fromfile(file, np.float32, 1)
                 elif code == 666000:
                     ang = np.fromfile(file, np.int32, 1)
-                data["elevation_angle"][sample], data["azimuth_angle"][sample] = _angle_calc(ang, code)
+                (
+                    data["elevation_angle"][sample],
+                    data["azimuth_angle"][sample],
+                ) = _angle_calc(ang, code)
             file.close()
             return data
 
@@ -536,7 +557,6 @@ def read_met(file_name: str) -> dict:
     """This function reads RPG MWR .MET binary files."""
 
     with open(file_name, "rb") as file:
-
         code = np.fromfile(file, np.int32, 1)
         if code not in (599658943, 599658944):
             raise RuntimeError(["Error: MET file code " + str(code) + " not suported"])
@@ -577,7 +597,8 @@ def read_met(file_name: str) -> dict:
                 "rain": np.ones(header["n"], np.byte) * Fill_Value_Int,
                 "air_pressure": np.ones(header["n"], np.float32) * Fill_Value_Float,
                 "air_temperature": np.ones(header["n"], np.float32) * Fill_Value_Float,
-                "relative_humidity": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "relative_humidity": np.ones(header["n"], np.float32)
+                * Fill_Value_Float,
                 "adds": np.ones([header["n"], 3], np.float32) * Fill_Value_Float,
             }
             #'adds' : np.ones( [header['n'], header['_n_sen'].count('1')],
@@ -593,7 +614,9 @@ def read_met(file_name: str) -> dict:
                 data["rain"][sample] = np.fromfile(file, np.byte, 1)
                 data["air_pressure"][sample] = np.fromfile(file, np.float32, 1)
                 data["air_temperature"][sample] = np.fromfile(file, np.float32, 1)
-                data["relative_humidity"][sample] = np.fromfile(file, np.float32, 1) / 100.0
+                data["relative_humidity"][sample] = (
+                    np.fromfile(file, np.float32, 1) / 100.0
+                )
                 for add in range(header["_n_sen"].count("1")):
                     data["adds"][sample, add] = np.fromfile(file, np.float32, 1)
             file.close()
@@ -608,7 +631,6 @@ def read_irt(file_name: str) -> dict:
     """This function reads RPG MWR .IRT binary files."""
 
     with open(file_name, "rb") as file:
-
         code = np.fromfile(file, np.int32, 1)
         if code not in (671112495, 671112496, 671112000):
             raise RuntimeError(["Error: IRT file code " + str(code) + " not suported"])
@@ -638,8 +660,10 @@ def read_irt(file_name: str) -> dict:
             vrs = {
                 "time": np.ones(header["n"], np.int32) * Fill_Value_Int,
                 "rain": np.ones(header["n"], np.byte) * Fill_Value_Int,
-                "irt": np.ones([header["n"], header["_n_f"]], np.float32) * Fill_Value_Float,
-                "ir_elevation_angle": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "irt": np.ones([header["n"], header["_n_f"]], np.float32)
+                * Fill_Value_Float,
+                "ir_elevation_angle": np.ones(header["n"], np.float32)
+                * Fill_Value_Float,
                 "ir_azimuth_angle": np.ones(header["n"], np.float32) * Fill_Value_Float,
             }
             return vrs
@@ -683,7 +707,10 @@ def read_irt(file_name: str) -> dict:
                     ang = np.fromfile(file, np.float32, 1)
                 elif code == 671112000:
                     ang = np.fromfile(file, np.int32, 1)
-                data["ir_elevation_angle"][sample], data["ir_azimuth_angle"][sample] = _angle_calc(ang, code)
+                (
+                    data["ir_elevation_angle"][sample],
+                    data["ir_azimuth_angle"][sample],
+                ) = _angle_calc(ang, code)
             file.close()
             return data
 
@@ -696,7 +723,6 @@ def read_blb(file_name: str) -> dict:
     """This function reads RPG MWR .BLB binary files."""
 
     with open(file_name, "rb") as file:
-
         code = np.fromfile(file, np.int32, 1)
         if code not in (567845847, 567845848):
             raise RuntimeError(["Error: BLB file code " + str(code) + " not suported"])
@@ -746,7 +772,9 @@ def read_blb(file_name: str) -> dict:
             vrs = {
                 "time": np.ones(header["n"], np.int32) * Fill_Value_Int,
                 "rf_mod": np.ones(header["n"], np.byte) * Fill_Value_Int,
-                "tb": np.ones([header["n"], header["_n_f"], header["_n_ang"]], np.float32)
+                "tb": np.ones(
+                    [header["n"], header["_n_f"], header["_n_ang"]], np.float32
+                )
                 * Fill_Value_Float,
             }
             return vrs
@@ -776,7 +804,6 @@ def read_hkd(file_name: str) -> dict:
     """This function reads RPG MWR .HKD binary files."""
 
     with open(file_name, "rb") as file:
-
         code = np.fromfile(file, np.int32, 1)
         if code != 837854832:
             raise RuntimeError(["Error: HKD file code " + str(code) + " not suported"])
@@ -820,13 +847,9 @@ def read_hkd(file_name: str) -> dict:
                     data["longitude"][sample] = np.fromfile(file, np.float32, count=1)
                     data["latitude"][sample] = np.fromfile(file, np.float32, count=1)
                 if header["_sel"] & 2:
-                    data["temp"][
-                        sample,
-                    ] = np.fromfile(file, np.float32, count=4)
+                    data["temp"][sample,] = np.fromfile(file, np.float32, count=4)
                 if header["_sel"] & 4:
-                    data["stab"][
-                        sample,
-                    ] = np.fromfile(file, np.float32, count=2)
+                    data["stab"][sample,] = np.fromfile(file, np.float32, count=2)
                 if header["_sel"] & 8:
                     data["flash"][sample] = np.fromfile(file, np.int32, count=1)
                 if header["_sel"] & 16:
@@ -845,7 +868,6 @@ def read_spc(file_name: str) -> dict:
     """This function reads RPG MWR .SPC binary files."""
 
     with open(file_name, "rb") as file:
-
         code = np.fromfile(file, np.int32, 1)
         if code not in (666667, 667000):
             raise RuntimeError(["Error: SPC file code " + str(code) + " not suported"])
@@ -871,7 +893,8 @@ def read_spc(file_name: str) -> dict:
             vrs = {
                 "time": np.ones(header["n"], np.int32) * Fill_Value_Int,
                 "rain": np.ones(header["n"], np.byte) * Fill_Value_Int,
-                "tb": np.ones([header["n"], header["_n_f"]], np.float32) * Fill_Value_Float,
+                "tb": np.ones([header["n"], header["_n_f"]], np.float32)
+                * Fill_Value_Float,
                 "elevation_angle": np.ones(header["n"], np.float32) * Fill_Value_Float,
                 "azimuth_angle": np.ones(header["n"], np.float32) * Fill_Value_Float,
             }
@@ -898,17 +921,17 @@ def read_spc(file_name: str) -> dict:
 
             data = _create_variables()
             for sample in range(header["n"]):
-
                 data["time"][sample] = np.fromfile(file, np.int32, 1)
                 data["rain"][sample] = np.fromfile(file, np.byte, 1)
-                data["tb"][
-                    sample,
-                ] = np.fromfile(file, np.float32, header["_n_f"])
+                data["tb"][sample,] = np.fromfile(file, np.float32, header["_n_f"])
                 if code == 666667:
                     ang = np.fromfile(file, np.float32, 1)
                 elif code == 667000:
                     ang = np.fromfile(file, np.int32, 1)
-                data["elevation_angle"][sample], data["azimuth_angle"][sample] = _angle_calc(ang, code)
+                (
+                    data["elevation_angle"][sample],
+                    data["azimuth_angle"][sample],
+                ) = _angle_calc(ang, code)
             file.close()
             return data
 
@@ -921,7 +944,6 @@ def read_his(file_name: str) -> dict:
     """This function reads RPG MWR ABSCAL.HIS binary files."""
 
     with open(file_name, "rb") as file:
-
         code = np.fromfile(file, np.int32, 1)
         if code != 39583209:
             raise RuntimeError(["Error: CAL file code " + str(code) + " not suported"])
@@ -973,7 +995,6 @@ def read_his(file_name: str) -> dict:
 
             data = _create_variables()
             for sample in range(header["n"]):
-
                 data["len"][sample] = np.fromfile(file, np.int32, 1)
                 data["rad_id"][sample] = np.fromfile(file, np.int32, 1)
                 data["cal1_t"][sample] = np.fromfile(file, np.int32, 1)
@@ -989,9 +1010,7 @@ def read_his(file_name: str) -> dict:
                 data["hl_temp2"][sample] = np.fromfile(file, np.float32, 1)
                 data["cl_temp1"][sample] = np.fromfile(file, np.float32, 1)
                 data["cl_temp2"][sample] = np.fromfile(file, np.float32, 1)
-                data["spare"][
-                    sample,
-                ] = np.fromfile(file, np.float32, 5)
+                data["spare"][sample,] = np.fromfile(file, np.float32, 5)
                 data["n_ch1"][sample] = np.fromfile(file, np.int32, 1)
                 data["n_ch1"][sample] = data["n_ch1"][sample]
                 data["freq1"][sample, 0 : data["n_ch1"][sample]] = np.fromfile(
@@ -1003,7 +1022,9 @@ def read_his(file_name: str) -> dict:
                 )
                 data["cal_flag"][
                     sample, 0 : int(data["n_ch1"][sample] + data["n_ch2"][sample])
-                ] = np.fromfile(file, np.int32, int(data["n_ch1"][sample] + data["n_ch2"][sample]))
+                ] = np.fromfile(
+                    file, np.int32, int(data["n_ch1"][sample] + data["n_ch2"][sample])
+                )
                 data["gain"][
                     sample, 0 : int(data["n_ch1"][sample] + data["n_ch2"][sample])
                 ] = np.fromfile(

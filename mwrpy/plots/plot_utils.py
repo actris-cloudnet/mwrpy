@@ -25,7 +25,9 @@ def _get_ret_flag(nc_file: str, time: ndarray) -> ndarray:
     t_lev1 = read_nc_fields(lev1_file, "time")
     f_lev1 = read_nc_fields(lev1_file, "frequency")
     freq = get_ret_freq(nc_file)
-    _, freq_ind, _ = np.intersect1d(f_lev1.data, freq, assume_unique=False, return_indices=True)
+    _, freq_ind, _ = np.intersect1d(
+        f_lev1.data, freq, assume_unique=False, return_indices=True
+    )
     _, q_ind, t_ind = np.intersect1d(
         seconds2hours(t_lev1.data), time.data, assume_unique=False, return_indices=True
     )
@@ -74,7 +76,9 @@ def _get_bit_flag(data: ndarray, bits: ndarray) -> ndarray:
     return flag
 
 
-def _get_unmasked_values(data: ma.MaskedArray, time: ndarray) -> tuple[ndarray, ndarray]:
+def _get_unmasked_values(
+    data: ma.MaskedArray, time: ndarray
+) -> tuple[ndarray, ndarray]:
     """Returns unmasked time and data"""
     if ma.is_masked(data) is False:
         return data, time
@@ -111,7 +115,9 @@ def _gap_array(time: ndarray, case_date, tgap: float = 5.0 / 60.0) -> ndarray:
     return gtim
 
 
-def _calculate_rolling_mean(time: ndarray, data: ndarray, win: float = 0.5) -> tuple[ndarray, int]:
+def _calculate_rolling_mean(
+    time: ndarray, data: ndarray, win: float = 0.5
+) -> tuple[ndarray, int]:
     """Returns rolling mean and used window width."""
     width = len(time[time <= time[0] + win])
     if (width % 2) != 0:
@@ -133,7 +139,9 @@ def _read_location(nc_file: str) -> str:
     return site_name
 
 
-def heatmap(data, row_labels, col_labels, ax=None, cbar_kw=None, cbarlabel="", **kwargs):
+def heatmap(
+    data, row_labels, col_labels, ax=None, cbar_kw=None, cbarlabel="", **kwargs
+):
     """
     Create a heatmap from a numpy array and two lists of labels.
 
@@ -182,7 +190,12 @@ def heatmap(data, row_labels, col_labels, ax=None, cbar_kw=None, cbarlabel="", *
 
 
 def annotate_heatmap(
-    im, data=None, valfmt="{x:.2f}", textcolors=("black", "white"), threshold=None, **textkw
+    im,
+    data=None,
+    valfmt="{x:.2f}",
+    textcolors=("black", "white"),
+    threshold=None,
+    **textkw
 ):
     """
     A function to annotate a heatmap.

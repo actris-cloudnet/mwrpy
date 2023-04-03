@@ -6,6 +6,7 @@ import numpy as np
 from numpy import ma
 
 from mwrpy import utils, version
+
 from .level1.lev1_meta_nc import MetaData
 
 
@@ -189,7 +190,9 @@ def save_rpg(rpg: Rpg, output_file: str, att: dict, data_type: str) -> None:
             "frequency": len(rpg.data["tb_spectrum"][:].T),
         }
     else:
-        raise RuntimeError(["Data type " + data_type + " not supported for file writing."])
+        raise RuntimeError(
+            ["Data type " + data_type + " not supported for file writing."]
+        )
 
     with init_file(output_file, dims, rpg.data, att) as rootgrp:
         setattr(rootgrp, "date", rpg.date)

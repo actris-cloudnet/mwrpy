@@ -2,10 +2,10 @@
 
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-MWRpy is a Python based software to process RPG Microwave Radiometer data and is developed at the University of Cologne, Germany as part of the [Aerosol, Clouds and Trace Gases Research Infrastructure (ACTRIS)](https://actris.eu/). 
+MWRpy is a Python based software to process RPG Microwave Radiometer data and is developed at the University of Cologne, Germany as part of the [Aerosol, Clouds and Trace Gases Research Infrastructure (ACTRIS)](https://actris.eu/).
 The software features reading raw data, Level 1 quality control, generation of Level 2 data products and visualization.
 
-The data format including metadata information, variable names and file naming is designed to be compliant with the data structure and naming convention developed in the [EUMETNET Profiling Programme E-PROFILE](https://www.eumetnet.eu/). 
+The data format including metadata information, variable names and file naming is designed to be compliant with the data structure and naming convention developed in the [EUMETNET Profiling Programme E-PROFILE](https://www.eumetnet.eu/).
 
 ![MWRpy example output](https://atmos.meteo.uni-koeln.de/~hatpro/quicklooks/obs/site/jue/tophat/actris/level2/2022/10/29/20221029_juelich_temperature.png)
 
@@ -30,7 +30,7 @@ This folder contains configuration files for each instrument type in `instrument
     # Bit 6: rain_detected
     # Bit 7: sun_in_beam
     # Bit 8: tb_offset_above_threshold
-    
+
 #### Level 1 Data Types
 * 1B01: MWR brightnesss temperatures from .BRT and .BLB/.BLS files
 * 1B11: IR brightnesss temperatures from .IRT files
@@ -64,8 +64,8 @@ Running the software is based on a wrapper script `mwrpy/mwrpy.py`:
 
     usage: mwrpy.py [-h] -s SITE [-d YYYY-MM-DD] [--start YYYY-MM-DD]
                            [--stop YYYY-MM-DD] [-p ...] COMMAND ...
-                           
-                           
+
+
 The following general arguments can be used and must be issued before the command argument:
 
 
@@ -78,7 +78,7 @@ The following general arguments can be used and must be issued before the comman
 |       | `--stop`     | `current day `    | Stopping date.                                                                     |
 | `-p`  | `--products` | all               | Processed products, e.g, `1C01, 2I02, 2P03, stats`.                                |
 
-                           
+
 ### Commands
 
 ### `process`
@@ -89,4 +89,4 @@ In addition to the general arguments, it accepts the following special arguments
 
 | Short | Long                   | Default | Description                                                                        |
 |:------|:-----------------------|:--------|:-----------------------------------------------------------------------------------|
-| `-f`  | `--figure`             | `False` | Produce figures only; no processing. 
+| `-f`  | `--figure`             | `False` | Produce figures only; no processing.

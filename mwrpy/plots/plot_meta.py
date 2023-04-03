@@ -220,7 +220,9 @@ ATTRIBUTES = {
         name="Rain & sun quality flag", clabel=_CLABEL["quality_flag_0"], source="qf"
     ),
     "quality_flag_1": PlotMeta(
-        name="Receiver status quality flag", clabel=_CLABEL["quality_flag_1"], source="qf"
+        name="Receiver status quality flag",
+        clabel=_CLABEL["quality_flag_1"],
+        source="qf",
     ),
     "quality_flag_2": PlotMeta(
         name="Spectral consistency quality flag",

@@ -3,13 +3,14 @@
 
 import argparse
 import sys
-import utils
 import warnings
+
+import utils
 
 from mwrpy import process_mwrpy
 
-#warnings.simplefilter("ignore", UserWarning)
-#warnings.simplefilter("ignore", RuntimeWarning)
+# warnings.simplefilter("ignore", UserWarning)
+# warnings.simplefilter("ignore", RuntimeWarning)
 
 """All modules MUST have an add_arguments function which adds the subcommand to the subparser."""
 modules = {
@@ -34,7 +35,11 @@ def _parse_args(args):
         subparsers = module.add_arguments(subparsers)
     group = parser.add_argument_group(title="General options")
     group.add_argument(
-        "-s", "--site", required=True, help="Site to process data from, e.g. juelich", type=str
+        "-s",
+        "--site",
+        required=True,
+        help="Site to process data from, e.g. juelich",
+        type=str,
     )
     group.add_argument(
         "-p",
@@ -71,7 +76,11 @@ def _parse_args(args):
         default=utils.get_date_from_past(-1),
     )
     group.add_argument(
-        "-d", "--date", type=str, metavar="YYYY-MM-DD", help="Single date to be processed."
+        "-d",
+        "--date",
+        type=str,
+        metavar="YYYY-MM-DD",
+        help="Single date to be processed.",
     )
     return parser.parse_args(args)
 

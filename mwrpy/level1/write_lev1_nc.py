@@ -72,12 +72,13 @@ def prepare_data(
     """Load and prepare data for netCDF writing"""
 
     if data_type in ("1B01", "1C01"):
-
         file_list_brt = get_file_list(path_to_files, "BRT")
 
         rpg_bin = get_rpg_bin(file_list_brt)
         rpg_bin.data["tb"] = rpg_bin.data["tb"][:, np.argsort(params["bandwidth"])]
-        rpg_bin.data["frequency"] = rpg_bin.header["_f"][np.argsort(params["bandwidth"])]
+        rpg_bin.data["frequency"] = rpg_bin.header["_f"][
+            np.argsort(params["bandwidth"])
+        ]
         fields = [
             "bandwidth",
             "n_sidebands",
@@ -88,7 +89,9 @@ def prepare_data(
         ]
         for name in fields:
             rpg_bin.data[name] = np.array(params[name])
-        rpg_bin.data["time_bnds"] = add_time_bounds(rpg_bin.data["time"], params["int_time"])
+        rpg_bin.data["time_bnds"] = add_time_bounds(
+            rpg_bin.data["time"], params["int_time"]
+        )
         rpg_bin.data["pointing_flag"] = np.zeros(len(rpg_bin.data["time"]), np.int32)
 
         if data_type == "1B01":
@@ -110,7 +113,10 @@ def prepare_data(
             (len(rpg_bin.data["time"]), len(params["receiver"])), np.int32
         )
         _, ind_brt, ind_hkd = np.intersect1d(
-            rpg_bin.data["time"], rpg_hkd.data["time"], assume_unique=False, return_indices=True
+            rpg_bin.data["time"],
+            rpg_hkd.data["time"],
+            assume_unique=False,
+            return_indices=True,
         )
         rpg_bin.data["status"][ind_brt, :] = hkd_sanity_check(
             rpg_hkd.data["status"][ind_hkd], params
@@ -120,7 +126,12 @@ def prepare_data(
             try:
                 file_list_bls = get_file_list(path_to_files, "BLS")
             except:
-                print(["No binary files with extension bls found in directory " + path_to_files])
+                print(
+                    [
+                        "No binary files with extension bls found in directory "
+                        + path_to_files
+                    ]
+                )
             if len(file_list_bls) > 0:
                 rpg_bls = get_rpg_bin(file_list_bls)
                 _add_bls(rpg_bin, rpg_bls, rpg_hkd, params, site)
@@ -132,7 +143,9 @@ def prepare_data(
         if params["azi_cor"] != Fill_Value_Float:
             _azi_correction(rpg_bin.data, params)
         if params["const_azi"] != Fill_Value_Float:
-            rpg_bin.data["azimuth_angle"] = (rpg_bin.data["azimuth_angle"] + params["const_azi"]) % 360
+            rpg_bin.data["azimuth_angle"] = (
+                rpg_bin.data["azimuth_angle"] + params["const_azi"]
+            ) % 360
 
         if data_type == "1C01":
             if params["ir_flag"]:
@@ -146,12 +159,20 @@ def prepare_data(
                     rpg_bin.data["ir_wavelength"] = rpg_irt.header["_f"]
                     rpg_bin.data["ir_bandwidth"] = params["ir_bandwidth"]
                     rpg_bin.data["ir_beamwidth"] = params["ir_beamwidth"]
-                    add_interpol1d(rpg_bin.data, rpg_irt.data["irt"], rpg_irt.data["time"], "irt")
                     add_interpol1d(
-                        rpg_bin.data, rpg_irt.data["ir_elevation_angle"], rpg_irt.data["time"], "ir_elevation_angle"
+                        rpg_bin.data, rpg_irt.data["irt"], rpg_irt.data["time"], "irt"
                     )
                     add_interpol1d(
-                        rpg_bin.data, rpg_irt.data["ir_azimuth_angle"], rpg_irt.data["time"], "ir_azimuth_angle"
+                        rpg_bin.data,
+                        rpg_irt.data["ir_elevation_angle"],
+                        rpg_irt.data["time"],
+                        "ir_elevation_angle",
+                    )
+                    add_interpol1d(
+                        rpg_bin.data,
+                        rpg_irt.data["ir_azimuth_angle"],
+                        rpg_irt.data["time"],
+                        "ir_azimuth_angle",
                     )
 
             (
@@ -203,7 +224,12 @@ def prepare_data(
                         "rainfall_rate",
                     )
             except:
-                print(["No binary files with extension met found in directory " + path_to_files])
+                print(
+                    [
+                        "No binary files with extension met found in directory "
+                        + path_to_files
+                    ]
+                )
 
     elif data_type == "1B11":
         file_list_irt = get_file_list(path_to_files, "IRT")
@@ -223,7 +249,9 @@ def prepare_data(
             rpg_bin.data["rainfall_rate"] = rpg_bin.data["adds"][:, 2] / 1000.0 / 3600.0
 
     else:
-        raise RuntimeError(["Data type " + data_type + " not supported for file writing."])
+        raise RuntimeError(
+            ["Data type " + data_type + " not supported for file writing."]
+        )
 
     file_list_hkd = get_file_list(path_to_files, "HKD")
     _append_hkd(file_list_hkd, rpg_bin, data_type, params)
@@ -234,7 +262,9 @@ def prepare_data(
     return rpg_bin
 
 
-def _append_hkd(file_list_hkd: list, rpg_bin: dict, data_type: str, params: dict) -> None:
+def _append_hkd(
+    file_list_hkd: list, rpg_bin: dict, data_type: str, params: dict
+) -> None:
     """Append hkd data on same time grid and perform TB sanity check"""
 
     hkd = get_rpg_bin(file_list_hkd)
@@ -271,8 +301,12 @@ def _append_hkd(file_list_hkd: list, rpg_bin: dict, data_type: str, params: dict
         )
 
     if data_type in ("1B01", "1C01"):
-        add_interpol1d(rpg_bin.data, hkd.data["temp"][:, 0:2], hkd.data["time"], "t_amb")
-        add_interpol1d(rpg_bin.data, hkd.data["temp"][:, 2:4], hkd.data["time"], "t_rec")
+        add_interpol1d(
+            rpg_bin.data, hkd.data["temp"][:, 0:2], hkd.data["time"], "t_amb"
+        )
+        add_interpol1d(
+            rpg_bin.data, hkd.data["temp"][:, 2:4], hkd.data["time"], "t_rec"
+        )
         add_interpol1d(rpg_bin.data, hkd.data["stab"], hkd.data["time"], "t_sta")
 
 
@@ -329,7 +363,9 @@ def find_lwcl_free(lev1: dict, ix: np.ndarray) -> tuple:
             irt = lev1["irt"][ix, :]
             irt[irt == Fill_Value_Float] = np.nan
             irt = np.nanmean(irt, axis=1)
-            irt[(lev1["pointing_flag"][ix] == 1) | (elevation_angle[ix] < 89.0)] = np.nan
+            irt[
+                (lev1["pointing_flag"][ix] == 1) | (elevation_angle[ix] < 89.0)
+            ] = np.nan
             irt_df = pd.DataFrame({"Irt": irt[:]}, index=pd.to_datetime(time, unit="s"))
             irt_mx = irt_df.rolling("20min", center=True, min_periods=100).max()
             index[(irt_mx["Irt"] > 263.15) & (tb_mx["Tb"] > tb_thres)] = 1
@@ -351,7 +387,9 @@ def _add_bls(brt: dict, bls: dict, hkd: dict, params: dict, site: str) -> None:
     """Add BLS boundary-layer scans using a linear time axis"""
 
     bls.data["time_bnds"] = add_time_bounds(bls.data["time"] + 1, params["int_time"])
-    bls.data["status"] = np.zeros((len(bls.data["time"]), len(params["receiver"])), np.int32)
+    bls.data["status"] = np.zeros(
+        (len(bls.data["time"]), len(params["receiver"])), np.int32
+    )
 
     for time_ind, time_bls in enumerate(bls.data["time"]):
         if np.min(np.abs(hkd.data["time"] - time_bls)) <= params["int_time"] * 2:
@@ -362,7 +400,9 @@ def _add_bls(brt: dict, bls: dict, hkd: dict, params: dict, site: str) -> None:
 
     bls.data["pointing_flag"] = np.ones(len(bls.data["time"]), np.int32)
     bls.data["liquid_cloud_flag"] = np.ones(len(bls.data["time"]), np.int32) * 2
-    bls.data["liquid_cloud_flag_status"] = np.ones(len(bls.data["time"]), np.int32) * Fill_Value_Int
+    bls.data["liquid_cloud_flag_status"] = (
+        np.ones(len(bls.data["time"]), np.int32) * Fill_Value_Int
+    )
     brt.data["time"] = np.concatenate((brt.data["time"], bls.data["time"]))
     ind = np.argsort(brt.data["time"])
     brt.data["time"] = brt.data["time"][ind]
@@ -389,7 +429,15 @@ def _add_bls(brt: dict, bls: dict, hkd: dict, params: dict, site: str) -> None:
 def _add_blb(brt: dict, blb: dict, hkd: dict, params: dict, site: str) -> None:
     """Add BLB boundary-layer scans using a linear time axis"""
 
-    time_add, time_bnds_add, elevation_angle_add, azimuth_angle_add, rain_add, tb_add, status_add = (
+    (
+        time_add,
+        time_bnds_add,
+        elevation_angle_add,
+        azimuth_angle_add,
+        rain_add,
+        tb_add,
+        status_add,
+    ) = (
         np.empty([0], dtype=np.int32),
         [],
         [],
@@ -398,7 +446,10 @@ def _add_blb(brt: dict, blb: dict, hkd: dict, params: dict, site: str) -> None:
         [],
         [],
     )
-    seqs = [(key, len(list(val))) for key, val in groupby(hkd.data["status"][:] & 2**18 > 0)]
+    seqs = [
+        (key, len(list(val)))
+        for key, val in groupby(hkd.data["status"][:] & 2**18 > 0)
+    ]
     seqs = np.array(
         [
             (key, sum(s[1] for s in seqs[:i]), len)
@@ -408,7 +459,6 @@ def _add_blb(brt: dict, blb: dict, hkd: dict, params: dict, site: str) -> None:
     )
 
     for time_ind, time_blb in enumerate(blb.data["time"]):
-
         if (
             (site in ["juelich", "cologne"])
             & (
@@ -418,11 +468,16 @@ def _add_blb(brt: dict, blb: dict, hkd: dict, params: dict, site: str) -> None:
             & (time_blb + int(params["scan_time"]) < hkd.data["time"][-1])
         ):
             time_blb = time_blb + int(params["scan_time"])
-        seqi = np.where(np.abs(hkd.data["time"][seqs[:, 1] + seqs[:, 2] - 1] - time_blb) < 60)[0]
+        seqi = np.where(
+            np.abs(hkd.data["time"][seqs[:, 1] + seqs[:, 2] - 1] - time_blb) < 60
+        )[0]
         if len(seqi) != 1:
             continue
 
-        if np.abs(time_blb - hkd.data["time"][seqs[seqi, 1]][0]) >= blb.header["_n_ang"]:
+        if (
+            np.abs(time_blb - hkd.data["time"][seqs[seqi, 1]][0])
+            >= blb.header["_n_ang"]
+        ):
             scan_quadrant = 0.0  # scan quadrant, 0 deg: 1st, 180 deg: 2nd
             if (isbit(blb.data["rf_mod"][time_ind], 1)) & (
                 not isbit(blb.data["rf_mod"][time_ind], 2)
@@ -457,7 +512,8 @@ def _add_blb(brt: dict, blb: dict, hkd: dict, params: dict, site: str) -> None:
             )
 
             brt_ind = np.where(
-                (brt.data["time"] > time_blb - 3600) & (brt.data["time"] < time_blb + 3600)
+                (brt.data["time"] > time_blb - 3600)
+                & (brt.data["time"] < time_blb + 3600)
             )[0]
             brt_azi = ma.median(brt.data["azimuth_angle"][brt_ind])
             azimuth_angle_add = np.concatenate(
@@ -474,7 +530,9 @@ def _add_blb(brt: dict, blb: dict, hkd: dict, params: dict, site: str) -> None:
                     * int(isbit(blb.data["rf_mod"][time_ind], 0)),
                 )
             )
-            elevation_angle_add = np.concatenate((elevation_angle_add, blb.header["_ang"]))
+            elevation_angle_add = np.concatenate(
+                (elevation_angle_add, blb.header["_ang"])
+            )
 
             for ang in range(blb.header["_n_ang"]):
                 if len(tb_add) == 0:
@@ -484,22 +542,29 @@ def _add_blb(brt: dict, blb: dict, hkd: dict, params: dict, site: str) -> None:
 
             if len(time_bnds_add) == 0:
                 time_bnds_add = add_time_bounds(
-                    time_add, int(np.floor(params["scan_time"] / (blb.header["_n_ang"])))
+                    time_add,
+                    int(np.floor(params["scan_time"] / (blb.header["_n_ang"]))),
                 )
             else:
                 time_bnds_add = np.concatenate(
                     (
                         time_bnds_add,
                         add_time_bounds(
-                            time_add, int(np.floor(params["scan_time"] / (blb.header["_n_ang"])))
+                            time_add,
+                            int(np.floor(params["scan_time"] / (blb.header["_n_ang"]))),
                         ),
                     )
                 )
 
             blb_status = hkd_sanity_check(
-                hkd.data["status"][seqs[seqi, 1][0] : seqs[seqi, 1][0] + seqs[seqi, 2][0]], params
+                hkd.data["status"][
+                    seqs[seqi, 1][0] : seqs[seqi, 1][0] + seqs[seqi, 2][0]
+                ],
+                params,
             )
-            blb_status_add = np.zeros((blb.header["_n_ang"], len(params["receiver"])), np.int32)
+            blb_status_add = np.zeros(
+                (blb.header["_n_ang"], len(params["receiver"])), np.int32
+            )
             for i_ch, _ in enumerate(params["receiver"]):
                 blb_status_add[:, i_ch] = int(np.any(blb_status[:, i_ch]))
             if len(status_add) == 0:
@@ -531,17 +596,19 @@ def _add_blb(brt: dict, blb: dict, hkd: dict, params: dict, site: str) -> None:
                 brt.data[var] = brt.data[var][ind, :]
             else:
                 brt.data[var] = brt.data[var][ind]
-        brt.header["n"] = len(
-            brt.data["time"]
-        )
+        brt.header["n"] = len(brt.data["time"])
 
 
 def _azi_correction(brt: dict, params: dict) -> None:
     """Azimuth correction (transform to "geographical" coordinates)"""
     ind180 = np.where((brt["azimuth_angle"][:] >= 0) & (brt["azimuth_angle"][:] <= 180))
-    ind360 = np.where((brt["azimuth_angle"][:] > 180) & (brt["azimuth_angle"][:] <= 360))
+    ind360 = np.where(
+        (brt["azimuth_angle"][:] > 180) & (brt["azimuth_angle"][:] <= 360)
+    )
     brt["azimuth_angle"][ind180] = params["azi_cor"] - brt["azimuth_angle"][ind180]
-    brt["azimuth_angle"][ind360] = 360.0 + params["azi_cor"] - brt["azimuth_angle"][ind360]
+    brt["azimuth_angle"][ind360] = (
+        360.0 + params["azi_cor"] - brt["azimuth_angle"][ind360]
+    )
     brt["azimuth_angle"][brt["azimuth_angle"][:] < 0] += 360.0
 
 
@@ -556,7 +623,12 @@ def cal_his(params: dict, glob_att: dict, time0: int) -> dict:
     try:
         file_list_cal = get_file_list(params["path_to_cal"], " ", " ", "his")
     except:
-        print(["No binary files with extension his found in directory " + params["path_to_cal"]])
+        print(
+            [
+                "No binary files with extension his found in directory "
+                + params["path_to_cal"]
+            ]
+        )
 
     if file_list_cal != []:
         rpg_cal = get_rpg_bin(file_list_cal)
@@ -579,7 +651,9 @@ def cal_his(params: dict, glob_att: dict, time0: int) -> dict:
             glob_att[
                 "receiver1_date_of_last_absolute_calibration"
             ] = datetime.datetime.utcfromtimestamp(
-                epoch2unix(rpg_cal.data["t1"][cal_ind1[-1]], rpg_cal.header["_time_ref"])
+                epoch2unix(
+                    rpg_cal.data["t1"][cal_ind1[-1]], rpg_cal.header["_time_ref"]
+                )
             ).strftime(
                 "%Y%m%d"
             )
@@ -589,7 +663,9 @@ def cal_his(params: dict, glob_att: dict, time0: int) -> dict:
             glob_att[
                 "receiver2_date_of_last_absolute_calibration"
             ] = datetime.datetime.utcfromtimestamp(
-                epoch2unix(rpg_cal.data["t2"][cal_ind2[-1]], rpg_cal.header["_time_ref"])
+                epoch2unix(
+                    rpg_cal.data["t2"][cal_ind2[-1]], rpg_cal.header["_time_ref"]
+                )
             ).strftime(
                 "%Y%m%d"
             )

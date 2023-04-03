@@ -1,18 +1,18 @@
 """Module for general helper functions."""
 
 import glob
+import os
 import re
 import time
-from typing import Iterator
-import yaml
-from yaml.loader import SafeLoader
 from datetime import date, datetime, timedelta, timezone
-import os
+from typing import Iterator
 
 import netCDF4
 import numpy as np
+import yaml
 from numpy import ma
 from scipy import signal
+from yaml.loader import SafeLoader
 
 SECONDS_PER_MINUTE = 60
 SECONDS_PER_HOUR = 3600
@@ -157,7 +157,9 @@ def interpol_2d(
     return ma.array(result, mask=~masked)
 
 
-def add_interpol1d(data0: dict, data1: np.ndarray, time1: np.ndarray, output_name: str) -> None:
+def add_interpol1d(
+    data0: dict, data1: np.ndarray, time1: np.ndarray, output_name: str
+) -> None:
     """Adds interpolated 1d field to dict
     Args:
         data0: Output dict.
@@ -169,7 +171,9 @@ def add_interpol1d(data0: dict, data1: np.ndarray, time1: np.ndarray, output_nam
             np.ones([len(data0["time"]), data1.shape[1]], np.float32) * Fill_Value_Float
         )
         for ndim in range(data1.shape[1]):
-            data0[output_name][:, ndim] = np.interp(data0["time"], time1, data1[:, ndim])
+            data0[output_name][:, ndim] = np.interp(
+                data0["time"], time1, data1[:, ndim]
+            )
     else:
         data0[output_name] = np.interp(data0["time"], time1, data1)
 
@@ -202,8 +206,12 @@ def get_coeff_list(site: str, prefix: str):
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
     s_list = [
-        glob.glob(dir_path + "/site_config/" + site + "/coefficients/" + prefix.lower() + "*"),
-        glob.glob(dir_path + "/site_config/" + site + "/coefficients/" + prefix.upper() + "*"),
+        glob.glob(
+            dir_path + "/site_config/" + site + "/coefficients/" + prefix.lower() + "*"
+        ),
+        glob.glob(
+            dir_path + "/site_config/" + site + "/coefficients/" + prefix.upper() + "*"
+        ),
     ]
     c_list = [x for x in s_list if x != []]
     if len(c_list[0]) < 1:
@@ -239,12 +247,12 @@ def read_yaml_config(site: str) -> tuple[dict, dict]:
         "altitude": 108.0,
         "longitude": 6.407,
         "latitude": 50.906,
-        "scan_time": 50.,
+        "scan_time": 50.0,
         "int_time": 1,
-        "azi_cor": -999.,
-        "const_azi": -999.,
+        "azi_cor": -999.0,
+        "const_azi": -999.0,
         "flag_status": [0, 0, 0, 0, 0, 0, 0, 1],
-        "ir_flag": True
+        "ir_flag": True,
     }
     global_specs = {
         "title": "HATPRO Level 1B data",
@@ -454,7 +462,9 @@ def isodate2date(date_str: str) -> datetime.date:
     return datetime.strptime(date_str, "%Y-%m-%d").date()
 
 
-def date_range(start_date: datetime.date, end_date: datetime.date) -> Iterator[datetime.date]:
+def date_range(
+    start_date: datetime.date, end_date: datetime.date
+) -> Iterator[datetime.date]:
     """Returns range between two dates (datetimes)."""
     for n in range(int((end_date - start_date).days)):
         yield start_date + timedelta(n)

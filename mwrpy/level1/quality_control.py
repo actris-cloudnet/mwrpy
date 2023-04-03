@@ -42,57 +42,76 @@ def apply_qc(site: str, data: dict, params: dict) -> None:
     ind_bit7 = orbpos(data, params)
 
     for freq, _ in enumerate(data["frequency"]):
-
         # Bit 1: Missing TB-value
         if params["flag_status"][0] == 1:
-            data["quality_flag_status"][:, freq] = setbit(data["quality_flag_status"][:, freq], 0)
+            data["quality_flag_status"][:, freq] = setbit(
+                data["quality_flag_status"][:, freq], 0
+            )
         else:
             ind = np.where(data["tb"][:, freq] == Fill_Value_Float)
             data["quality_flag"][ind, freq] = setbit(data["quality_flag"][ind, freq], 0)
 
         # Bit 2: TB threshold (lower range)
         if params["flag_status"][1] == 1:
-            data["quality_flag_status"][:, freq] = setbit(data["quality_flag_status"][:, freq], 1)
+            data["quality_flag_status"][:, freq] = setbit(
+                data["quality_flag_status"][:, freq], 1
+            )
         else:
             ind = np.where(data["tb"][:, freq] < params["TB_threshold"][0])
             data["quality_flag"][ind, freq] = setbit(data["quality_flag"][ind, freq], 1)
 
         # Bit 3: TB threshold (upper range)
         if params["flag_status"][2] == 1:
-            data["quality_flag_status"][:, freq] = setbit(data["quality_flag_status"][:, freq], 2)
+            data["quality_flag_status"][:, freq] = setbit(
+                data["quality_flag_status"][:, freq], 2
+            )
         else:
             ind = np.where(data["tb"][:, freq] > params["TB_threshold"][1])
             data["quality_flag"][ind, freq] = setbit(data["quality_flag"][ind, freq], 2)
 
         # Bit 4: Spectral consistency threshold
         if params["flag_status"][3] == 1:
-            data["quality_flag_status"][:, freq] = setbit(data["quality_flag_status"][:, freq], 3)
+            data["quality_flag_status"][:, freq] = setbit(
+                data["quality_flag_status"][:, freq], 3
+            )
         else:
             ind = np.where(ind_bit4[:, freq] == 1)
             data["quality_flag"][ind, freq] = setbit(data["quality_flag"][ind, freq], 3)
 
         # Bit 5: Receiver sanity
         if params["flag_status"][4] == 1:
-            data["quality_flag_status"][:, freq] = setbit(data["quality_flag_status"][:, freq], 4)
+            data["quality_flag_status"][:, freq] = setbit(
+                data["quality_flag_status"][:, freq], 4
+            )
         else:
             ind = np.where(data["status"][:, freq] == 1)
             data["quality_flag"][ind, freq] = setbit(data["quality_flag"][ind, freq], 4)
 
         # Bit 6: Rain flag
         if params["flag_status"][5] == 1:
-            data["quality_flag_status"][:, freq] = setbit(data["quality_flag_status"][:, freq], 5)
+            data["quality_flag_status"][:, freq] = setbit(
+                data["quality_flag_status"][:, freq], 5
+            )
         else:
-            data["quality_flag"][ind_bit6, freq] = setbit(data["quality_flag"][ind_bit6, freq], 5)
+            data["quality_flag"][ind_bit6, freq] = setbit(
+                data["quality_flag"][ind_bit6, freq], 5
+            )
 
         # Bit 7: Solar/Lunar flag
         if params["flag_status"][6] == 1:
-            data["quality_flag_status"][:, freq] = setbit(data["quality_flag_status"][:, freq], 6)
+            data["quality_flag_status"][:, freq] = setbit(
+                data["quality_flag_status"][:, freq], 6
+            )
         else:
-            data["quality_flag"][ind_bit7, freq] = setbit(data["quality_flag"][ind_bit7, freq], 6)
+            data["quality_flag"][ind_bit7, freq] = setbit(
+                data["quality_flag"][ind_bit7, freq], 6
+            )
 
         # Bit 8: TB offset threshold
         if params["flag_status"][7] == 1:
-            data["quality_flag_status"][:, freq] = setbit(data["quality_flag_status"][:, freq], 7)
+            data["quality_flag_status"][:, freq] = setbit(
+                data["quality_flag_status"][:, freq], 7
+            )
         # else:
 
 
@@ -104,54 +123,62 @@ def orbpos(data: dict, params: dict) -> np.ndarray:
     sun["azimuth_angle"] = np.zeros(data["time"].shape) * Fill_Value_Float
     sun["elevation_angle"] = np.zeros(data["time"].shape) * Fill_Value_Float
     moon = dict()
-    moon["azimuth_angle"] = np.zeros(data['time'].shape) * Fill_Value_Float
-    moon['elevation_angle'] = np.zeros(data['time'].shape) * Fill_Value_Float
+    moon["azimuth_angle"] = np.zeros(data["time"].shape) * Fill_Value_Float
+    moon["elevation_angle"] = np.zeros(data["time"].shape) * Fill_Value_Float
 
     sol = ephem.Sun()
     lun = ephem.Moon()
     obs_loc = ephem.Observer()
 
     for ind, time in enumerate(data["time"]):
-
         obs_loc.lat, obs_loc.lon = str(data["latitude"][ind]), str(
             data["longitude"][ind]
         )
         obs_loc.elevation = data["altitude"][ind]
-        obs_loc.date = datetime.datetime.utcfromtimestamp(time).strftime("%Y/%m/%d %H:%M:%S")
+        obs_loc.date = datetime.datetime.utcfromtimestamp(time).strftime(
+            "%Y/%m/%d %H:%M:%S"
+        )
         sol.compute(obs_loc)
         sun["elevation_angle"][ind] = np.rad2deg(sol.alt)
         sun["azimuth_angle"][ind] = np.rad2deg(sol.az)
         lun.compute(obs_loc)
-        moon['elevation_angle'][ind] = np.rad2deg(lun.alt)
+        moon["elevation_angle"][ind] = np.rad2deg(lun.alt)
         moon["azimuth_angle"][ind] = np.rad2deg(lun.az)
 
     sun["rise"], moon["rise"] = data["time"][0], data["time"][0]
-    sun["set"], moon["set"] = data["time"][0] + 24.0 * 3600.0, data["time"][0] + 24.0 * 3600.0
+    sun["set"], moon["set"] = (
+        data["time"][0] + 24.0 * 3600.0,
+        data["time"][0] + 24.0 * 3600.0,
+    )
     i_sun = np.where(sun["elevation_angle"] > 0.0)[0]
     if len(i_sun) > 0:
         sun["rise"] = data["time"][i_sun[0]]
-        sun["set"] = data["time"][i_sun[-1]]       
+        sun["set"] = data["time"][i_sun[-1]]
     i_moon = np.where(moon["elevation_angle"] > 0.0)[0]
     if len(i_moon) > 0:
         moon["rise"] = data["time"][i_moon[0]]
-        moon["set"] = data["time"][i_moon[-1]]        
+        moon["set"] = data["time"][i_moon[-1]]
 
     flag_ind = np.where(
-        ((data["elevation_angle"] != Fill_Value_Float)
-        & (data["elevation_angle"] <= np.max(sun["elevation_angle"]) + 10.0)
-        & (data["time"] >= sun["rise"])
-        & (data["time"] <= sun["set"])
-        & (data["elevation_angle"] >= sun["elevation_angle"] - params["saf"])
-        & (data["elevation_angle"] <= sun["elevation_angle"] + params["saf"])
-        & (data["azimuth_angle"] >= sun["azimuth_angle"] - params["saf"])
-        & (data["azimuth_angle"] <= sun["azimuth_angle"] + params["saf"]))
-        | ((data["elevation_angle"] <= np.max(moon["elevation_angle"]) + 10.0)
-        & (data["time"] >= moon["rise"])
-        & (data["time"] <= moon["set"])
-        & (data["elevation_angle"] >= moon["elevation_angle"] - params["saf"])
-        & (data["elevation_angle"] <= moon["elevation_angle"] + params["saf"])
-        & (data["azimuth_angle"] >= moon["azimuth_angle"] - params["saf"])
-        & (data["azimuth_angle"] <= moon["azimuth_angle"] + params["saf"]))
+        (
+            (data["elevation_angle"] != Fill_Value_Float)
+            & (data["elevation_angle"] <= np.max(sun["elevation_angle"]) + 10.0)
+            & (data["time"] >= sun["rise"])
+            & (data["time"] <= sun["set"])
+            & (data["elevation_angle"] >= sun["elevation_angle"] - params["saf"])
+            & (data["elevation_angle"] <= sun["elevation_angle"] + params["saf"])
+            & (data["azimuth_angle"] >= sun["azimuth_angle"] - params["saf"])
+            & (data["azimuth_angle"] <= sun["azimuth_angle"] + params["saf"])
+        )
+        | (
+            (data["elevation_angle"] <= np.max(moon["elevation_angle"]) + 10.0)
+            & (data["time"] >= moon["rise"])
+            & (data["time"] <= moon["set"])
+            & (data["elevation_angle"] >= moon["elevation_angle"] - params["saf"])
+            & (data["elevation_angle"] <= moon["elevation_angle"] + params["saf"])
+            & (data["azimuth_angle"] >= moon["azimuth_angle"] - params["saf"])
+            & (data["azimuth_angle"] <= moon["azimuth_angle"] + params["saf"])
+        )
     )
 
     return flag_ind
@@ -188,7 +215,9 @@ def spectral_consistency(data: dict, c_file: list) -> np.ndarray:
                         axis=1,
                     )
                     + np.sum(
-                        coeff["coefficient_mvr"][coeff_ind + (len(data["frequency"]) - 1)].T
+                        coeff["coefficient_mvr"][
+                            coeff_ind + (len(data["frequency"]) - 1)
+                        ].T
                         * np.array(data["tb"])[np.ix_(ele_ind, freq_ind)] ** 2,
                         axis=1,
                     )
@@ -208,8 +237,12 @@ def spectral_consistency(data: dict, c_file: list) -> np.ndarray:
                 flag_ind[
                     ele_ind[
                         (
-                            np.abs(tb_df["Tb"].values[ele_ind] - tb_mean["Tb"].values[ele_ind])
-                            > coeff["predictand_err"][0] * fact[data["receiver"][ifreq] - 1]
+                            np.abs(
+                                tb_df["Tb"].values[ele_ind]
+                                - tb_mean["Tb"].values[ele_ind]
+                            )
+                            > coeff["predictand_err"][0]
+                            * fact[data["receiver"][ifreq] - 1]
                         )
                     ],
                     ifreq,

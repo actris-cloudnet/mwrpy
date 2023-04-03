@@ -1,7 +1,8 @@
 """Module for LWP offset correction"""
 import os
-from time import gmtime
 from pathlib import Path
+from time import gmtime
+
 import numpy as np
 import pandas as pd
 
@@ -10,7 +11,9 @@ from mwrpy.level1.write_lev1_nc import find_lwcl_free
 Fill_Value_Float = -999.0
 
 
-def correct_lwp_offset(lev1: dict, lwp_org: np.ndarray, index: np.ndarray, site: str) -> np.ndarray:
+def correct_lwp_offset(
+    lev1: dict, lwp_org: np.ndarray, index: np.ndarray, site: str
+) -> np.ndarray:
     """This function corrects Lwp offset using the
     2min standard deviation of the 31.4 GHz channel and IR temperature
 
@@ -59,7 +62,8 @@ def correct_lwp_offset(lev1: dict, lwp_org: np.ndarray, index: np.ndarray, site:
             [
                 csv_off,
                 pd.DataFrame(
-                    {"date": time[ind[0]], "offset": lwp_offset["Lwp"][ind[0]]}, index=[0]
+                    {"date": time[ind[0]], "offset": lwp_offset["Lwp"][ind[0]]},
+                    index=[0],
                 ),
             ],
             ignore_index=True,
@@ -68,7 +72,8 @@ def correct_lwp_offset(lev1: dict, lwp_org: np.ndarray, index: np.ndarray, site:
             [
                 csv_off,
                 pd.DataFrame(
-                    {"date": time[ind[-1]], "offset": lwp_offset["Lwp"][ind[-1]]}, index=[0]
+                    {"date": time[ind[-1]], "offset": lwp_offset["Lwp"][ind[-1]]},
+                    index=[0],
                 ),
             ],
             ignore_index=True,
@@ -77,7 +82,10 @@ def correct_lwp_offset(lev1: dict, lwp_org: np.ndarray, index: np.ndarray, site:
         csv_off = pd.concat(
             [
                 csv_off,
-                pd.DataFrame({"date": time[ind], "offset": lwp_offset["Lwp"][int(ind)]}, index=[0]),
+                pd.DataFrame(
+                    {"date": time[ind], "offset": lwp_offset["Lwp"][int(ind)]},
+                    index=[0],
+                ),
             ],
             ignore_index=True,
         )
@@ -87,7 +95,8 @@ def correct_lwp_offset(lev1: dict, lwp_org: np.ndarray, index: np.ndarray, site:
 
     # offset from previous day
     off_ind = np.where(
-        (csv_off["date"].values < time[0]) & (time[0] - csv_off["date"].values < 2.0 * 3600.0)
+        (csv_off["date"].values < time[0])
+        & (time[0] - csv_off["date"].values < 2.0 * 3600.0)
     )[0]
     if off_ind.size == 1:
         off_ind = np.array([int(off_ind), int(off_ind)])
@@ -95,7 +104,8 @@ def correct_lwp_offset(lev1: dict, lwp_org: np.ndarray, index: np.ndarray, site:
         lwp_offset["Lwp"][0] = csv_off["offset"][off_ind[-1]]
     # offset from next day (for reprocessing purposes)
     off_ind = np.where(
-        (csv_off["date"].values > time[-1]) & (csv_off["date"].values - time[-1] < 2.0 * 3600.0)
+        (csv_off["date"].values > time[-1])
+        & (csv_off["date"].values - time[-1] < 2.0 * 3600.0)
     )[0]
     if off_ind.size == 1:
         off_ind = np.array([int(off_ind), int(off_ind)])

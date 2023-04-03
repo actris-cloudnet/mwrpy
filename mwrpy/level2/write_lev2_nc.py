@@ -1,4 +1,5 @@
 """Module for writing Level 2 netCDF files"""
+import logging
 import os
 from datetime import datetime
 
@@ -8,8 +9,6 @@ import numpy as np
 import pytz
 from numpy import ma
 from timezonefinder import TimezoneFinder
-
-import logging
 
 from mwrpy import rpg_mwr
 from mwrpy.atmos import eq_pot_tem, pot_tem, rel_hum, rh_err
@@ -30,7 +29,9 @@ Fill_Value_Float = -999.0
 Fill_Value_Int = -99
 
 
-def lev2_to_nc(date_in: str | None, site: str, data_type: str, lev1_path: str, output_file: str):
+def lev2_to_nc(
+    date_in: str | None, site: str, data_type: str, lev1_path: str, output_file: str
+):
     """This function reads Level 1 files,
     applies retrieval coefficients for Level 2 products and writes it into a netCDF file.
 
@@ -56,7 +57,9 @@ def lev2_to_nc(date_in: str | None, site: str, data_type: str, lev1_path: str, o
         "2I01",
         "2I02",
     ):
-        raise RuntimeError(["Data type " + data_type + " not supported for file writing."])
+        raise RuntimeError(
+            ["Data type " + data_type + " not supported for file writing."]
+        )
 
     with nc.Dataset(lev1_path) as lev1:
         BL_scan = _test_BL_scan(site, lev1)
@@ -113,7 +116,9 @@ def lev2_to_nc(date_in: str | None, site: str, data_type: str, lev1_path: str, o
         rpg_mwr.save_rpg(hatpro, output_file, global_attributes, data_type)
 
 
-def get_products(site: str, lev1: netCDF4.Dataset, data_type: str, params: dict) -> dict:
+def get_products(
+    site: str, lev1: netCDF4.Dataset, data_type: str, params: dict
+) -> dict:
     "Derive specified Level 2 products."
 
     if "elevation_angle" in lev1.variables:
@@ -154,7 +159,8 @@ def get_products(site: str, lev1: netCDF4.Dataset, data_type: str, params: dict)
                 np.abs(
                     (np.ones((len(elevation_angle), len(coeff["ele"]))) * coeff["ele"])
                     - np.transpose(
-                        np.ones((len(coeff["ele"]), len(elevation_angle))) * elevation_angle
+                        np.ones((len(coeff["ele"]), len(elevation_angle)))
+                        * elevation_angle
                     )
                 )
                 < 0.5,
@@ -168,9 +174,7 @@ def get_products(site: str, lev1: netCDF4.Dataset, data_type: str, params: dict)
         coeff["retrieval_elevation_angles"] = str(
             np.sort(np.unique(ele_retrieval(elevation_angle[index], coeff)))
         )
-        coeff["retrieval_frequencies"] = str(
-            np.sort(np.unique(coeff["freq"]))
-        )          
+        coeff["retrieval_frequencies"] = str(np.sort(np.unique(coeff["freq"])))
 
         if coeff["ret_type"] < 2:
             coeff_offset = offset(elevation_angle[index])
@@ -183,7 +187,6 @@ def get_products(site: str, lev1: netCDF4.Dataset, data_type: str, params: dict)
             )
 
         else:
-
             tmp_product = np.ones(len(index), np.float32) * Fill_Value_Float
 
             c_w1, c_w2, fac = (
@@ -192,15 +195,20 @@ def get_products(site: str, lev1: netCDF4.Dataset, data_type: str, params: dict)
                 factor(elevation_angle[index]),
             )
 
-            in_sc, in_os = input_scale(elevation_angle[index]), input_offset(elevation_angle[index])
-            op_sc, op_os = output_scale(elevation_angle[index]), output_offset(elevation_angle[index])
+            in_sc, in_os = input_scale(elevation_angle[index]), input_offset(
+                elevation_angle[index]
+            )
+            op_sc, op_os = output_scale(elevation_angle[index]), output_offset(
+                elevation_angle[index]
+            )
 
             for ix, iv in enumerate(index):
                 ret_in[iv, 1:] = (ret_in[iv, 1:] - in_os[ix, :]) * in_sc[ix, :]
                 hidden_layer = np.ones(c_w1.shape[2] + 1, np.float32)
                 hidden_layer[1:] = np.tanh(fac[ix] * ret_in[iv, :].dot(c_w1[ix, :, :]))
                 tmp_product[ix] = (
-                    np.tanh(fac[ix] * hidden_layer.dot(c_w2[ix, :])) * op_sc[ix, :] + op_os[ix, :]
+                    np.tanh(fac[ix] * hidden_layer.dot(c_w2[ix, :])) * op_sc[ix, :]
+                    + op_os[ix, :]
                 )
 
         if product == "lwp":
@@ -216,7 +224,6 @@ def get_products(site: str, lev1: netCDF4.Dataset, data_type: str, params: dict)
                 )
         else:
             rpg_dat["iwv"] = tmp_product
-
 
     elif data_type in ("2P01", "2P03"):
         if data_type == "2P01":
@@ -248,7 +255,8 @@ def get_products(site: str, lev1: netCDF4.Dataset, data_type: str, params: dict)
                 np.abs(
                     (np.ones((len(elevation_angle), len(coeff["ele"]))) * coeff["ele"])
                     - np.transpose(
-                        np.ones((len(coeff["ele"]), len(elevation_angle))) * elevation_angle
+                        np.ones((len(coeff["ele"]), len(elevation_angle)))
+                        * elevation_angle
                     )
                 )
                 < 0.5,
@@ -262,9 +270,7 @@ def get_products(site: str, lev1: netCDF4.Dataset, data_type: str, params: dict)
         coeff["retrieval_elevation_angles"] = str(
             np.sort(np.unique(ele_retrieval(elevation_angle[index], coeff)))
         )
-        coeff["retrieval_frequencies"] = str(
-            np.sort(np.unique(coeff["freq"]))
-        )          
+        coeff["retrieval_frequencies"] = str(np.sort(np.unique(coeff["freq"])))
 
         rpg_dat["height"] = coeff["height_grid"][:] + params["altitude"]
         rpg_dat[product] = ma.masked_all((len(index), coeff["n_height_grid"]))
@@ -287,11 +293,17 @@ def get_products(site: str, lev1: netCDF4.Dataset, data_type: str, params: dict)
                 weights2(elevation_angle[index]),
                 factor(elevation_angle[index]),
             )
-            in_sc, in_os = input_scale(elevation_angle[index]), input_offset(elevation_angle[index])
-            op_sc, op_os = output_scale(elevation_angle[index]), output_offset(elevation_angle[index])
+            in_sc, in_os = input_scale(elevation_angle[index]), input_offset(
+                elevation_angle[index]
+            )
+            op_sc, op_os = output_scale(elevation_angle[index]), output_offset(
+                elevation_angle[index]
+            )
 
             for ix, iv in enumerate(index):
-                hidden_in = np.concatenate(([1.0], (ret_in[iv, 1:] - in_os[ix, :]) * in_sc[ix, :]))
+                hidden_in = np.concatenate(
+                    ([1.0], (ret_in[iv, 1:] - in_os[ix, :]) * in_sc[ix, :])
+                )
                 hidden_layer = np.concatenate(
                     ([1.0], np.tanh(fac[ix] * hidden_in.dot(c_w1[ix, :, :])))
                 )
@@ -303,14 +315,15 @@ def get_products(site: str, lev1: netCDF4.Dataset, data_type: str, params: dict)
                     rpg_dat[product][ix, :] = rpg_dat[product][ix, :] / 1000.0
 
     elif data_type == "2P02":
-
         coeff = get_mvr_coeff(site, "tpb", lev1["frequency"][:])
         if coeff[0]["ret_type"] < 2:
             coeff, offset, lin, quad, e_ran, e_sys = get_mvr_coeff(
                 site, "tpb", lev1["frequency"][:]
             )
         else:
-            coeff, _, _, _, _, _, _, _ = get_mvr_coeff(site, "tpb", lev1["frequency"][:])
+            coeff, _, _, _, _, _, _, _ = get_mvr_coeff(
+                site, "tpb", lev1["frequency"][:]
+            )
             coeff["ele"] = np.sort(coeff["ele"])
         ret_in = retrieval_input(lev1, coeff)
 
@@ -323,10 +336,8 @@ def get_products(site: str, lev1: netCDF4.Dataset, data_type: str, params: dict)
         _, freq_bl, _ = np.intersect1d(
             coeff["freq"], coeff["freq_bl"], assume_unique=False, return_indices=True
         )
-        
-        coeff["retrieval_frequencies"] = str(
-            np.sort(np.unique(coeff["freq"]))
-        )          
+
+        coeff["retrieval_frequencies"] = str(np.sort(np.unique(coeff["freq"])))
 
         ix0 = np.where(
             (elevation_angle[:] > coeff["ele"][0] - 0.5)
@@ -336,16 +347,27 @@ def get_products(site: str, lev1: netCDF4.Dataset, data_type: str, params: dict)
         )[0]
         ibl, tb = (
             np.empty([0, len(coeff["ele"])], np.int32),
-            np.ones((len(freq_ind), len(coeff["ele"]), 0), np.float32) * Fill_Value_Float,
+            np.ones((len(freq_ind), len(coeff["ele"]), 0), np.float32)
+            * Fill_Value_Float,
         )
 
         for ix0v in ix0:
-            if (ix0v + len(coeff["ele"]) < len(lev1["time"])) & (np.allclose(elevation_angle[ix0v : ix0v + len(coeff["ele"])], coeff["ele"], atol=0.5)):
-                ibl = np.append(ibl, [np.array(range(ix0v, ix0v + len(coeff["ele"])))], axis=0)
+            if (ix0v + len(coeff["ele"]) < len(lev1["time"])) & (
+                np.allclose(
+                    elevation_angle[ix0v : ix0v + len(coeff["ele"])],
+                    coeff["ele"],
+                    atol=0.5,
+                )
+            ):
+                ibl = np.append(
+                    ibl, [np.array(range(ix0v, ix0v + len(coeff["ele"])))], axis=0
+                )
                 tb = np.concatenate(
                     (
                         tb,
-                        np.expand_dims(lev1["tb"][ix0v : ix0v + len(coeff["ele"]), freq_ind].T, 2),
+                        np.expand_dims(
+                            lev1["tb"][ix0v : ix0v + len(coeff["ele"]), freq_ind].T, 2
+                        ),
                     ),
                     axis=2,
                 )
@@ -372,26 +394,46 @@ def get_products(site: str, lev1: netCDF4.Dataset, data_type: str, params: dict)
                 )
 
         else:
-            for ix in range(ibl.shape[0]):               
+            for ix in range(ibl.shape[0]):
                 ret_array = np.reshape(
-                    ret_in[np.ix_(ibl[ix, :], np.linspace(1, len(freq_ind), len(freq_ind)).astype(int))], len(coeff["ele"]) * len(freq_ind)
+                    ret_in[
+                        np.ix_(
+                            ibl[ix, :],
+                            np.linspace(1, len(freq_ind), len(freq_ind)).astype(int),
+                        )
+                    ],
+                    len(coeff["ele"]) * len(freq_ind),
                 )
                 for i_add in range(ret_in.shape[1] - len(freq_ind) - 1, 0, -1):
-                    ret_array = np.concatenate((ret_array, [ma.median(ret_in[ibl[ix, :], -i_add])]))
+                    ret_array = np.concatenate(
+                        (ret_array, [ma.median(ret_in[ibl[ix, :], -i_add])])
+                    )
                 hidden_in = np.concatenate(
-                    ([1.0], (ret_array - coeff["input_offset"][0, :]) * coeff["input_scale"][0, :])
+                    (
+                        [1.0],
+                        (ret_array - coeff["input_offset"][0, :])
+                        * coeff["input_scale"][0, :],
+                    )
                 )
                 hidden_layer = np.concatenate(
-                    ([1.0], np.tanh(coeff["factor"][0] * hidden_in.dot(coeff["weights1"][0, :, :])))
+                    (
+                        [1.0],
+                        np.tanh(
+                            coeff["factor"][0]
+                            * hidden_in.dot(coeff["weights1"][0, :, :])
+                        ),
+                    )
                 )
                 rpg_dat["temperature"][ix, :] = (
-                    np.tanh(coeff["factor"][0] * hidden_layer.dot(coeff["weights2"][0, :, :]))
+                    np.tanh(
+                        coeff["factor"][0]
+                        * hidden_layer.dot(coeff["weights2"][0, :, :])
+                    )
                     * coeff["output_scale"][0, :]
                     + coeff["output_offset"][0, :]
                 )
 
     elif data_type in ("2P04", "2P07", "2P08"):
-
         tem_dat, tem_freq, tem_ang, product = load_product(
             site, datetime.strptime(lev1.date, "%Y-%m-%d"), "2P02"
         )
@@ -416,9 +458,13 @@ def get_products(site: str, lev1: netCDF4.Dataset, data_type: str, params: dict)
         )
 
         rpg_dat["height"] = tem_dat.variables["height"][:]
-        pres = np.interp(tem_dat.variables["time"][:], lev1["time"][:], lev1["air_pressure"][:])
+        pres = np.interp(
+            tem_dat.variables["time"][:], lev1["time"][:], lev1["air_pressure"][:]
+        )
         if data_type == "2P04":
-            rpg_dat["relative_humidity"] = rel_hum(tem_dat.variables["temperature"][:, :], hum_int)
+            rpg_dat["relative_humidity"] = rel_hum(
+                tem_dat.variables["temperature"][:, :], hum_int
+            )
         if data_type == "2P07":
             rpg_dat["potential_temperature"] = pot_tem(
                 tem_dat.variables["temperature"][:, :], hum_int, pres, rpg_dat["height"]
@@ -440,7 +486,11 @@ def get_products(site: str, lev1: netCDF4.Dataset, data_type: str, params: dict)
 
 
 def _combine_lev1(
-    lev1: netCDF4.Dataset, rpg_dat: dict, index: np.ndarray, data_type: str, params: dict
+    lev1: netCDF4.Dataset,
+    rpg_dat: dict,
+    index: np.ndarray,
+    data_type: str,
+    params: dict,
 ) -> None:
     """add level1 data"""
     lev1_vars = [
@@ -459,7 +509,9 @@ def _combine_lev1(
                 logging.info("Skipping %s", ivars)
                 continue
             if (ivars == "time_bnds") & (data_type == "2P02"):
-                rpg_dat[ivars] = add_time_bounds(lev1["time"][index], params["scan_time"])
+                rpg_dat[ivars] = add_time_bounds(
+                    lev1["time"][index], params["scan_time"]
+                )
             elif (ivars == "time_bnds") & (data_type in ("2P04", "2P07", "2P08")):
                 rpg_dat[ivars] = np.ones(lev1[ivars].shape, np.int32) * Fill_Value_Int
             else:
@@ -495,13 +547,24 @@ def load_product(site: str, date_in: str, product: str):
     global_attributes, params = read_yaml_config(site)
     ID = global_attributes["wigos_station_id"]
     data_out_l2 = params["data_out"] + "level2/" + date_in.strftime("%Y/%m/%d/")
-    file_name = data_out_l2 + "MWR_" + product + "_" + ID + "_" + date_in.strftime("%Y%m%d") + ".nc"
+    file_name = (
+        data_out_l2
+        + "MWR_"
+        + product
+        + "_"
+        + ID
+        + "_"
+        + date_in.strftime("%Y%m%d")
+        + ".nc"
+    )
 
     if os.path.isfile(file_name):
         file = nc.Dataset(file_name)
     # Load single pointing T if no BL scans are performed
     if (not os.path.isfile(file_name)) & (product == "2P02"):
-        file_name = data_out_l2 + "MWR_2P01_" + ID + "_" + date_in.strftime("%Y%m%d") + ".nc"
+        file_name = (
+            data_out_l2 + "MWR_2P01_" + ID + "_" + date_in.strftime("%Y%m%d") + ".nc"
+        )
         if os.path.isfile(file_name):
             file = nc.Dataset(file_name)
             product = "2P01"
@@ -547,7 +610,6 @@ def retrieval_input(lev1: netCDF4.Dataset, coeff: dict) -> np.ndarray:
     tf = TimezoneFinder()
 
     for ind, time in enumerate(lev1["time"][:].data):
-
         if time < 24:
             date = [lev1.year, lev1.month, lev1.day]
             time = decimal_hour2unix(date, time)
@@ -560,8 +622,12 @@ def retrieval_input(lev1: netCDF4.Dataset, coeff: dict) -> np.ndarray:
         dtime = datetime.fromtimestamp(time, timezone)
 
         dyear = datetime(dtime.year, 12, 31, 0, 0).timetuple().tm_yday
-        doy[ind, 0] = np.cos(datetime.fromtimestamp(time).timetuple().tm_yday / dyear * 2 * np.pi)
-        doy[ind, 1] = np.sin(datetime.fromtimestamp(time).timetuple().tm_yday / dyear * 2 * np.pi)
+        doy[ind, 0] = np.cos(
+            datetime.fromtimestamp(time).timetuple().tm_yday / dyear * 2 * np.pi
+        )
+        doy[ind, 1] = np.sin(
+            datetime.fromtimestamp(time).timetuple().tm_yday / dyear * 2 * np.pi
+        )
         sun[ind, 0] = np.cos(
             (dtime.hour + dtime.minute / 60 + dtime.second / 3600) / 24 * 2 * np.pi
         )
@@ -577,9 +643,12 @@ def retrieval_input(lev1: netCDF4.Dataset, coeff: dict) -> np.ndarray:
         "doy",
         "sun",
     ]
-    
+
     _, freq_ind, _ = np.intersect1d(
-        lev1["frequency"][:], coeff["freq"][:, 0], assume_unique=False, return_indices=True
+        lev1["frequency"][:],
+        coeff["freq"][:, 0],
+        assume_unique=False,
+        return_indices=True,
     )
 
     if coeff["ret_type"] < 2:
@@ -591,7 +660,9 @@ def retrieval_input(lev1: netCDF4.Dataset, coeff: dict) -> np.ndarray:
                 ret_in = np.concatenate(
                     (
                         ret_in,
-                        np.reshape(lev1["air_temperature"][:].data, (len(lev1["time"][:]), 1)),
+                        np.reshape(
+                            lev1["air_temperature"][:].data, (len(lev1["time"][:]), 1)
+                        ),
                     ),
                     axis=1,
                 )
@@ -599,7 +670,9 @@ def retrieval_input(lev1: netCDF4.Dataset, coeff: dict) -> np.ndarray:
                 ret_in = np.concatenate(
                     (
                         ret_in,
-                        np.reshape(lev1["relative_humidity"][:].data, (len(lev1["time"][:]), 1)),
+                        np.reshape(
+                            lev1["relative_humidity"][:].data, (len(lev1["time"][:]), 1)
+                        ),
                     ),
                     axis=1,
                 )
@@ -607,7 +680,9 @@ def retrieval_input(lev1: netCDF4.Dataset, coeff: dict) -> np.ndarray:
                 ret_in = np.concatenate(
                     (
                         ret_in,
-                        np.reshape(lev1["air_pressure"][:].data, (len(lev1["time"][:]), 1)),
+                        np.reshape(
+                            lev1["air_pressure"][:].data, (len(lev1["time"][:]), 1)
+                        ),
                     ),
                     axis=1,
                 )

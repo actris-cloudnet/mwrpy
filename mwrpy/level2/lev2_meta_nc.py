@@ -30,10 +30,11 @@ def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
         "2I02",
         "2S02",
     ):
-        raise RuntimeError(["Data type " + data_type + " not supported for file writing."])
+        raise RuntimeError(
+            ["Data type " + data_type + " not supported for file writing."]
+        )
 
     else:
-
         attributes = dict(ATTRIBUTES_COM, **eval("ATTRIBUTES_" + data_type))
         for key in list(rpg_variables):
             if key in attributes:
@@ -42,7 +43,9 @@ def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
                 del rpg_variables[key]
 
         index_map = {v: i for i, v in enumerate(attributes)}
-        rpg_variables = dict(sorted(rpg_variables.items(), key=lambda pair: index_map[pair[0]]))
+        rpg_variables = dict(
+            sorted(rpg_variables.items(), key=lambda pair: index_map[pair[0]])
+        )
 
         return rpg_variables
 
