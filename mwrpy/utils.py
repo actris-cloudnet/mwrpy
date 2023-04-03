@@ -228,7 +228,9 @@ def get_coeff_list(site: str, prefix: str):
 
 def get_file_list(path_to_files: str, extension: str):
     """Returns file list for specified path."""
-    f_list = sorted(glob.glob(path_to_files + "/*." + extension))
+    f_list = sorted(glob.glob(path_to_files + "*." + extension))
+    if len(f_list) == 0:
+        f_list = sorted(glob.glob(path_to_files + "*." + extension.lower()))
     if len(f_list) == 0:
         raise RuntimeError(
             [
