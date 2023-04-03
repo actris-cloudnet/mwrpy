@@ -5,9 +5,7 @@ import argparse
 import sys
 import warnings
 
-import utils
-
-from mwrpy import process_mwrpy
+from mwrpy import process_mwrpy, utils
 
 # warnings.simplefilter("ignore", UserWarning)
 # warnings.simplefilter("ignore", RuntimeWarning)
@@ -43,45 +41,31 @@ def _parse_args(args):
     )
     group.add_argument(
         "-p",
-        "--products",
-        help="Products to be processed, e.g., 1C01, 2I02, 2P03, stats.\
-                        Default is all regular products.",
-        type=lambda s: s.split(","),
-        default=[
-            "1C01",
-            "2I01",
-            "2I02",
-            "2P01",
-            "2P02",
-            "2P03",
-            "2P04",
-            "2P07",
-            "2P08",
-            "2S02",
-            "stats",
-        ],
+        "--product",
+        required=True,
+        help="Product to be processed, e.g., 1C01, 2I02, 2P03, stats.",
     )
-    group.add_argument(
-        "--start",
-        type=str,
-        metavar="YYYY-MM-DD",
-        help="Starting date. Default is current day - 1 (included).",
-        default=utils.get_date_from_past(1),
-    )
-    group.add_argument(
-        "--stop",
-        type=str,
-        metavar="YYYY-MM-DD",
-        help="Stopping date. Default is current day + 1 (excluded).",
-        default=utils.get_date_from_past(-1),
-    )
-    group.add_argument(
-        "-d",
-        "--date",
-        type=str,
-        metavar="YYYY-MM-DD",
-        help="Single date to be processed.",
-    )
+    # group.add_argument(
+    #    "--start",
+    #    type=str,
+    #    metavar="YYYY-MM-DD",
+    #    help="Starting date. Default is current day - 1 (included).",
+    #    default=utils.get_date_from_past(1),
+    # )
+    # group.add_argument(
+    #    "--stop",
+    #    type=str,
+    #    metavar="YYYY-MM-DD",
+    #    help="Stopping date. Default is current day + 1 (excluded).",
+    #    default=utils.get_date_from_past(-1),
+    # )
+    # group.add_argument(
+    #    "-d",
+    #    "--date",
+    #    type=str,
+    #    metavar="YYYY-MM-DD",
+    #    help="Single date to be processed.",
+    # )
     return parser.parse_args(args)
 
 

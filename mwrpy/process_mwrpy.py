@@ -25,19 +25,15 @@ product = [
 
 
 def main(args):
-    _start_date, _stop_date = get_processing_dates(args)
-    start_date = isodate2date(_start_date)
-    stop_date = isodate2date(_stop_date)
-    for date in date_range(start_date, stop_date):
-        for product in args.products:
-            if args.figure:
-                print(f"Plotting {product} product, {args.site} {date}")
-                plot_product(product, date, args.site)
-            else:
-                print(f"Processing {product} product, {args.site} {date}")
-                process_product(product, date, args.site)
-                print(f"Plotting {product} product, {args.site} {date}")
-                plot_product(product, date, args.site)
+    date = "UNUSED"
+    if args.figure:
+        print(f"Plotting {args.product} product, {args.site}")
+        plot_product(args.product, date, args.site, args.indir, args.outfile)
+    else:
+        print(f"Processing {args.product} product, {args.site}")
+        process_product(args.product, date, args.site, args.indir, args.outfile)
+        # print(f"Plotting {args.product} product, {args.site}")
+        # plot_product(args.product, date, args.site)
 
 
 def _link_quicklook(link_direc: str, figure_name: str) -> None:
@@ -260,4 +256,6 @@ def add_arguments(subparser):
         help="Produce figures only; no processing",
         default=False,
     )
+    parser.add_argument("indir")
+    parser.add_argument("outfile")
     return subparser
