@@ -202,7 +202,7 @@ def add_time_bounds(time_arr: np.ndarray, int_time: int) -> np.ndarray:
 
 
 def get_coeff_list(site: str, prefix: str):
-    "Returns list of .nc coefficient file(s)"
+    """Returns list of .nc coefficient file(s)"""
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
     s_list = [
@@ -250,6 +250,7 @@ def get_file_list(path_to_files: str, extension: str):
 
 def read_yaml_config(site: str) -> tuple[dict, dict]:
     """Reads config yaml files."""
+
     params = {
         "altitude": 108.0,
         "longitude": 6.407,
@@ -258,9 +259,10 @@ def read_yaml_config(site: str) -> tuple[dict, dict]:
         "int_time": 1,
         "azi_cor": -999.0,
         "const_azi": -999.0,
-        "flag_status": [0, 0, 0, 0, 0, 0, 0, 1],
+        "flag_status": [0, 0, 0, 1, 0, 0, 0, 0],
         "ir_flag": True,
     }
+
     global_specs = {
         "title": "HATPRO Level 1B data",
     }

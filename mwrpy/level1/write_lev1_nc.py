@@ -578,6 +578,7 @@ def _add_blb(brt: dict, blb: dict, hkd: dict, params: dict, site: str) -> None:
         liquid_cloud_flag_status_add = np.ones(len(time_add), np.int32) * Fill_Value_Int
         brt.data["time"] = np.concatenate((brt.data["time"], time_add))
         ind = np.argsort(brt.data["time"])
+
         brt.data["time"] = brt.data["time"][ind]
         names = [
             "time_bnds",

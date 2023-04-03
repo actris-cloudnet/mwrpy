@@ -109,12 +109,10 @@ ATTRIBUTES_2P01 = {
     "temperature_random_error": MetaData(
         long_name="Random uncertainty of retrieved temperature profile (single pointing)",
         units="K",
-        comment="specify here source of this variable",
     ),
     "temperature_systematic_error": MetaData(
         long_name="Systematic uncertainty of retrieved temperature profile (single pointing)",
         units="K",
-        comment="specify here source of this variable",
     ),
 }
 
@@ -133,12 +131,10 @@ ATTRIBUTES_2P02 = {
     "temperature_random_error": MetaData(
         long_name="Random uncertainty of retrieved temperature profile (multiple pointing)",
         units="K",
-        comment="specify here source of this variable",
     ),
     "temperature_systematic_error": MetaData(
         long_name="Systematic uncertainty of retrieved temperature profile (multiple pointing)",
         units="K",
-        comment="specify here source of this variable",
     ),
 }
 
@@ -156,12 +152,10 @@ ATTRIBUTES_2P03 = {
     "absolute_humidity_random_error": MetaData(
         long_name="Random uncertainty of absolute humidity",
         units="kg m-3",
-        comment="specify here source of this variable",
     ),
     "absolute_humidity_systematic_error": MetaData(
         long_name="Systematic uncertainty of absolute humidity",
         units="kg m-3",
-        comment="specify here source of this variable",
     ),
 }
 
@@ -180,12 +174,10 @@ ATTRIBUTES_2P04 = {
     "relative_humidity_random_error": MetaData(
         long_name="Random uncertainty of relative humidity",
         units="1",
-        comment="specify here source of this variable",
     ),
     "relative_humidity_systematic_error": MetaData(
         long_name="Systematic uncertainty of relative humidity",
         units="1",
-        comment="specify here source of this variable",
     ),
 }
 
@@ -204,12 +196,10 @@ ATTRIBUTES_2P07 = {
     "potential_temperature_random_error": MetaData(
         long_name="Random uncertainty of potential temperature",
         units="K",
-        comment="specify here source of this variable",
     ),
     "potential_temperature_systematic_error": MetaData(
         long_name="Systematic uncertainty of potential temperature",
         units="K",
-        comment="specify here source of this variable",
     ),
 }
 
@@ -228,12 +218,10 @@ ATTRIBUTES_2P08 = {
     "equivalent_potential_temperature_random_error": MetaData(
         long_name="Random uncertainty of equivalent potential temperature",
         units="K",
-        comment="specify here source of this variable",
     ),
     "equivalent_potential_temperature_systematic_error": MetaData(
         long_name="Systematic uncertainty of equivalent potential temperature",
         units="K",
-        comment="specify here source of this variable",
     ),
 }
 
@@ -247,17 +235,14 @@ ATTRIBUTES_2I01 = {
     "lwp_random_error": MetaData(
         long_name="Random uncertainty of retrieved column-integrated liquid water path",
         units="kg m-2",
-        comment="specify here source of this variable",
     ),
     "lwp_systematic_error": MetaData(
         long_name="Systematic uncertainty of retrieved column-integrated liquid water path",
         units="kg m-2",
-        comment="specify here source of this variable",
     ),
     "lwp_offset": MetaData(
         long_name="Subtracted offset correction of retrieved column-integrated liquid water path",
         units="kg m-2",
-        comment="specify here source of this variable",
     ),
 }
 
@@ -271,12 +256,10 @@ ATTRIBUTES_2I02 = {
     "iwv_random_error": MetaData(
         long_name="Random uncertainty of retrieved column-integrated water vapour",
         units="kg m-2",
-        comment="specify here source of this variable",
     ),
     "iwv_systematic_error": MetaData(
         long_name="Systematic uncertainty of retrieved column-integrated water vapour",
         units="kg m-2",
-        comment="specify here source of this variable",
     ),
 }
 

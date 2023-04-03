@@ -1,12 +1,9 @@
 """Module for processing."""
-import datetime
 import os
 
 from mwrpy.level1.write_lev1_nc import lev1_to_nc
 from mwrpy.level2.write_lev2_nc import lev2_to_nc
 from mwrpy.plots.generate_plots import generate_figure
-
-# from mwrpy.plots.stat_plot import generate_stat
 from mwrpy.utils import date_range, get_processing_dates, isodate2date, read_yaml_config
 
 product = [
@@ -43,7 +40,12 @@ def _link_quicklook(link_direc: str, figure_name: str) -> None:
 
 
 def process_product(
-    prod: str, date: str | None, site: str, input_dir: str, output_filename: str
+    prod: str,
+    site: str,
+    input_dir: str,
+    output_filename: str,
+    temp_file: str | None = None,
+    hum_file: str | None = None,
 ) -> None:
     if prod[0] == "1":
         lev1_to_nc(
@@ -53,25 +55,14 @@ def process_product(
             output_filename,
         )
     else:
-        lev2_to_nc(None, site, prod, input_dir, output_filename)
-
-    # Level 2
-
-    # global_attributes, params = read_yaml_config(site)
-    # ID = global_attributes["wigos_station_id"]
-    # elif (
-    #     (prod[0] == "2")
-    #     & (
-    #         os.path.isdir("site_config/" + site + "/coefficients/")
-    #     ) & (
-    #         os.path.isfile(output_dir + "MWR_1C01_" + ID + "_" + date.strftime("%Y%m%d") + ".nc")
-    #     )
-    # ):
-    #     data_out_l2 = params["data_out"] + "level2/" + date.strftime("%Y/%m/%d/")
-    #     if not os.path.isdir(data_out_l2):
-    #         os.makedirs(data_out_l2)
-    #     lev1_data = output_dir + "MWR_1C01_" + ID + "_" + date.strftime("%Y%m%d") + ".nc"
-    #     lev2_to_nc(date.strftime("%Y%m%d"), site, prod, lev1_data, data_out_l2)
+        lev2_to_nc(
+            site,
+            prod,
+            input_dir,
+            output_filename,
+            temp_file=temp_file,
+            hum_file=hum_file,
+        )
 
 
 def plot_product(prod: str, date, site: str):

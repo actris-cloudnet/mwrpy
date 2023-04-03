@@ -1,6 +1,4 @@
 """Module for writing Level 2 netCDF files"""
-import logging
-import os
 from datetime import datetime
 
 import netCDF4
@@ -12,13 +10,11 @@ from timezonefinder import TimezoneFinder
 
 from mwrpy import rpg_mwr
 from mwrpy.atmos import eq_pot_tem, pot_tem, rel_hum, rh_err
-from mwrpy.level1.quality_control import spectral_consistency
 from mwrpy.level2.get_ret_coeff import get_mvr_coeff
 from mwrpy.level2.lev2_meta_nc import get_data_attributes
 from mwrpy.level2.lwp_offset import correct_lwp_offset
 from mwrpy.utils import (
     add_time_bounds,
-    get_coeff_list,
     get_ret_ang,
     get_ret_freq,
     interpol_2d,
@@ -30,7 +26,12 @@ Fill_Value_Int = -99
 
 
 def lev2_to_nc(
-    date_in: str | None, site: str, data_type: str, lev1_path: str, output_file: str
+    site: str,
+    data_type: str,
+    lev1_path: str,
+    output_file: str,
+    temp_file: str | None = None,
+    hum_file: str | None = None,
 ):
     """This function reads Level 1 files,
     applies retrieval coefficients for Level 2 products and writes it into a netCDF file.
@@ -41,10 +42,6 @@ def lev2_to_nc(
         lev1_path: Path of Level 1 file.
         lev2_path: Path of Level 2 output directory.
 
-    Examples:
-        >>> from level2.write_lev2_nc import lev2_to_nc
-        >>> lev2_to_nc('date', site_name', '2P00',
-        '/path/to/lev1_file/lev1_data.nc', '/path/to/lev2_file/')
     """
 
     if data_type not in (
@@ -71,55 +68,34 @@ def lev2_to_nc(
                 T_product = "2P01"
             for d_type in [T_product, "2P03"]:
                 global_attributes, params = read_yaml_config(site)
-                # if not os.path.isfile(
-                #     lev2_path
-                #     + "MWR_"
-                #     + d_type
-                #     + "_"
-                #     + global_attributes["wigos_station_id"]
-                #     + "_"
-                #     + date_in
-                #     + ".nc"
-                # ):
-                rpg_dat, coeff, index = get_products(site, lev1, d_type, params)
+                rpg_dat, coeff, index = get_products(
+                    site, lev1, d_type, params, temp_file=temp_file, hum_file=hum_file
+                )
                 _combine_lev1(lev1, rpg_dat, index, d_type, params)
                 hatpro = rpg_mwr.Rpg(rpg_dat)
                 hatpro.data = get_data_attributes(hatpro.data, d_type)
-                # output_file = (
-                #     lev2_path
-                #     + "MWR_"
-                #     + d_type
-                #     + "_"
-                #     + global_attributes["wigos_station_id"]
-                #     + "_"
-                #     + date_in
-                #     + ".nc"
-                # )
                 rpg_mwr.save_rpg(hatpro, output_file, global_attributes, d_type)
 
         global_attributes, params = read_yaml_config(site)
-        rpg_dat, coeff, index = get_products(site, lev1, data_type, params)
+        rpg_dat, coeff, index = get_products(
+            site, lev1, data_type, params, temp_file=temp_file, hum_file=hum_file
+        )
         _combine_lev1(lev1, rpg_dat, index, data_type, params)
-        _add_att(global_attributes, coeff, lev1)
+        _add_att(global_attributes, coeff)
         hatpro = rpg_mwr.Rpg(rpg_dat)
         hatpro.data = get_data_attributes(hatpro.data, data_type)
-        # output_file = (
-        #     lev2_path
-        #     + "MWR_"
-        #     + data_type
-        #     + "_"
-        #     + global_attributes["wigos_station_id"]
-        #     + "_"
-        #     + date_in
-        #     + ".nc"
-        # )
         rpg_mwr.save_rpg(hatpro, output_file, global_attributes, data_type)
 
 
 def get_products(
-    site: str, lev1: netCDF4.Dataset, data_type: str, params: dict
+    site: str,
+    lev1: netCDF4.Dataset,
+    data_type: str,
+    params: dict,
+    temp_file: str | None = None,
+    hum_file: str | None = None,
 ) -> dict:
-    "Derive specified Level 2 products."
+    """Derive specified Level 2 products."""
 
     if "elevation_angle" in lev1.variables:
         elevation_angle = lev1["elevation_angle"][:]
@@ -339,12 +315,14 @@ def get_products(
 
         coeff["retrieval_frequencies"] = str(np.sort(np.unique(coeff["freq"])))
 
+        # starting indices (elevation ~4.2)
         ix0 = np.where(
-            (elevation_angle[:] > coeff["ele"][0] - 0.5)
-            & (elevation_angle[:] < coeff["ele"][0] + 0.5)
+            (elevation_angle > coeff["ele"][0] - 0.5)
+            & (elevation_angle < coeff["ele"][0] + 0.5)
             & (lev1["pointing_flag"][:] == 1)
             & (np.arange(len(lev1["time"])) + len(coeff["ele"]) < len(lev1["time"]))
         )[0]
+
         ibl, tb = (
             np.empty([0, len(coeff["ele"])], np.int32),
             np.ones((len(freq_ind), len(coeff["ele"]), 0), np.float32)
@@ -434,12 +412,9 @@ def get_products(
                 )
 
     elif data_type in ("2P04", "2P07", "2P08"):
-        tem_dat, tem_freq, tem_ang, product = load_product(
-            site, datetime.strptime(lev1.date, "%Y-%m-%d"), "2P02"
-        )
-        hum_dat, hum_freq, hum_ang, _ = load_product(
-            site, datetime.strptime(lev1.date, "%Y-%m-%d"), "2P03"
-        )
+        product = data_type
+        tem_dat, tem_freq, tem_ang = load_product(temp_file)
+        hum_dat, hum_freq, hum_ang = load_product(hum_file)
 
         coeff, index = {}, []
         coeff["retrieval_frequencies"] = str(
@@ -475,12 +450,14 @@ def get_products(
             )
 
         _combine_lev1(
-            tem_dat.variables,
+            tem_dat,
             rpg_dat,
             np.arange(len(tem_dat.variables["time"][:])),
             data_type,
             params,
         )
+        tem_dat.close()
+        hum_dat.close()
 
     return rpg_dat, coeff, index
 
@@ -506,7 +483,7 @@ def _combine_lev1(
     if index != []:
         for ivars in lev1_vars:
             if ivars not in lev1.variables:
-                logging.info("Skipping %s", ivars)
+                # logging.info("Skipping %s", ivars)
                 continue
             if (ivars == "time_bnds") & (data_type == "2P02"):
                 rpg_dat[ivars] = add_time_bounds(
@@ -518,7 +495,7 @@ def _combine_lev1(
                 rpg_dat[ivars] = lev1[ivars][index]
 
 
-def _add_att(global_attributes: dict, coeff: dict, lev1: dict) -> None:
+def _add_att(global_attributes: dict, coeff: dict) -> None:
     "add retrieval and calibration attributes"
     fields = [
         "retrieval_type",
@@ -541,36 +518,12 @@ def _add_att(global_attributes: dict, coeff: dict, lev1: dict) -> None:
             del global_attributes[name]
 
 
-def load_product(site: str, date_in: str, product: str):
-    "load existing lev2 file for deriving other products"
-    file = []
-    global_attributes, params = read_yaml_config(site)
-    ID = global_attributes["wigos_station_id"]
-    data_out_l2 = params["data_out"] + "level2/" + date_in.strftime("%Y/%m/%d/")
-    file_name = (
-        data_out_l2
-        + "MWR_"
-        + product
-        + "_"
-        + ID
-        + "_"
-        + date_in.strftime("%Y%m%d")
-        + ".nc"
-    )
-
-    if os.path.isfile(file_name):
-        file = nc.Dataset(file_name)
-    # Load single pointing T if no BL scans are performed
-    if (not os.path.isfile(file_name)) & (product == "2P02"):
-        file_name = (
-            data_out_l2 + "MWR_2P01_" + ID + "_" + date_in.strftime("%Y%m%d") + ".nc"
-        )
-        if os.path.isfile(file_name):
-            file = nc.Dataset(file_name)
-            product = "2P01"
-    ret_freq = get_ret_freq(file_name)
-    ret_ang = get_ret_ang(file_name)
-    return file, ret_freq, ret_ang, product
+def load_product(filename: str):
+    """load existing lev2 file for deriving other products"""
+    file = nc.Dataset(filename)
+    ret_freq = get_ret_freq(filename)
+    ret_ang = get_ret_ang(filename)
+    return file, ret_freq, ret_ang
 
 
 def _test_BL_scan(site: str, lev1: netCDF4.Dataset) -> bool:
