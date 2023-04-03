@@ -214,16 +214,21 @@ def get_coeff_list(site: str, prefix: str):
         ),
     ]
     c_list = [x for x in s_list if x != []]
-    if len(c_list[0]) < 1:
-        raise RuntimeError(
+
+    if len(c_list) > 0:
+        c_list = sorted(c_list[0])
+    else:
+        print(
             [
-                "Error: no coefficient files found in directory "
-                + "site_config/"
+                "No coefficient files for product "
+                + prefix
+                + " found in directory "
+                + "/site_config/"
                 + site
                 + "/coefficients/"
             ]
         )
-    return sorted(c_list[0])
+    return c_list
 
 
 def get_file_list(path_to_files: str, extension: str):

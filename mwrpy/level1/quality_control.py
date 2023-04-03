@@ -35,9 +35,13 @@ def apply_qc(site: str, data: dict, params: dict) -> None:
     data["quality_flag"] = np.zeros(data["tb"].shape, dtype=np.int32)
     data["quality_flag_status"] = np.zeros(data["tb"].shape, dtype=np.int32)
 
-    if params["flag_status"][3] == 0:
-        c_list = get_coeff_list(site, "tbx")
+    # if params["flag_status"][3] == 0:
+    #     c_list = get_coeff_list(site, "tbx")
+    c_list = get_coeff_list(site, "tbx")
+    if len(c_list) > 0:
         ind_bit4, _ = spectral_consistency(data, c_list)
+    else:
+        params["flag_status"][3] = 1
     ind_bit6 = np.where(data["rain"] == 1)
     ind_bit7 = orbpos(data, params)
 
