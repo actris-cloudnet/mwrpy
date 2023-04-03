@@ -4,7 +4,7 @@ import os
 from mwrpy.level1.write_lev1_nc import lev1_to_nc
 from mwrpy.level2.write_lev2_nc import lev2_to_nc
 from mwrpy.plots.generate_plots import generate_figure
-from mwrpy.utils import date_range, get_processing_dates, isodate2date, read_yaml_config
+from mwrpy.utils import read_yaml_config
 
 product = [
     ("1C01", ""),

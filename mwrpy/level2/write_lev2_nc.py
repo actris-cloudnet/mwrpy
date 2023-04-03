@@ -9,7 +9,7 @@ from numpy import ma
 from timezonefinder import TimezoneFinder
 
 from mwrpy import rpg_mwr
-from mwrpy.atmos import eq_pot_tem, pot_tem, rel_hum, rh_err
+from mwrpy.atmos import eq_pot_tem, pot_tem, rel_hum
 from mwrpy.level2.get_ret_coeff import get_mvr_coeff
 from mwrpy.level2.lev2_meta_nc import get_data_attributes
 from mwrpy.level2.lwp_offset import correct_lwp_offset
@@ -94,7 +94,7 @@ def get_products(
     params: dict,
     temp_file: str | None = None,
     hum_file: str | None = None,
-) -> dict:
+) -> tuple:
     """Derive specified Level 2 products."""
 
     if "elevation_angle" in lev1.variables:
@@ -547,7 +547,7 @@ def _test_BL_scan(site: str, lev1: netCDF4.Dataset) -> bool:
 
 
 def ele_retrieval(ele_obs: np.ndarray, coeff: dict) -> np.ndarray:
-    "Extracts elevation angles used in retrieval"
+    """Extracts elevation angles used in retrieval"""
     ele_ret = coeff["ele"]
     if ele_ret.shape == ():
         ele_ret = np.array([ele_ret])
@@ -587,15 +587,6 @@ def retrieval_input(lev1: netCDF4.Dataset, coeff: dict) -> np.ndarray:
         sun[ind, 1] = np.sin(
             (dtime.hour + dtime.minute / 60 + dtime.second / 3600) / 24 * 2 * np.pi
         )
-
-    fields = [
-        "air_temperature",
-        "relative_humidity",
-        "air_pressure",
-        "irt",
-        "doy",
-        "sun",
-    ]
 
     _, freq_ind, _ = np.intersect1d(
         lev1["frequency"][:],

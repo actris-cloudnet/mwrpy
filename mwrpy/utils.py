@@ -193,7 +193,7 @@ def seconds2date(time_in_seconds: float, epoch: Epoch = (1970, 1, 1)) -> list:
 
 
 def add_time_bounds(time_arr: np.ndarray, int_time: int) -> np.ndarray:
-    "Adds time bounds"
+    """Adds time bounds"""
     time_bounds = np.ones([len(time_arr), 2], np.int32) * Fill_Value_Int
     time_bounds[:, 0] = time_arr - int_time
     time_bounds[:, 1] = time_arr
@@ -233,17 +233,15 @@ def get_coeff_list(site: str, prefix: str):
 
 def get_file_list(path_to_files: str, extension: str):
     """Returns file list for specified path."""
-    f_list = sorted(glob.glob(path_to_files + "*." + extension))
+    f_list = sorted(glob.glob(path_to_files + "/*." + extension))
     if len(f_list) == 0:
-        f_list = sorted(glob.glob(path_to_files + "*." + extension.lower()))
+        f_list = sorted(glob.glob(path_to_files + "/*." + extension.lower()))
     if len(f_list) == 0:
         raise RuntimeError(
-            [
-                "Error: no binary files with extension "
-                + extension
-                + " found in directory "
-                + path_to_files
-            ]
+            "Error: no binary files with extension "
+            + extension
+            + " found in directory "
+            + path_to_files
         )
     return f_list
 
@@ -450,8 +448,8 @@ def get_date_from_past(n: int, reference_date: str | None = None) -> str:
         str: Date as "YYYY-MM-DD".
     """
     reference = reference_date or get_time().split()[0]
-    date = date_string_to_date(reference) - timedelta(n)
-    return str(date)
+    the_date = date_string_to_date(reference) - timedelta(n)
+    return str(the_date)
 
 
 def get_processing_dates(args) -> tuple[str, str]:

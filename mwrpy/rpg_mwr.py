@@ -201,7 +201,7 @@ def save_rpg(rpg: Rpg, output_file: str, att: dict, data_type: str) -> None:
 def init_file(
     file_name: str, dimensions: dict, rpg_arrays: dict, att_global: dict
 ) -> netCDF4.Dataset:
-    """Initializes a RPG MWR file for writing.
+    """Initializes an RPG MWR file for writing.
     Args:
         file_name: File name to be generated.
         dimensions: Dictionary containing dimension for this file.

@@ -2,7 +2,6 @@
 import datetime
 from itertools import groupby
 
-import netCDF4
 import numpy as np
 import pandas as pd
 from numpy import ma
@@ -11,9 +10,7 @@ from mwrpy import rpg_mwr
 from mwrpy.level1.lev1_meta_nc import get_data_attributes
 from mwrpy.level1.met_quality_control import apply_met_qc
 from mwrpy.level1.quality_control import apply_qc
-from mwrpy.level1.rpg_bin import get_rpg_bin
-
-# from level1.tb_offset import correct_tb_offset
+from mwrpy.level1.rpg_bin import RpgBin
 from mwrpy.utils import (
     add_interpol1d,
     add_time_bounds,
@@ -43,10 +40,6 @@ def lev1_to_nc(
         path_to_files: Folder containing one day of RPG MWR binary files.
         output_file: Output file name.
 
-    Examples:
-        >>> from level1.write_lev1_nc import lev1_to_nc
-        >>> lev1_to_nc('site_name', '1B01', '/path/to/files/', '/path/to/previous/day/',
-        '/path/to/next/day/', 'rpg_mwr.nc')
     """
 
     global_attributes, params = read_yaml_config(site)
@@ -68,13 +61,12 @@ def prepare_data(
     data_type: str,
     params: dict,
     site: str,
-) -> dict:
+) -> RpgBin:
     """Load and prepare data for netCDF writing"""
 
     if data_type in ("1B01", "1C01"):
         file_list_brt = get_file_list(path_to_files, "BRT")
-
-        rpg_bin = get_rpg_bin(file_list_brt)
+        rpg_bin = RpgBin(file_list_brt)
         rpg_bin.data["tb"] = rpg_bin.data["tb"][:, np.argsort(params["bandwidth"])]
         rpg_bin.data["frequency"] = rpg_bin.header["_f"][
             np.argsort(params["bandwidth"])
@@ -108,7 +100,7 @@ def prepare_data(
             )
 
         file_list_hkd = get_file_list(path_to_files, "HKD")
-        rpg_hkd = get_rpg_bin(file_list_hkd)
+        rpg_hkd = RpgBin(file_list_hkd)
         rpg_bin.data["status"] = np.zeros(
             (len(rpg_bin.data["time"]), len(params["receiver"])), np.int32
         )
@@ -125,7 +117,7 @@ def prepare_data(
             file_list_bls = []
             try:
                 file_list_bls = get_file_list(path_to_files, "BLS")
-            except:
+            except RuntimeError:
                 print(
                     [
                         "No binary files with extension bls found in directory "
@@ -133,11 +125,11 @@ def prepare_data(
                     ]
                 )
             if len(file_list_bls) > 0:
-                rpg_bls = get_rpg_bin(file_list_bls)
-                _add_bls(rpg_bin, rpg_bls, rpg_hkd, params, site)
+                rpg_bls = RpgBin(file_list_bls)
+                _add_bls(rpg_bin, rpg_bls, rpg_hkd, params)
             else:
                 file_list_blb = get_file_list(path_to_files, "BLB")
-                rpg_blb = get_rpg_bin(file_list_blb)
+                rpg_blb = RpgBin(file_list_blb)
                 _add_blb(rpg_bin, rpg_blb, rpg_hkd, params, site)
 
         if params["azi_cor"] != Fill_Value_Float:
@@ -154,7 +146,7 @@ def prepare_data(
                 except RuntimeError as err:
                     print(err)
                 if len(file_list_irt) > 0:
-                    rpg_irt = get_rpg_bin(file_list_irt)
+                    rpg_irt = RpgBin(file_list_irt)
                     rpg_irt.data["irt"][rpg_irt.data["irt"] <= 125.5] = Fill_Value_Float
                     rpg_bin.data["ir_wavelength"] = rpg_irt.header["_f"]
                     rpg_bin.data["ir_bandwidth"] = params["ir_bandwidth"]
@@ -182,7 +174,7 @@ def prepare_data(
 
             try:
                 file_list_met = get_file_list(path_to_files, "MET")
-                rpg_met = get_rpg_bin(file_list_met)
+                rpg_met = RpgBin(file_list_met)
                 add_interpol1d(
                     rpg_bin.data,
                     rpg_met.data["air_temperature"],
@@ -233,14 +225,14 @@ def prepare_data(
 
     elif data_type == "1B11":
         file_list_irt = get_file_list(path_to_files, "IRT")
-        rpg_bin = get_rpg_bin(file_list_irt)
+        rpg_bin = RpgBin(file_list_irt)
         rpg_bin.data["ir_wavelength"] = rpg_bin.header["_f"]
         rpg_bin.data["ir_bandwidth"] = params["ir_bandwidth"]
         rpg_bin.data["ir_beamwidth"] = params["ir_beamwidth"]
 
     elif data_type == "1B21":
         file_list_met = get_file_list(path_to_files, "MET")
-        rpg_bin = get_rpg_bin(file_list_met)
+        rpg_bin = RpgBin(file_list_met)
         if (int(rpg_bin.header["_n_sen"], 2) & 1) != 0:
             rpg_bin.data["wind_speed"] = rpg_bin.data["adds"][:, 0] / 3.6
         if (int(rpg_bin.header["_n_sen"], 2) & 2) != 0:
@@ -263,11 +255,11 @@ def prepare_data(
 
 
 def _append_hkd(
-    file_list_hkd: list, rpg_bin: dict, data_type: str, params: dict
+    file_list_hkd: list, rpg_bin: RpgBin, data_type: str, params: dict
 ) -> None:
     """Append hkd data on same time grid and perform TB sanity check"""
 
-    hkd = get_rpg_bin(file_list_hkd)
+    hkd = RpgBin(file_list_hkd)
 
     if all(hkd.data["latitude"] == Fill_Value_Float):
         add_interpol1d(
@@ -383,7 +375,7 @@ def find_lwcl_free(lev1: dict, ix: np.ndarray) -> tuple:
     return np.nan_to_num(index, nan=2).astype(int), status
 
 
-def _add_bls(brt: dict, bls: dict, hkd: dict, params: dict, site: str) -> None:
+def _add_bls(brt: RpgBin, bls: RpgBin, hkd: RpgBin, params: dict) -> None:
     """Add BLS boundary-layer scans using a linear time axis"""
 
     bls.data["time_bnds"] = add_time_bounds(bls.data["time"] + 1, params["int_time"])
@@ -426,7 +418,7 @@ def _add_bls(brt: dict, bls: dict, hkd: dict, params: dict, site: str) -> None:
     brt.header["n"] = len(brt.data["time"])
 
 
-def _add_blb(brt: dict, blb: dict, hkd: dict, params: dict, site: str) -> None:
+def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict, site: str) -> None:
     """Add BLB boundary-layer scans using a linear time axis"""
 
     (
@@ -454,7 +446,7 @@ def _add_blb(brt: dict, blb: dict, hkd: dict, params: dict, site: str) -> None:
         [
             (key, sum(s[1] for s in seqs[:i]), len)
             for i, (key, len) in enumerate(seqs)
-            if key == True
+            if bool(key) is True
         ]
     )
 
@@ -613,7 +605,7 @@ def _azi_correction(brt: dict, params: dict) -> None:
     brt["azimuth_angle"][brt["azimuth_angle"][:] < 0] += 360.0
 
 
-def cal_his(params: dict, glob_att: dict, time0: int) -> dict:
+def cal_his(params: dict, glob_att: dict, time0: int) -> RpgBin:
     """Load and add information from ABSCAL.HIS file"""
     file_list_cal, rpg_cal = [], []
     cal_type = [
@@ -622,8 +614,8 @@ def cal_his(params: dict, glob_att: dict, time0: int) -> dict:
         "sky tipping calibration",
     ]
     try:
-        file_list_cal = get_file_list(params["path_to_cal"], " ", " ", "his")
-    except:
+        file_list_cal = get_file_list(params["path_to_cal"], " ")
+    except RuntimeError:
         print(
             [
                 "No binary files with extension his found in directory "
@@ -631,8 +623,8 @@ def cal_his(params: dict, glob_att: dict, time0: int) -> dict:
             ]
         )
 
-    if file_list_cal != []:
-        rpg_cal = get_rpg_bin(file_list_cal)
+    if len(file_list_cal) > 0:
+        rpg_cal = RpgBin(file_list_cal)
         cal_times1 = epoch2unix(rpg_cal.data["t1"], rpg_cal.header["_time_ref"])
         cal_times2 = epoch2unix(rpg_cal.data["t2"], rpg_cal.header["_time_ref"])
         cal_ind1 = np.where(cal_times1 < time0)[0]

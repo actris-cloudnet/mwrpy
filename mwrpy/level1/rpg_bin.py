@@ -10,24 +10,6 @@ Fill_Value_Float = -999.0
 Fill_Value_Int = -99
 
 
-def get_rpg_bin(file_list: list) -> np.ndarray:
-    """This function reads one day of a RPG MWR binary file type and concatenates the data.
-    Args:
-        file_list: List of files for one day of a RPG MWR binary file type.
-
-    Returns:
-        Data array
-
-    Example:
-        >>> from level1.rpg_mwr import get_rpg_bin
-        >>> get_rpg_bin('file_list')
-
-    """
-
-    rpg_bin = RpgBin(file_list)
-    return rpg_bin
-
-
 def stack_files(file_list):
     """This function calls extension specific reader and stacks data and header."""
 
