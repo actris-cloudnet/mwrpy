@@ -1,5 +1,6 @@
 """Module for Level 2 Metadata"""
-from collections import namedtuple
+
+from mwrpy.utils import MetaData
 
 
 def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
@@ -48,12 +49,6 @@ def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
         )
 
         return rpg_variables
-
-
-FIELDS = ("long_name", "standard_name", "units", "definition", "comment")
-
-MetaData = namedtuple("MetaData", FIELDS)
-MetaData.__new__.__defaults__ = (None,) * len(MetaData._fields)
 
 
 ATTRIBUTES_COM = {
@@ -271,11 +266,9 @@ ATTRIBUTES_2S02 = {
         units="GHz",
         comment="For more accurate frequency values use frequency+freq_shift.",
     ),
-    "receiver_nb": MetaData(
-        long_name="Number of the microwave receiver",
-    ),
+    "receiver_nb": MetaData(long_name="Number of the microwave receiver", units="1"),
     "receiver": MetaData(
-        long_name="Corresponding microwave receiver for each channel",
+        long_name="Corresponding microwave receiver for each channel", units="1"
     ),
     "tb": MetaData(
         long_name="Microwave brightness temperatures",

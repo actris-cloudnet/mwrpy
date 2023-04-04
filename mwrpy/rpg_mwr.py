@@ -6,8 +6,7 @@ import numpy as np
 from numpy import ma
 
 from mwrpy import utils, version
-
-from .level1.lev1_meta_nc import MetaData
+from mwrpy.utils import MetaData
 
 
 class RpgArray:

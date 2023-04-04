@@ -5,7 +5,7 @@ import os
 import re
 import time
 from datetime import date, datetime, timedelta, timezone
-from typing import Iterator
+from typing import Iterator, NamedTuple
 
 import netCDF4
 import numpy as np
@@ -20,6 +20,14 @@ SECONDS_PER_DAY = 86400
 Fill_Value_Float = -999.0
 Fill_Value_Int = -99
 Epoch = tuple[int, int, int]
+
+
+class MetaData(NamedTuple):
+    long_name: str
+    units: str
+    standard_name: str | None = None
+    definition: str | None = None
+    comment: str | None = None
 
 
 def seconds2hours(time_in_seconds: np.ndarray) -> np.ndarray:

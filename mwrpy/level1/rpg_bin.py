@@ -219,7 +219,7 @@ def read_tpc(file_name: str) -> dict:
         return header, data
 
 
-def read_tpb(file_name: str) -> dict:
+def read_tpb(file_name: str) -> tuple:
     """This function reads RPG MWR .TPB binary files."""
 
     with open(file_name, "rb") as file:
@@ -279,7 +279,7 @@ def read_tpb(file_name: str) -> dict:
         return header, data
 
 
-def read_iwv(file_name: str) -> dict:
+def read_iwv(file_name: str) -> tuple:
     """This function reads RPG MWR .IWV binary files."""
 
     with open(file_name, "rb") as file:

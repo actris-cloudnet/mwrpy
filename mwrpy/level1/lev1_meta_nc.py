@@ -1,5 +1,5 @@
 """Module for Level 1 Metadata"""
-from collections import namedtuple
+from mwrpy.utils import MetaData
 
 
 def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
@@ -44,12 +44,6 @@ def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
     )
 
     return rpg_variables
-
-
-FIELDS = ("long_name", "standard_name", "units", "definition", "comment")
-
-MetaData = namedtuple("MetaData", FIELDS)
-MetaData.__new__.__defaults__ = (None,) * len(MetaData._fields)
 
 
 ATTRIBUTES_COM = {
