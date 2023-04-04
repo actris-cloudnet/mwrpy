@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
-"""A wrapper script for calling data processing functions."""
+"""A wrapper script for calling data processing functions.
+All modules MUST have an add_arguments function
+which adds the subcommand to the subparser.
+"""
 
 import argparse
 import sys
-import warnings
 
-from mwrpy import process_mwrpy, utils
+from mwrpy import process_mwrpy  # , utils
+
+# import warnings
+
 
 # warnings.simplefilter("ignore", UserWarning)
 # warnings.simplefilter("ignore", RuntimeWarning)
 
-"""All modules MUST have an add_arguments function which adds the subcommand to the subparser."""
 modules = {
     "process": process_mwrpy,
 }

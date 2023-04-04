@@ -174,53 +174,48 @@ def prepare_data(
 
             try:
                 file_list_met = get_file_list(path_to_files, "MET")
-                rpg_met = RpgBin(file_list_met)
+            except RuntimeError as err:
+                print(err)
+            rpg_met = RpgBin(file_list_met)
+            add_interpol1d(
+                rpg_bin.data,
+                rpg_met.data["air_temperature"],
+                rpg_met.data["time"],
+                "air_temperature",
+            )
+            add_interpol1d(
+                rpg_bin.data,
+                rpg_met.data["relative_humidity"],
+                rpg_met.data["time"],
+                "relative_humidity",
+            )
+            add_interpol1d(
+                rpg_bin.data,
+                rpg_met.data["air_pressure"] * 100,
+                rpg_met.data["time"],
+                "air_pressure",
+            )
+            if (int(rpg_met.header["_n_sen"], 2) & 1) != 0:
                 add_interpol1d(
                     rpg_bin.data,
-                    rpg_met.data["air_temperature"],
+                    rpg_met.data["adds"][:, 0],
                     rpg_met.data["time"],
-                    "air_temperature",
+                    "wind_speed",
                 )
+                rpg_bin.data["wind_speed"] = rpg_bin.data["wind_speed"] / 3.6
+            if (int(rpg_met.header["_n_sen"], 2) & 2) != 0:
                 add_interpol1d(
                     rpg_bin.data,
-                    rpg_met.data["relative_humidity"],
+                    rpg_met.data["adds"][:, 1],
                     rpg_met.data["time"],
-                    "relative_humidity",
+                    "wind_direction",
                 )
+            if (int(rpg_met.header["_n_sen"], 2) & 4) != 0:
                 add_interpol1d(
                     rpg_bin.data,
-                    rpg_met.data["air_pressure"] * 100,
+                    rpg_met.data["adds"][:, 2],
                     rpg_met.data["time"],
-                    "air_pressure",
-                )
-                if (int(rpg_met.header["_n_sen"], 2) & 1) != 0:
-                    add_interpol1d(
-                        rpg_bin.data,
-                        rpg_met.data["adds"][:, 0],
-                        rpg_met.data["time"],
-                        "wind_speed",
-                    )
-                    rpg_bin.data["wind_speed"] = rpg_bin.data["wind_speed"] / 3.6
-                if (int(rpg_met.header["_n_sen"], 2) & 2) != 0:
-                    add_interpol1d(
-                        rpg_bin.data,
-                        rpg_met.data["adds"][:, 1],
-                        rpg_met.data["time"],
-                        "wind_direction",
-                    )
-                if (int(rpg_met.header["_n_sen"], 2) & 4) != 0:
-                    add_interpol1d(
-                        rpg_bin.data,
-                        rpg_met.data["adds"][:, 2],
-                        rpg_met.data["time"],
-                        "rainfall_rate",
-                    )
-            except:
-                print(
-                    [
-                        "No binary files with extension met found in directory "
-                        + path_to_files
-                    ]
+                    "rainfall_rate",
                 )
 
     elif data_type == "1B11":
@@ -331,8 +326,10 @@ def hkd_sanity_check(status: np.ndarray, params: dict) -> np.ndarray:
 
 
 def find_lwcl_free(lev1: dict, ix: np.ndarray) -> tuple:
-    """Identification of liquid water cloud free periods using TB variability at 31.4 GHz and IRT.
-    Uses pre-defined time index and additionally returns status of IRT availability"""
+    """Identification of liquid water cloud free periods
+    using TB variability at 31.4 GHz and IRT.
+    Uses pre-defined time index and additionally returns status of IRT availability
+    """
 
     if "elevation_angle" in lev1:
         elevation_angle = lev1["elevation_angle"][:]

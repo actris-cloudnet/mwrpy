@@ -1,7 +1,7 @@
 """Module for LWP offset correction"""
-import os
-from pathlib import Path
-from time import gmtime
+# import os
+# from pathlib import Path
+# from time import gmtime
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,7 @@ Fill_Value_Float = -999.0
 
 
 def correct_lwp_offset(
-    lev1: dict, lwp_org: np.ndarray, index: np.ndarray, site: str
+    lev1: dict, lwp_org: np.ndarray, index: np.ndarray
 ) -> np.ndarray:
     """This function corrects Lwp offset using the
     2min standard deviation of the 31.4 GHz channel and IR temperature

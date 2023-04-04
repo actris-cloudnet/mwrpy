@@ -153,7 +153,7 @@ def interpol_2d(
     result = np.zeros((len(x_new), array.shape[1]))
     array_screened = ma.masked_invalid(array, copy=True)  # data may contain nan-values
     for ind, values in enumerate(array_screened.T):
-        if array.mask == True:
+        if ma.is_masked(array):
             mask = ~values.mask
             if ma.any(values[mask]):
                 result[:, ind] = np.interp(x_new, x_in[mask], values[mask])
@@ -200,6 +200,14 @@ def seconds2date(time_in_seconds: float, epoch: Epoch = (1970, 1, 1)) -> list:
     return datetime.utcfromtimestamp(timestamp).strftime("%Y %m %d %H %M %S").split()
 
 
+def str_to_numeric(value: str) -> int | float:
+    """Converts string to number (int or float)."""
+    try:
+        return int(value)
+    except ValueError:
+        return float(value)
+
+
 def add_time_bounds(time_arr: np.ndarray, int_time: int) -> np.ndarray:
     """Adds time bounds"""
     time_bounds = np.ones([len(time_arr), 2], np.int32) * Fill_Value_Int
@@ -221,7 +229,7 @@ def get_coeff_list(site: str, prefix: str):
             dir_path + "/site_config/" + site + "/coefficients/" + prefix.upper() + "*"
         ),
     ]
-    c_list = [x for x in s_list if x != []]
+    c_list = [x for x in s_list if x]
 
     if len(c_list) > 0:
         c_list = sorted(c_list[0])
@@ -267,6 +275,7 @@ def read_yaml_config(site: str) -> tuple[dict, dict]:
         "const_azi": -999.0,
         "flag_status": [0, 0, 0, 1, 0, 0, 0, 0],
         "ir_flag": True,
+        "site_name": site,
     }
 
     global_specs = {
@@ -278,7 +287,7 @@ def read_yaml_config(site: str) -> tuple[dict, dict]:
     }
     dir_name = os.path.dirname(__file__)
     inst_file = os.path.join(dir_name, "site_config/hatpro.yaml")
-    with open(inst_file) as f:
+    with open(inst_file, "r", encoding="utf8") as f:
         inst_config = yaml.load(f, Loader=SafeLoader)
     inst_config["global_specs"].update(site_config["global_specs"])
     for name in inst_config["params"].keys():

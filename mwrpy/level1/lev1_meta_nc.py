@@ -104,10 +104,11 @@ ATTRIBUTES_1B01 = {
         long_name="Nominal centre frequency of microwave channels",
         standard_name="radiation_frequency",
         units="GHz",
-        comment="1) For double-sideband receivers, frequency corresponds to the local\n"
-        "oscillator frequency whereas the radio frequency of the upper/lower sideband is\n"
-        "frequency+/-sideband_IF_separation. 2) In case of known offset between the real and the\n"
-        "nominal frequency of some channels, frequency+freq_shift gives more accurate values.",
+        comment="1) For double-sideband receivers, frequency corresponds to the\n"
+        "local oscillator frequency whereas the radio frequency of the upper/lower\n"
+        "sideband is frequency+/-sideband_IF_separation. 2) In case of known\n"
+        "offset between the real and the nominal frequency of some channels,\n"
+        "frequency+freq_shift gives more accurate values.",
     ),
     "receiver_nb": MetaData(
         long_name="Microwave receiver number",
@@ -123,13 +124,15 @@ ATTRIBUTES_1B01 = {
     "n_sidebands": MetaData(
         long_name="Number of sidebands",
         units="1",
-        comment="0: direct-detection receivers, 1: single-sideband, 2: double-sideband.\n"
-        "The frequency separation of sidebands is indicated in sideband_IF_separation.",
+        comment="0: direct-detection receivers, 1: single-sideband,\n"
+        "2: double-sideband. The frequency separation of sidebands\n"
+        "is indicated in sideband_IF_separation.",
     ),
     "sideband_IF_separation": MetaData(
         long_name="Sideband IF separation",
-        comment="For double sideband channels, this is the positive and negative IF range\n"
-        "distance of the two band passes around the centre frequency (which is the LO frqeuency)",
+        comment="For double sideband channels, this is the positive and negative\n"
+        "IF range distance of the two band passes around the centre frequency\n"
+        "(which is the LO frqeuency)",
         units="GHz",
     ),
     "beamwidth": MetaData(
@@ -161,13 +164,14 @@ ATTRIBUTES_1B01 = {
         long_name="Total absolute calibration uncertainty of brightness temperature,\n"
         "one standard deviation",
         units="K",
-        comment="specify here source of this variable, e.g. literature value, specified by\n"
-        "manufacturer, result of validation effort (updated irregularily) For RDX systems,\n"
-        "derived from analysis performed by Tim Hewsion (Tim J. Hewison, 2006: Profiling\n"
-        "Temperature and Humidity by Ground-based Microwave Radiometers, PhD Thesis,\n"
-        "University of Reading.) Derived from sensitivity analysis of LN2 calibration plus\n"
-        "instrument noise levels (ACTRIS work), currently literature values\n"
-        "(Maschwitz et al. for HATPRO, ? for radiometrics)",
+        comment="specify here source of this variable, e.g. literature value,\n"
+        "specified by manufacturer, result of validation effort\n"
+        "(updated irregularily) For RDX systems, derived from analysis\n"
+        "performed by Tim Hewsion (Tim J. Hewison, 2006: Profiling Temperature\n"
+        "and Humidity by Ground-based Microwave Radiometers, PhD Thesis,\n"
+        "University of Reading.) Derived from sensitivity analysis of LN2\n"
+        "calibration plus instrument noise levels (ACTRIS work), \n"
+        "currently literature values (Maschwitz et al. for HATPRO, ? for radiometrics)",
     ),
     "tb_cov": MetaData(
         long_name="Error covariance matrix of brightness temperature channels",
@@ -192,7 +196,8 @@ ATTRIBUTES_1B01 = {
     "liquid_cloud_flag": MetaData(
         long_name="Liquid cloud flag",
         units="1",
-        comment="Flag meaning: no liquid cloud (0), liquid cloud present (1), undefined (2)",
+        comment="Flag meaning: no liquid cloud (0), liquid cloud present (1),\n"
+        "undefined (2)",
     ),
     "liquid_cloud_flag_status": MetaData(
         long_name="Liquid cloud flag status",

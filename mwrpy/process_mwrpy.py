@@ -28,7 +28,14 @@ def main(args):
         plot_product(args.product, date, args.site, args.indir, args.outfile)
     else:
         print(f"Processing {args.product} product, {args.site}")
-        process_product(args.product, date, args.site, args.indir, args.outfile)
+        process_product(
+            args.product,
+            args.site,
+            args.indir,
+            args.outfile,
+            args.temp_file,
+            args.hum_file,
+        )
         # print(f"Plotting {args.product} product, {args.site}")
         # plot_product(args.product, date, args.site)
 
@@ -249,4 +256,6 @@ def add_arguments(subparser):
     )
     parser.add_argument("indir")
     parser.add_argument("outfile")
+    parser.add_argument("temp_file")
+    parser.add_argument("hum_file")
     return subparser

@@ -101,7 +101,7 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                                 cll = lines[jj].split(":")
                             else:
                                 cll = lines[jj].split("=")
-                            coeff["coeff_quad"][i + jj, freq_ind] = np.array(
+                            coeff["coeff_quad"][jj, freq_ind] = np.array(
                                 [
                                     float(idx)
                                     for idx in cll[1].split()[0 : len(freq_coeff)]

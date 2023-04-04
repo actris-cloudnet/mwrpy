@@ -126,7 +126,7 @@ def orbpos(data: dict, params: dict) -> np.ndarray:
     sun = {}
     sun["azimuth_angle"] = np.zeros(data["time"].shape) * Fill_Value_Float
     sun["elevation_angle"] = np.zeros(data["time"].shape) * Fill_Value_Float
-    moon = dict()
+    moon = {}
     moon["azimuth_angle"] = np.zeros(data["time"].shape) * Fill_Value_Float
     moon["elevation_angle"] = np.zeros(data["time"].shape) * Fill_Value_Float
 

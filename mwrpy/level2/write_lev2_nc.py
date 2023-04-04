@@ -1,7 +1,6 @@
 """Module for writing Level 2 netCDF files"""
 from datetime import datetime
 
-import netCDF4
 import netCDF4 as nc
 import numpy as np
 import pytz
@@ -34,7 +33,8 @@ def lev2_to_nc(
     hum_file: str | None = None,
 ):
     """This function reads Level 1 files,
-    applies retrieval coefficients for Level 2 products and writes it into a netCDF file.
+    applies retrieval coefficients for Level 2 products
+    and writes it into a netCDF file.
 
     Args:
         site: Name of site.
@@ -89,7 +89,7 @@ def lev2_to_nc(
 
 def get_products(
     site: str,
-    lev1: netCDF4.Dataset,
+    lev1: nc.Dataset,
     data_type: str,
     params: dict,
     temp_file: str | None = None,
@@ -113,7 +113,7 @@ def get_products(
         coeff = get_mvr_coeff(site, product, lev1["frequency"][:])
 
         if coeff[0]["ret_type"] < 2:
-            coeff, offset, lin, quad, e_ran, e_sys = get_mvr_coeff(
+            coeff, offset, lin, quad, _, _ = get_mvr_coeff(
                 site, product, lev1["frequency"][:]
             )
         else:
@@ -196,7 +196,7 @@ def get_products(
                 )
             else:
                 rpg_dat["lwp"], rpg_dat["lwp_offset"] = correct_lwp_offset(
-                    lev1.variables, tmp_product, index, site
+                    lev1.variables, tmp_product, index
                 )
         else:
             rpg_dat["iwv"] = tmp_product
@@ -209,7 +209,7 @@ def get_products(
 
         coeff = get_mvr_coeff(site, ret, lev1["frequency"][:])
         if coeff[0]["ret_type"] < 2:
-            coeff, offset, lin, quad, e_ran, e_sys = get_mvr_coeff(
+            coeff, offset, lin, quad, _, _ = get_mvr_coeff(
                 site, ret, lev1["frequency"][:]
             )
         else:
@@ -293,7 +293,7 @@ def get_products(
     elif data_type == "2P02":
         coeff = get_mvr_coeff(site, "tpb", lev1["frequency"][:])
         if coeff[0]["ret_type"] < 2:
-            coeff, offset, lin, quad, e_ran, e_sys = get_mvr_coeff(
+            coeff, offset, lin, quad, _, _ = get_mvr_coeff(
                 site, "tpb", lev1["frequency"][:]
             )
         else:
@@ -463,7 +463,7 @@ def get_products(
 
 
 def _combine_lev1(
-    lev1: netCDF4.Dataset,
+    lev1: nc.Dataset,
     rpg_dat: dict,
     index: np.ndarray,
     data_type: str,
@@ -526,7 +526,7 @@ def load_product(filename: str):
     return file, ret_freq, ret_ang
 
 
-def _test_BL_scan(site: str, lev1: netCDF4.Dataset) -> bool:
+def _test_BL_scan(site: str, lev1: nc.Dataset) -> bool:
     """Check for exiEsting BL scans in lev1 data"""
 
     if "elevation_angle" in lev1.variables:
@@ -554,12 +554,12 @@ def ele_retrieval(ele_obs: np.ndarray, coeff: dict) -> np.ndarray:
     return np.array([ele_ret[(np.abs(ele_ret - v)).argmin()] for v in ele_obs])
 
 
-def retrieval_input(lev1: netCDF4.Dataset, coeff: dict) -> np.ndarray:
+def retrieval_input(lev1: nc.Dataset, coeff: dict) -> np.ndarray:
     """Get retrieval input"""
     bias = np.ones((len(lev1["time"][:]), 1), np.float32)
     doy = np.ones((len(lev1["time"][:]), 2), np.float32) * Fill_Value_Float
     sun = np.ones((len(lev1["time"][:]), 2), np.float32) * Fill_Value_Float
-    irt = np.ones((len(lev1["time"][:]), 2), np.float32) * Fill_Value_Float
+    # irt = np.ones((len(lev1["time"][:]), 2), np.float32) * Fill_Value_Float
     tf = TimezoneFinder()
 
     for ind, time in enumerate(lev1["time"][:].data):

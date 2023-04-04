@@ -12,8 +12,8 @@ from mwrpy.utils import MetaData
 class RpgArray:
     """Stores netCDF4 variables, numpy arrays and scalars as RpgArrays.
     Args:
-        variable: The netCDF4 :class:`Variable` instance, numpy array (masked or regular),
-            or scalar (float, int).
+        variable: The netCDF4 :class:`Variable` instance,
+        numpy array (masked or regular), or scalar (float, int).
         name: Name of the variable.
         units_from_user: Units of the variable.
     Attributes:
@@ -105,6 +105,7 @@ class Rpg:
         return datetime.utcfromtimestamp(time_median).strftime("%Y-%m-%d")
 
     def find_valid_times(self):
+        """Sorts timestamps and finds valid times"""
         # sort timestamps
         time = self.data["time"].data[:]
         ind = time.argsort()
@@ -118,9 +119,9 @@ class Rpg:
         # find valid date
         time = self.data["time"].data[:]
         ind = np.zeros(len(time), dtype=int)
-        for i, t in enumerate(time):
-            if "-".join(utils.seconds2date(t)[:3]) == self.date:
-                ind[i] = 1
+        for time_i, time_v in enumerate(time):
+            if "-".join(utils.seconds2date(time_v)[:3]) == self.date:
+                ind[time_i] = 1
         self._screen(np.where(ind == 1)[0])
 
     def _screen(self, ind: np.ndarray):
@@ -209,21 +210,21 @@ def init_file(
         date: Date string of file
     """
 
-    nc = netCDF4.Dataset(file_name, "w", format="NETCDF4_CLASSIC")
+    nc_file = netCDF4.Dataset(file_name, "w", format="NETCDF4_CLASSIC")
     for key, dimension in dimensions.items():
-        nc.createDimension(key, dimension)
-    _write_vars2nc(nc, rpg_arrays)
-    _add_standard_global_attributes(nc, att_global)
-    return nc
+        nc_file.createDimension(key, dimension)
+    _write_vars2nc(nc_file, rpg_arrays)
+    _add_standard_global_attributes(nc_file, att_global)
+    return nc_file
 
 
-def _get_dimensions(nc: netCDF4.Dataset, data: np.ndarray) -> tuple:
+def _get_dimensions(nc_file: netCDF4.Dataset, data: np.ndarray) -> tuple:
     """Finds correct dimensions for a variable."""
 
     if utils.isscalar(data):
         return ()
     variable_size = ()
-    file_dims = nc.dimensions
+    file_dims = nc_file.dimensions
     array_dims = data.shape
     for length in array_dims:
         dim = [key for key in file_dims.keys() if file_dims[key].size == length][0]
@@ -231,7 +232,7 @@ def _get_dimensions(nc: netCDF4.Dataset, data: np.ndarray) -> tuple:
     return variable_size
 
 
-def _write_vars2nc(nc: netCDF4.Dataset, mwr_variables: dict) -> None:
+def _write_vars2nc(nc_file: netCDF4.Dataset, mwr_variables: dict) -> None:
     """Iterates over RPG instances and write to netCDF file."""
 
     for obj in mwr_variables.values():
@@ -240,7 +241,7 @@ def _write_vars2nc(nc: netCDF4.Dataset, mwr_variables: dict) -> None:
         else:
             fill_value = -99
 
-        size = obj.dimensions or _get_dimensions(nc, obj.data)
+        size = obj.dimensions or _get_dimensions(nc_file, obj.data)
         if obj.name == "time_bnds":
             size = ("time", "bnds")
         if obj.name == "receiver_nb":
@@ -251,7 +252,7 @@ def _write_vars2nc(nc: netCDF4.Dataset, mwr_variables: dict) -> None:
             size = "ir_wavelength"
         if obj.name == "t_amb":
             size = ("time", "t_amb_nb")
-        nc_variable = nc.createVariable(
+        nc_variable = nc_file.createVariable(
             obj.name, obj.data_type, size, zlib=True, fill_value=fill_value
         )
         nc_variable[:] = obj.data
@@ -259,10 +260,12 @@ def _write_vars2nc(nc: netCDF4.Dataset, mwr_variables: dict) -> None:
             setattr(nc_variable, attr, getattr(obj, attr))
 
 
-def _add_standard_global_attributes(nc: netCDF4.Dataset, att_global) -> None:
-    nc.mwrpy_version = version.__version__
-    nc.processed = datetime.now(tz=timezone.utc).strftime("%d %b %Y %H:%M:%S") + " UTC"
+def _add_standard_global_attributes(nc_file: netCDF4.Dataset, att_global) -> None:
+    nc_file.mwrpy_version = version.__version__
+    nc_file.processed = (
+        datetime.now(tz=timezone.utc).strftime("%d %b %Y %H:%M:%S") + " UTC"
+    )
     for name, value in att_global.items():
         if value is None:
             value = ""
-        setattr(nc, name, value)
+        setattr(nc_file, name, value)

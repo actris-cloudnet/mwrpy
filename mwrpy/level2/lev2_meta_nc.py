@@ -35,20 +35,19 @@ def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
             ["Data type " + data_type + " not supported for file writing."]
         )
 
-    else:
-        attributes = dict(ATTRIBUTES_COM, **eval("ATTRIBUTES_" + data_type))
-        for key in list(rpg_variables):
-            if key in attributes:
-                rpg_variables[key].set_attributes(attributes[key])
-            else:
-                del rpg_variables[key]
+    attributes = dict(ATTRIBUTES_COM, **eval("ATTRIBUTES_" + data_type))
+    for key in list(rpg_variables):
+        if key in attributes:
+            rpg_variables[key].set_attributes(attributes[key])
+        else:
+            del rpg_variables[key]
 
-        index_map = {v: i for i, v in enumerate(attributes)}
-        rpg_variables = dict(
-            sorted(rpg_variables.items(), key=lambda pair: index_map[pair[0]])
-        )
+    index_map = {v: i for i, v in enumerate(attributes)}
+    rpg_variables = dict(
+        sorted(rpg_variables.items(), key=lambda pair: index_map[pair[0]])
+    )
 
-        return rpg_variables
+    return rpg_variables
 
 
 ATTRIBUTES_COM = {
@@ -102,11 +101,13 @@ ATTRIBUTES_2P01 = {
         units="K",
     ),
     "temperature_random_error": MetaData(
-        long_name="Random uncertainty of retrieved temperature profile (single pointing)",
+        long_name="Random uncertainty of retrieved\n"
+        "temperature profile (single pointing)",
         units="K",
     ),
     "temperature_systematic_error": MetaData(
-        long_name="Systematic uncertainty of retrieved temperature profile (single pointing)",
+        long_name="Systematic uncertainty of retrieved\n"
+        "temperature profile (single pointing)",
         units="K",
     ),
 }
@@ -124,11 +125,13 @@ ATTRIBUTES_2P02 = {
         units="K",
     ),
     "temperature_random_error": MetaData(
-        long_name="Random uncertainty of retrieved temperature profile (multiple pointing)",
+        long_name="Random uncertainty of retrieved\n"
+        "temperature profile (multiple pointing)",
         units="K",
     ),
     "temperature_systematic_error": MetaData(
-        long_name="Systematic uncertainty of retrieved temperature profile (multiple pointing)",
+        long_name="Systematic uncertainty of retrieved\n"
+        "temperature profile (multiple pointing)",
         units="K",
     ),
 }
@@ -228,15 +231,18 @@ ATTRIBUTES_2I01 = {
         units="kg m-2",
     ),
     "lwp_random_error": MetaData(
-        long_name="Random uncertainty of retrieved column-integrated liquid water path",
+        long_name="Random uncertainty of retrieved\n"
+        "column-integrated liquid water path",
         units="kg m-2",
     ),
     "lwp_systematic_error": MetaData(
-        long_name="Systematic uncertainty of retrieved column-integrated liquid water path",
+        long_name="Systematic uncertainty of retrieved\n"
+        "column-integrated liquid water path",
         units="kg m-2",
     ),
     "lwp_offset": MetaData(
-        long_name="Subtracted offset correction of retrieved column-integrated liquid water path",
+        long_name="Subtracted offset correction of retrieved\n"
+        "column-integrated liquid water path",
         units="kg m-2",
     ),
 }
