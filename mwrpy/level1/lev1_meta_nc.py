@@ -1,4 +1,7 @@
 """Module for Level 1 Metadata"""
+from collections.abc import Callable
+from typing import TypeAlias
+
 from mwrpy.utils import MetaData
 
 
@@ -19,17 +22,23 @@ def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
         att = get_data_attributes('data','data_type')
     """
 
+    if data_type not in (
+        "1B01",
+        "1B11",
+        "1B21",
+        "1C01",
+    ):
+        raise RuntimeError(
+            ["Data type " + data_type + " not supported for file writing."]
+        )
+
     if data_type in ("1B01", "1B11", "1B21"):
-        attributes = dict(ATTRIBUTES_COM, **eval("ATTRIBUTES_" + data_type))
+        read_att = att_reader[data_type]
+        attributes = dict(ATTRIBUTES_COM, **read_att)
 
     elif data_type == "1C01":
         attributes = dict(
             ATTRIBUTES_COM, **ATTRIBUTES_1B01, **ATTRIBUTES_1B11, **ATTRIBUTES_1B21
-        )
-
-    else:
-        raise RuntimeError(
-            ["Data type " + data_type + " not supported for file writing."]
         )
 
     for key in list(rpg_variables):
@@ -309,4 +318,12 @@ ATTRIBUTES_1B21 = {
         comment="0=ok, 1=problem. Note: should also be set to 1\n"
         "if corresponding sensor not available",
     ),
+}
+
+
+FuncType: TypeAlias = Callable[[str], dict]
+att_reader: dict[str, dict] = {
+    "1B01": ATTRIBUTES_1B01,
+    "1B11": ATTRIBUTES_1B11,
+    "1B21": ATTRIBUTES_1B21,
 }

@@ -1,6 +1,8 @@
 """This module contains all functions to read in RPG MWR binary files"""
 import datetime
 import logging
+from collections.abc import Callable
+from typing import TypeAlias
 
 import numpy as np
 
@@ -39,12 +41,13 @@ def stack_files(file_list):
         "tpc",
     ):
         raise RuntimeError(["Error: no reader for file type " + ext])
-    reader_name = str("read_" + ext)
+
+    read_type = type_reader[ext]
     data, header = {}, {}
 
     for file in file_list:
         try:
-            header_tmp, data_tmp = eval(reader_name + "(file)")
+            header_tmp, data_tmp = read_type(file)
         except (TypeError, ValueError) as err:
             logging.warning(err)
             continue
@@ -944,3 +947,18 @@ def read_his(file_name: str) -> dict:
         header = _get_header()
         data = _get_data()
         return header, data
+
+
+FuncType: TypeAlias = Callable[[str], tuple[dict, dict]]
+type_reader: dict[str, FuncType] = {
+    "brt": read_brt,
+    "irt": read_irt,
+    "met": read_met,
+    "hkd": read_hkd,
+    "blb": read_blb,
+    "bls": read_bls,
+    "spc": read_spc,
+    "his": read_his,
+    "iwv": read_iwv,
+    "tpb": read_tpb,
+}

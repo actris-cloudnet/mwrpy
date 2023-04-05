@@ -1,6 +1,8 @@
 """Module for writing Level 1 netCDF files"""
 import datetime
+from collections.abc import Callable
 from itertools import groupby
+from typing import TypeAlias
 
 import numpy as np
 import pandas as pd
@@ -395,6 +397,7 @@ def _add_bls(brt: RpgBin, bls: RpgBin, hkd: RpgBin, params: dict) -> None:
     brt.data["time"] = np.concatenate((brt.data["time"], bls.data["time"]))
     ind = np.argsort(brt.data["time"])
     brt.data["time"] = brt.data["time"][ind]
+
     names = [
         "time_bnds",
         "elevation_angle",
@@ -567,25 +570,27 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict, site: str) -> 
         liquid_cloud_flag_status_add = np.ones(len(time_add), np.int32) * Fill_Value_Int
         brt.data["time"] = np.concatenate((brt.data["time"], time_add))
         ind = np.argsort(brt.data["time"])
-
         brt.data["time"] = brt.data["time"][ind]
-        names = [
-            "time_bnds",
-            "elevation_angle",
-            "azimuth_angle",
-            "rain",
-            "tb",
-            "pointing_flag",
-            "liquid_cloud_flag",
-            "liquid_cloud_flag_status",
-            "status",
-        ]
-        for var in names:
-            brt.data[var] = np.concatenate((brt.data[var], eval(var + "_add")))
-            if brt.data[var].ndim > 1:
-                brt.data[var] = brt.data[var][ind, :]
+
+        FuncType: TypeAlias = Callable[[str], np.array]
+        names_add: dict[str, FuncType] = {
+            "time_bnds": time_bnds_add,
+            "elevation_angle": elevation_angle_add,
+            "azimuth_angle": azimuth_angle_add,
+            "rain": rain_add,
+            "tb": tb_add,
+            "pointing_flag": pointing_flag_add,
+            "liquid_cloud_flag": liquid_cloud_flag_add,
+            "liquid_cloud_flag_status": liquid_cloud_flag_status_add,
+            "status": status_add,
+        }
+
+        for var in names_add.items():
+            brt.data[var[0]] = np.concatenate((brt.data[var[0]], var[1]))
+            if brt.data[var[0]].ndim > 1:
+                brt.data[var[0]] = brt.data[var[0]][ind, :]
             else:
-                brt.data[var] = brt.data[var][ind]
+                brt.data[var[0]] = brt.data[var[0]][ind]
         brt.header["n"] = len(brt.data["time"])
 
 

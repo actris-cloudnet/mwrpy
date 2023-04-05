@@ -1,4 +1,6 @@
 """Module for Level 2 Metadata"""
+from collections.abc import Callable
+from typing import TypeAlias
 
 from mwrpy.utils import MetaData
 
@@ -35,7 +37,8 @@ def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
             ["Data type " + data_type + " not supported for file writing."]
         )
 
-    attributes = dict(ATTRIBUTES_COM, **eval("ATTRIBUTES_" + data_type))
+    read_att = att_reader[data_type]
+    attributes = dict(ATTRIBUTES_COM, **read_att)
     for key in list(rpg_variables):
         if key in attributes:
             rpg_variables[key].set_attributes(attributes[key])
@@ -285,4 +288,17 @@ ATTRIBUTES_2S02 = {
         long_name="Brightness temperature spectrum",
         units="K",
     ),
+}
+
+FuncType: TypeAlias = Callable[[str], dict]
+att_reader: dict[str, dict] = {
+    "2P01": ATTRIBUTES_2P01,
+    "2P02": ATTRIBUTES_2P02,
+    "2P03": ATTRIBUTES_2P03,
+    "2P04": ATTRIBUTES_2P04,
+    "2P07": ATTRIBUTES_2P07,
+    "2P08": ATTRIBUTES_2P08,
+    "2I01": ATTRIBUTES_2I01,
+    "2I02": ATTRIBUTES_2I02,
+    "2S02": ATTRIBUTES_2S02,
 }
