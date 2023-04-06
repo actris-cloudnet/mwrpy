@@ -68,3 +68,230 @@ class TestBrtFileReading:
         assert np.min(self.data["tb"]) > 15
         assert np.max(self.data["tb"]) < 280
         assert np.isclose(np.mean(self.data["tb"]), 124.37, atol=1)
+
+
+class TestBlbFileReading:
+    header, data = rpg_bin.read_blb(f"{dir_name}/data/230406.BLB")
+
+    def test_header(self):
+        assert isinstance(self.header, dict)
+        data = {
+            "_code": np.array([567845848]),
+            "n": 42,
+            "_xmin": np.array(
+                [
+                    28.307354,
+                    27.608524,
+                    23.924782,
+                    18.503624,
+                    17.06893,
+                    15.607489,
+                    15.94603,
+                    106.36081,
+                    145.87115,
+                    243.2081,
+                    267.76,
+                    267.76,
+                    267.76,
+                    267.76,
+                ]
+            ),
+            "_xmax": np.array(
+                [
+                    276.26,
+                    276.26,
+                    276.26,
+                    276.26,
+                    276.26,
+                    276.26,
+                    276.26,
+                    276.26,
+                    276.26,
+                    276.79318,
+                    277.18457,
+                    277.06384,
+                    276.96106,
+                    277.0575,
+                ]
+            ),
+            "_time_ref": np.array([1]),
+            "_n_f": 14,
+            "_f": np.array(
+                [
+                    22.24,
+                    23.04,
+                    23.84,
+                    25.44,
+                    26.24,
+                    27.84,
+                    31.4,
+                    51.26,
+                    52.28,
+                    53.86,
+                    54.94,
+                    56.66,
+                    57.3,
+                    58.0,
+                ]
+            ),
+            "_n_ang": 10,
+            "_ang": np.array([4.2, 4.8, 5.4, 6.6, 8.4, 11.4, 14.4, 19.2, 30.0, 90.0]),
+        }
+        for key, value in data.items():
+            assert type(self.header[key]) == type(value)
+            if isinstance(value, int):
+                assert self.header[key] == value
+            else:
+                assert_array_almost_equal(self.header[key], value, decimal=2)
+
+    def test_data(self):
+        assert isinstance(self.data, dict)
+        expected_data_keys = {"time", "rf_mod", "temp_sfc", "tb"}
+        assert set(self.data.keys()) == expected_data_keys
+        assert len(self.data["time"]) == self.header["n"]
+        assert self.data["time"][0] == 702432050
+        assert self.data["time"][-1] == 702456651
+        assert np.isclose(self.data["rf_mod"], 4).all()
+        assert np.isclose(np.mean(self.data["temp_sfc"]), 269.9, atol=1)
+        assert np.isclose(np.mean(self.data["tb"]), 194.6, atol=1)
+        assert self.data["tb"].shape == (
+            self.header["n"],
+            self.header["_n_f"],
+            self.header["_n_ang"],
+        )
+        assert np.isclose(self.data["tb"][0, 0, 0], 28.307, atol=0.01)
+        assert np.isclose(self.data["tb"][-1, 0, 0], 28.586, atol=0.01)
+        assert np.isclose(self.data["tb"][0, -1, 0], 274.592, atol=0.01)
+        assert np.isclose(self.data["tb"][0, 0, -1], 231.091, atol=0.01)
+
+
+class TestIrtFileReading:
+    header, data = rpg_bin.read_irt(f"{dir_name}/data/230406.IRT")
+
+    def test_header(self):
+        assert isinstance(self.header, dict)
+        data = {
+            "_code": np.array([671112000]),
+            "n": 21389,
+            "_xmin": np.array([-72.217354]),
+            "_xmax": np.array([-66.10358]),
+            "_time_ref": np.array([1]),
+            "_n_f": 1,
+            "_f": np.array([10.5]),
+        }
+        for key, value in data.items():
+            assert type(self.header[key]) == type(value)
+            if isinstance(value, int):
+                assert self.header[key] == value
+            else:
+                assert_array_almost_equal(self.header[key], value, decimal=2)
+
+    def test_data(self):
+        assert isinstance(self.data, dict)
+        expected_data_keys = {
+            "time",
+            "rain",
+            "irt",
+            "ir_elevation_angle",
+            "ir_azimuth_angle",
+        }
+        assert set(self.data.keys()) == expected_data_keys
+        assert len(self.data["time"]) == self.header["n"]
+        assert self.data["time"][0] == 702432051
+        assert self.data["time"][-1] == 702457199
+        assert np.isclose(self.data["rain"], 0).all()
+        assert np.isclose(self.data["ir_elevation_angle"], 89.95).all()
+        assert np.isclose(self.data["ir_azimuth_angle"], 0.02).all()
+        assert self.data["irt"].shape == (self.header["n"], self.header["_n_f"])
+        assert np.isclose(np.mean(self.data["irt"]), 202.68, atol=1)
+
+
+class TestHkdFileReading:
+    header, data = rpg_bin.read_hkd(f"{dir_name}/data/230406.HKD")
+
+    def test_header(self):
+        assert isinstance(self.header, dict)
+        data = {
+            "_code": np.array([837854832]),
+            "n": 23019,
+            "_time_ref": np.array([1]),
+            "_sel": np.array([831]),
+        }
+        for key, value in data.items():
+            assert type(self.header[key]) == type(value)
+            if isinstance(value, int):
+                assert self.header[key] == value
+            else:
+                assert_array_almost_equal(self.header[key], value, decimal=2)
+
+    def test_data(self):
+        assert isinstance(self.data, dict)
+        expected_data_keys = {
+            "time",
+            "alarm",
+            "latitude",
+            "longitude",
+            "temp",
+            "stab",
+            "flash",
+            "qual",
+            "status",
+        }
+        assert set(self.data.keys()) == expected_data_keys
+        assert len(self.data["time"]) == self.header["n"]
+        assert self.data["time"][0] == 702432002
+        assert self.data["time"][-1] == 702457199
+        assert np.isclose(self.data["alarm"], 0).all()
+        assert np.isclose(self.data["qual"], 0).all()
+        assert np.isclose(self.data["flash"], 15211, atol=1).all()
+        assert np.isclose(self.data["latitude"], 61.84, atol=0.1).all()
+        assert np.isclose(self.data["longitude"], 24.28, atol=0.1).all()
+        assert self.data["temp"].shape == (self.header["n"], 4)
+        assert self.data["stab"].shape == (self.header["n"], 2)
+        assert np.isclose(np.mean(self.data["temp"]), 304.815, atol=1)
+        assert np.sum(self.data["status"]) == 2224932139157
+
+
+class TestMetFileReading:
+    header, data = rpg_bin.read_met(f"{dir_name}/data/230406.MET")
+
+    def test_header(self):
+        assert isinstance(self.header, dict)
+        data = {
+            "_code": np.array([599658944]),
+            "n": 23019,
+            "_n_add": np.array([7]),
+            "_xmin": np.array(
+                [1.0117e03, 2.6766e02, 6.5e01, 1.0e-01, 2.6275635e-02, 0]
+            ),
+            "_xmax": np.array([1012.4, 276.56, 87.6, 11.0, 358.02628, 0.0]),
+            "_time_ref": np.array([1]),
+        }
+        for key, value in data.items():
+            assert type(self.header[key]) == type(value)
+            if isinstance(value, int):
+                assert self.header[key] == value
+            else:
+                assert_array_almost_equal(self.header[key], value, decimal=2)
+
+    def test_data(self):
+        assert isinstance(self.data, dict)
+        expected_data_keys = {
+            "time",
+            "rain",
+            "air_pressure",
+            "air_temperature",
+            "relative_humidity",
+            "adds",
+        }
+        assert set(self.data.keys()) == expected_data_keys
+        assert len(self.data["time"]) == self.header["n"]
+        assert self.data["time"][0] == 702432002
+        assert self.data["time"][-1] == 702457199
+        assert np.isclose(self.data["rain"], 0).all()
+        assert np.isclose(np.mean(self.data["air_temperature"]), 270.40, atol=0.1)
+        assert np.isclose(np.mean(self.data["air_pressure"]), 1012.09, atol=0.1)
+        assert np.isclose(np.mean(self.data["relative_humidity"]), 0.78, atol=0.1)
+        assert self.data["adds"].shape == (self.header["n"], 3)
+        assert (np.isclose(self.data["adds"][0, :], [1.4, 129.03, 0], atol=0.1)).all()
+        assert (np.isclose(self.data["adds"][-1, :], [1.5, 195.03, 0], atol=0.1)).all()
