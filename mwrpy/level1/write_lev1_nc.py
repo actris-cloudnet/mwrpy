@@ -31,7 +31,7 @@ def lev1_to_nc(
     site: str,
     data_type: str,
     path_to_files: str,
-    output_file: str,
+    output_file: str | None = None,
 ):
     """This function reads one day of RPG MWR binary files,
     adds attributes and writes it into netCDF file.
@@ -55,7 +55,9 @@ def lev1_to_nc(
     hatpro = rpg_mwr.Rpg(rpg_bin.data)
     hatpro.find_valid_times()
     hatpro.data = get_data_attributes(hatpro.data, data_type)
-    rpg_mwr.save_rpg(hatpro, output_file, global_attributes, data_type)
+    if output_file is not None:
+        rpg_mwr.save_rpg(hatpro, output_file, global_attributes, data_type)
+    return hatpro
 
 
 def prepare_data(
@@ -67,8 +69,8 @@ def prepare_data(
     """Load and prepare data for netCDF writing"""
 
     if data_type in ("1B01", "1C01"):
-        file_list_brt = get_file_list(path_to_files, "BRT")
-        rpg_bin = RpgBin(file_list_brt)
+        brt_files = get_file_list(path_to_files, "BRT")
+        rpg_bin = RpgBin(brt_files)
         rpg_bin.data["tb"] = rpg_bin.data["tb"][:, np.argsort(params["bandwidth"])]
         rpg_bin.data["frequency"] = rpg_bin.header["_f"][
             np.argsort(params["bandwidth"])

@@ -483,7 +483,6 @@ def _combine_lev1(
     if index != []:
         for ivars in lev1_vars:
             if ivars not in lev1.variables:
-                # logging.info("Skipping %s", ivars)
                 continue
             if (ivars == "time_bnds") & (data_type == "2P02"):
                 rpg_dat[ivars] = add_time_bounds(
@@ -492,7 +491,10 @@ def _combine_lev1(
             elif (ivars == "time_bnds") & (data_type in ("2P04", "2P07", "2P08")):
                 rpg_dat[ivars] = np.ones(lev1[ivars].shape, np.int32) * Fill_Value_Int
             else:
-                rpg_dat[ivars] = lev1[ivars][index]
+                try:
+                    rpg_dat[ivars] = lev1[ivars][index]
+                except IndexError:
+                    rpg_dat[ivars] = lev1[ivars][:]
 
 
 def _add_att(global_attributes: dict, coeff: dict) -> None:

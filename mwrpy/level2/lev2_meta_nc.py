@@ -123,7 +123,8 @@ ATTRIBUTES_2P02 = {
         units="m",
     ),
     "temperature": MetaData(
-        long_name="Retrieved temperature profile (multiple pointing)",
+        long_name="Temperature",
+        comment="Retrieved temperature profile from multiple pointing mwr measurements",
         standard_name="air_temperature",
         units="K",
     ),
@@ -147,7 +148,7 @@ ATTRIBUTES_2P03 = {
         units="m",
     ),
     "absolute_humidity": MetaData(
-        long_name="Absolute Humidity",
+        long_name="Absolute humidity",
         units="kg m-3",
     ),
     "absolute_humidity_random_error": MetaData(
@@ -168,7 +169,7 @@ ATTRIBUTES_2P04 = {
         units="m",
     ),
     "relative_humidity": MetaData(
-        long_name="Relative Humidity",
+        long_name="Relative humidity",
         standard_name="relative_humidity",
         units="1",
     ),
@@ -190,7 +191,7 @@ ATTRIBUTES_2P07 = {
         units="m",
     ),
     "potential_temperature": MetaData(
-        long_name="Potential Temperature",
+        long_name="Potential temperature",
         standard_name="air_potential_temperature",
         units="K",
     ),
@@ -212,7 +213,7 @@ ATTRIBUTES_2P08 = {
         units="m",
     ),
     "equivalent_potential_temperature": MetaData(
-        long_name="Equivalent Potential Temperature",
+        long_name="Equivalent potential temperature",
         standard_name="air_equivalent_potential_temperature",
         units="K",
     ),
