@@ -30,6 +30,6 @@ setup(
         "timezonefinder",
     ],
     extras_require={
-        "test": ["pylint", "mypy"],
+        "test": ["pylint", "mypy", "pytest", "pytest-flakefinder"],
     },
 )
