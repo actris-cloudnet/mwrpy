@@ -199,25 +199,24 @@ def prepare_data(
                 rpg_met.data["time"],
                 "air_pressure",
             )
-            if (int(rpg_met.header["_n_sen"], 2) & 1) != 0:
+            if "wind_speed" in rpg_met.data:
                 add_interpol1d(
                     rpg_bin.data,
-                    rpg_met.data["adds"][:, 0],
+                    rpg_met.data["wind_speed"] / 3.6,
                     rpg_met.data["time"],
                     "wind_speed",
                 )
-                rpg_bin.data["wind_speed"] = rpg_bin.data["wind_speed"] / 3.6
-            if (int(rpg_met.header["_n_sen"], 2) & 2) != 0:
+            if "wind_direction" in rpg_met.data:
                 add_interpol1d(
                     rpg_bin.data,
-                    rpg_met.data["adds"][:, 1],
+                    rpg_met.data["wind_direction"],
                     rpg_met.data["time"],
                     "wind_direction",
                 )
-            if (int(rpg_met.header["_n_sen"], 2) & 4) != 0:
+            if "rainfall_rate" in rpg_met.data:
                 add_interpol1d(
                     rpg_bin.data,
-                    rpg_met.data["adds"][:, 2],
+                    rpg_met.data["rainfall_rate"] / 1000 / 3600,
                     rpg_met.data["time"],
                     "rainfall_rate",
                 )
@@ -232,12 +231,12 @@ def prepare_data(
     elif data_type == "1B21":
         file_list_met = get_file_list(path_to_files, "MET")
         rpg_bin = RpgBin(file_list_met)
-        if (int(rpg_bin.header["_n_sen"], 2) & 1) != 0:
-            rpg_bin.data["wind_speed"] = rpg_bin.data["adds"][:, 0] / 3.6
-        if (int(rpg_bin.header["_n_sen"], 2) & 2) != 0:
-            rpg_bin.data["wind_direction"] = rpg_bin.data["adds"][:, 1]
-        if (int(rpg_bin.header["_n_sen"], 2) & 4) != 0:
-            rpg_bin.data["rainfall_rate"] = rpg_bin.data["adds"][:, 2] / 1000.0 / 3600.0
+        if "wind_speed" in rpg_bin.data:
+            rpg_bin.data["wind_speed"] = rpg_bin.data["wind_speed"] / 3.6
+        if "wind_direction" in rpg_bin.data:
+            rpg_bin.data["wind_direction"] = rpg_bin.data["wind_direction"]
+        if "rainfall_rate" in rpg_bin.data:
+            rpg_bin.data["rainfall_rate"] = rpg_bin.data["rainfall_rate"] / 1000 / 3600
 
     else:
         raise RuntimeError(

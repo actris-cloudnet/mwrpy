@@ -313,18 +313,12 @@ def read_met(file_name: str) -> tuple[dict, dict]:
     """Reads MET files and returns header and data as dictionary."""
     with open(file_name, "rb") as file:
         header = _read_from_file(file, [("_code", "<i4"), ("n", "<i4")])
-        if header["_code"] == 599658944:  # New version
-            header["_n_add"] = np.fromfile(file, "b", 1)
-        else:
+        if header["_code"] == 599658943:
             header["_n_add"] = 0
-        header["_n_sen"] = bin(int(header["_n_add"]))
-        n_default_sensors = 3
-        n_additional_sensors = header["_n_sen"].count("1")
-        n_sensors = n_default_sensors + n_additional_sensors
-        minmax_values = np.fromfile(file, "<f", 2 * n_sensors)
-        header["_xmin"] = minmax_values[0::2]
-        header["_xmax"] = minmax_values[1::2]
-        header["_time_ref"] = np.fromfile(file, "<i4", 1)
+        elif header["_code"] == 599658944:
+            header |= _read_from_file(file, [("_n_add", "b")])
+        else:
+            raise ValueError(f"Error: MET file code {header['_code']} not supported")
         dt = [
             ("time", "<i4"),
             ("rain", "b"),
@@ -332,21 +326,54 @@ def read_met(file_name: str) -> tuple[dict, dict]:
             ("air_temperature", "<f"),
             ("relative_humidity", "<f"),
         ]
-        dt += [(f"adds_{n}", "<f") for n in range(n_additional_sensors)]
+        hdt = [
+            ("_air_pressure_min", "<f"),
+            ("_air_pressure_max", "<f"),
+            ("_air_temperature_min", "<f"),
+            ("_air_temperature_max", "<f"),
+            ("_relative_humidity_min", "<f"),
+            ("_relative_humidity_max", "<f"),
+        ]
+        if header["_n_add"] & 0x1:
+            dt.append(("wind_speed", "<f"))
+            hdt.append(("_wind_speed_min", "<f"))
+            hdt.append(("_wind_speed_max", "<f"))
+        if header["_n_add"] & 0x2:
+            dt.append(("wind_direction", "<f"))
+            hdt.append(("_wind_direction_min", "<f"))
+            hdt.append(("_wind_direction_max", "<f"))
+        if header["_n_add"] & 0x4:
+            dt.append(("rainfall_rate", "<f"))
+            hdt.append(("_rainfall_rate_min", "<f"))
+            hdt.append(("_rainfall_rate_max", "<f"))
+        if header["_n_add"] & 0x8:
+            dt.append(("_adds4", "<f"))
+            hdt.append(("_adds4_min", "<f"))
+            hdt.append(("_adds4_max", "<f"))
+        if header["_n_add"] & 0x10:
+            dt.append(("_adds5", "<f"))
+            hdt.append(("_adds5_min", "<f"))
+            hdt.append(("_adds5_max", "<f"))
+        if header["_n_add"] & 0x20:
+            dt.append(("_adds6", "<f"))
+            hdt.append(("_adds6_min", "<f"))
+            hdt.append(("_adds6_max", "<f"))
+        if header["_n_add"] & 0x40:
+            dt.append(("_adds7", "<f"))
+            hdt.append(("_adds7_min", "<f"))
+            hdt.append(("_adds7_max", "<f"))
+        if header["_n_add"] & 0x80:
+            dt.append(("_adds8", "<f"))
+            hdt.append(("_adds8_min", "<f"))
+            hdt.append(("_adds8_max", "<f"))
+        hdt.append(("_time_ref", "<i4"))
+        header |= _read_from_file(file, hdt)
         data = _read_from_file(file, dt, header["n"])
         _check_eof(file)
 
-    data_out = {"adds": np.empty((header["n"], n_additional_sensors))}
-    for key in data:
-        if "adds_" in key:
-            ind = int(key.split("_")[-1])
-            data_out["adds"][:, ind] = data[key]
-        else:
-            data_out[key] = data[key]
-
-    data_out["relative_humidity"] /= 100  # Converted in the original code
+    data["relative_humidity"] /= 100  # Converted in the original code
     header = _fix_header(header)
-    return header, data_out
+    return header, data
 
 
 Dim = int | tuple[int, ...]

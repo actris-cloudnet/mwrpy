@@ -260,15 +260,21 @@ class TestMetFileReading:
         data = {
             "_code": np.array([599658944]),
             "n": 23019,
-            "_n_add": np.array([7]),
-            "_xmin": np.array(
-                [1.0117e03, 2.6766e02, 6.5e01, 1.0e-01, 2.6275635e-02, 0]
-            ),
-            "_xmax": np.array([1012.4, 276.56, 87.6, 11.0, 358.02628, 0.0]),
+            "_air_pressure_min": 1.0117e03,
+            "_air_pressure_max": 1012.4,
+            "_air_temperature_min": 2.6766e02,
+            "_air_temperature_max": 276.56,
+            "_relative_humidity_min": 6.5e01,
+            "_relative_humidity_max": 87.6,
+            "_wind_speed_min": 1.0e-01,
+            "_wind_speed_max": 11.0,
+            "_wind_direction_min": 2.6275635e-02,
+            "_wind_direction_max": 358.02628,
+            "_rainfall_rate_min": 0,
+            "_rainfall_rate_max": 0,
             "_time_ref": np.array([1]),
         }
         for key, value in data.items():
-            assert type(self.header[key]) == type(value)
             if isinstance(value, int):
                 assert self.header[key] == value
             else:
@@ -282,7 +288,9 @@ class TestMetFileReading:
             "air_pressure",
             "air_temperature",
             "relative_humidity",
-            "adds",
+            "wind_speed",
+            "wind_direction",
+            "rainfall_rate",
         }
         assert set(self.data.keys()) == expected_data_keys
         assert len(self.data["time"]) == self.header["n"]
@@ -292,6 +300,9 @@ class TestMetFileReading:
         assert np.isclose(np.mean(self.data["air_temperature"]), 270.40, atol=0.1)
         assert np.isclose(np.mean(self.data["air_pressure"]), 1012.09, atol=0.1)
         assert np.isclose(np.mean(self.data["relative_humidity"]), 0.78, atol=0.1)
-        assert self.data["adds"].shape == (self.header["n"], 3)
-        assert (np.isclose(self.data["adds"][0, :], [1.4, 129.03, 0], atol=0.1)).all()
-        assert (np.isclose(self.data["adds"][-1, :], [1.5, 195.03, 0], atol=0.1)).all()
+        assert (np.isclose(self.data["wind_speed"][0], 1.4, atol=0.1)).all()
+        assert (np.isclose(self.data["wind_direction"][0], 129.03, atol=0.1)).all()
+        assert (np.isclose(self.data["rainfall_rate"][0], 0, atol=0.1)).all()
+        assert (np.isclose(self.data["wind_speed"][-1], 1.5, atol=0.1)).all()
+        assert (np.isclose(self.data["wind_direction"][-1], 195.03, atol=0.1)).all()
+        assert (np.isclose(self.data["rainfall_rate"][-1], 0, atol=0.1)).all()
