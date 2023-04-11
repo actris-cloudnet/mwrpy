@@ -136,22 +136,34 @@ def read_brt(file_name: str) -> tuple[dict, dict]:
     """Reads BRT files and returns header and data as dictionary."""
     version: Literal[1, 2]
     with open(file_name, "rb") as file:
-        header = {
-            _key: np.fromfile(file, "<i4", 1)[0]
-            for _key in ("_code", "n", "_time_ref", "_n_f")
-        }
+        header = _read_from_file(
+            file,
+            [("_code", "<i4"), ("n", "<i4"), ("_time_ref", "<i4"), ("_n_f", "<i4")],
+        )
         if header["_code"] == 666666:
             version = 1
         elif header["_code"] == 666000:
             version = 2
         else:
             raise RuntimeError(f"Error: BRT file code {header['_code']} not supported")
-        for key in ("_f", "_xmin", "_xmax"):
-            header[key] = np.fromfile(file, "<f", header["_n_f"])
-        dt = [("time", "<i4"), ("rain", "b")]
-        dt += [(f"tb_{n}", "<f") for n in range(header["_n_f"])]
-        dt += [("angles", "<f" if version == 1 else "<i4")]
-        data = _read_from_file(file, dt, header["n"])
+        header |= _read_from_file(
+            file,
+            [
+                ("_f", "<f", header["_n_f"]),
+                ("_xmin", "<f", header["_n_f"]),
+                ("_xmax", "<f", header["_n_f"]),
+            ],
+        )
+        data = _read_from_file(
+            file,
+            [
+                ("time", "<i4"),
+                ("rain", "b"),
+                ("tb", "<f", header["_n_f"]),
+                ("angles", "<f" if version == 1 else "<i4"),
+            ],
+            header["n"],
+        )
         _check_eof(file)
 
     data_out = {"tb": np.empty((header["n"], header["_n_f"]))}
@@ -159,9 +171,6 @@ def read_brt(file_name: str) -> tuple[dict, dict]:
         if key == "angles":
             ele, azi = _decode_angles(data["angles"], "brt", version)
             data_out["elevation_angle"], data_out["azimuth_angle"] = ele, azi
-        elif "tb_" in key:
-            ind = int(key.split("_")[-1])
-            data_out["tb"][:, ind] = data[key]
         else:
             data_out[key] = data[key]
 
@@ -173,21 +182,31 @@ def read_blb(file_name: str) -> tuple[dict, dict]:
     """Reads BLB files and returns header and data as dictionary."""
     with open(file_name, "rb") as file:
         header = _read_from_file(file, [("_code", "<i4"), ("n", "<i4")])
-        if header["_code"] not in (567845847, 567845848):
-            raise RuntimeError(f"Error: BRT file code {header['_code']} not supported")
-        if header["_code"] == 567845848:
-            header["_n_f"] = np.fromfile(file, "<i4", 1)[0]
-        else:
+        if header["_code"] == 567845847:
             header["_n_f"] = 14
-        header["_xmin"] = np.fromfile(file, "<f", header["_n_f"])
-        header["_xmax"] = np.fromfile(file, "<f", header["_n_f"])
-        header["_time_ref"] = np.fromfile(file, "<i4", 1)[0]
-        header["_f"] = np.fromfile(file, "<f", header["_n_f"])
-        header["_n_ang"] = np.fromfile(file, "<i4", 1)[0]
-        header["_ang"] = np.fromfile(file, "<f", header["_n_ang"])
+            version = 1
+        elif header["_code"] == 567845848:
+            header |= _read_from_file(file, [("_n_f", "<i4")])
+            version = 2
+        else:
+            raise RuntimeError(f"Error: BRT file code {header['_code']} not supported")
+        header |= _read_from_file(
+            file,
+            [
+                ("_xmin", "<f", header["_n_f"]),
+                ("_xmax", "<f", header["_n_f"]),
+                ("_time_ref", "<i4"),
+            ],
+        )
+        if version == 1:
+            header |= _read_from_file(file, [("_n_f", "<i4")])
+        header |= _read_from_file(
+            file, [("_f", "<f", header["_n_f"]), ("_n_ang", "<i4")]
+        )
+        header |= _read_from_file(file, [("_ang", "<f", header["_n_ang"])])
         dt = [("time", "<i4"), ("rf_mod", "b")]
         for n in range(header["_n_f"]):
-            dt += [(f"tb_{n}_{m}", "<f") for m in range(header["_n_ang"])]
+            dt += [(f"tb_{n}", "<f", header["_n_ang"])]
             dt += [(f"temp_sfc_{n}", "<f")]
         data = _read_from_file(file, dt, header["n"])
         _check_eof(file)
@@ -198,8 +217,8 @@ def read_blb(file_name: str) -> tuple[dict, dict]:
     }
     for key in data:
         if "tb_" in key:
-            _, freq_ind, ang_ind = key.split("_")
-            data_out["tb"][:, int(freq_ind), int(ang_ind)] = data[key]
+            freq_ind = int(key.split("_")[-1])
+            data_out["tb"][:, int(freq_ind)] = data[key]
         elif "temp_sfc_" in key:
             freq_ind = int(key.split("_")[-1])
             data_out["temp_sfc"][:, freq_ind] = data[key]
@@ -241,23 +260,21 @@ def read_irt(file_name: str) -> tuple[dict, dict]:
             header["_n_f"] = 1
             header["_f"] = 11.1
         else:
-            header["_n_f"] = np.fromfile(file, "<i4", 1)[0]
-            header["_f"] = np.fromfile(file, "<f", header["_n_f"])
-        dt = [("time", "<i4"), ("rain", "b")]
-        dt += [(f"irt_{n}", "<f") for n in range(header["_n_f"])]
+            header |= _read_from_file(file, [("_n_f", "<i4")])
+            header |= _read_from_file(file, [("_f", "<f", (header["_n_f"],))])
+        dt = [("time", "<i4"), ("rain", "b"), ("irt", "<f", (header["_n_f"],))]
         if version > 1:
             dt += [("angles", "<f" if version == 2 else "<i4")]
         data = _read_from_file(file, dt, header["n"])
         _check_eof(file)
 
-    data_out = {"irt": np.empty((header["n"], header["_n_f"]))}
+    data_out = {}
     for key in data:
         if key == "angles":
             ele, azi = _decode_angles(data["angles"], "irt", version)
             data_out["ir_elevation_angle"], data_out["ir_azimuth_angle"] = ele, azi
-        elif "irt_" in key:
-            ind = int(key.split("_")[-1])
-            data_out["irt"][:, ind] = data[key] + 273.15
+        elif key == "irt":
+            data_out["irt"] = data[key] + 273.15
         else:
             data_out[key] = data[key]
 
@@ -268,17 +285,17 @@ def read_irt(file_name: str) -> tuple[dict, dict]:
 def read_hkd(file_name: str) -> tuple[dict, dict]:
     """Reads HKD files and returns header and data as dictionary."""
     with open(file_name, "rb") as file:
-        header = {
-            _key: np.fromfile(file, "<i4", 1)[0]
-            for _key in ("_code", "n", "_time_ref", "_sel")
-        }
+        header = _read_from_file(
+            file,
+            [("_code", "<i4"), ("n", "<i4"), ("_time_ref", "<i4"), ("_sel", "<i4")],
+        )
         dt = [("time", "<i4"), ("alarm", "b")]
         if header["_sel"] & 0x1:
             dt += [("longitude", "<f"), ("latitude", "<f")]
         if header["_sel"] & 0x2:
-            dt += [(f"temp_{n}", "<f") for n in range(4)]
+            dt += [("temp", "<f", 4)]
         if header["_sel"] & 0x4:
-            dt += [(f"stab_{n}", "<f") for n in range(2)]
+            dt += [("stab", "<f", 2)]
         if header["_sel"] & 0x8:
             dt += [("flash", "<i4")]
         if header["_sel"] & 0x10:
@@ -288,16 +305,8 @@ def read_hkd(file_name: str) -> tuple[dict, dict]:
         data = _read_from_file(file, dt, header["n"])
         _check_eof(file)
 
-    data_out = {"temp": np.empty((header["n"], 4)), "stab": np.empty((header["n"], 2))}
-    for key in data:
-        if "temp_" in key or "stab_" in key:
-            name, ind = key.split("_")
-            data_out[name][:, int(ind)] = data[key]
-        else:
-            data_out[key] = data[key]
-
     header = _fix_header(header)
-    return header, data_out
+    return header, data
 
 
 def read_met(file_name: str) -> tuple[dict, dict]:
@@ -340,15 +349,17 @@ def read_met(file_name: str) -> tuple[dict, dict]:
     return header, data_out
 
 
-def _read_from_file(
-    file: BinaryIO, fields: list[tuple[str, str]], count: int = 1
-) -> dict:
+Dim = int | tuple[int, ...]
+Field = tuple[str, str] | tuple[str, str, Dim]
+
+
+def _read_from_file(file: BinaryIO, fields: list[Field], count: int = 1) -> dict:
     arr = np.fromfile(file, np.dtype(fields), count)
     if (read := len(arr)) != count:
         raise IOError(f"Read {read} of {count} records from file")
     if count == 1:
         arr = arr[0]
-    return {field: arr[field] for field, _type in fields}
+    return {field: arr[field] for field, *args in fields}
 
 
 def _check_eof(file: BinaryIO):
