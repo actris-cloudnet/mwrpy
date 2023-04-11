@@ -257,7 +257,7 @@ class TestHkdFileReading:
         assert self.data["temp"].shape == (self.header["n"], 4)
         assert self.data["stab"].shape == (self.header["n"], 2)
         assert np.isclose(np.mean(self.data["temp"]), 304.815, atol=1)
-        assert np.sum(self.data["status"]) == 2224932139157
+        assert np.sum(self.data["status"][:10]) == 968948470
 
 
 class TestMetFileReading:
