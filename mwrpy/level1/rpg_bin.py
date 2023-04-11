@@ -623,7 +623,7 @@ def read_bls(file_name: str) -> tuple[dict, dict]:
                 * Fill_Value_Int,
                 "rain": np.ones(header["n"] * header["_n_ang"], np.byte)
                 * Fill_Value_Int,
-                "temp_sfc": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "temp_sfc": np.ones(header["n"] * header["_n_ang"], np.float32) * Fill_Value_Float,
                 "tb": np.ones(
                     [header["n"] * header["_n_ang"], header["_n_f"]], np.float32
                 )

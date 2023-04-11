@@ -590,16 +590,15 @@ def retrieval_input(lev1: nc.Dataset, coeff: dict) -> np.ndarray:
             (dtime.hour + dtime.minute / 60 + dtime.second / 3600) / 24 * 2 * np.pi
         )
 
-    _, freq_ind, _ = np.intersect1d(
-        lev1["frequency"][:],
-        coeff["freq"][:, 0],
-        assume_unique=False,
-        return_indices=True,
-    )
-
     if coeff["ret_type"] < 2:
         ret_in = lev1["tb"][:, :]
     else:
+        _, freq_ind, _ = np.intersect1d(
+            lev1["frequency"][:],
+            coeff["freq"][:, 0],
+            assume_unique=False,
+            return_indices=True,
+        )
         ret_in = np.concatenate((bias, lev1["tb"][:, freq_ind]), axis=1)
         for i, field in enumerate(coeff["aux"]):
             if (field == "TS") & (coeff["aux_flag"][i] == 1):
