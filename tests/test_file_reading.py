@@ -56,7 +56,14 @@ class TestBrtFileReading:
 
     def test_data(self):
         assert isinstance(self.data, dict)
-        expected_data_keys = {"time", "rain", "tb", "elevation_angle", "azimuth_angle"}
+        expected_data_keys = {
+            "time",
+            "rain",
+            "tb",
+            "_angles",
+            "elevation_angle",
+            "azimuth_angle",
+        }
         assert set(self.data.keys()) == expected_data_keys
         assert len(self.data["time"]) == self.header["n"]
         assert self.data["time"][0] == 702432051
@@ -192,6 +199,7 @@ class TestIrtFileReading:
             "time",
             "rain",
             "irt",
+            "_angles",
             "ir_elevation_angle",
             "ir_azimuth_angle",
         }

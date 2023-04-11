@@ -160,22 +160,16 @@ def read_brt(file_name: str) -> tuple[dict, dict]:
                 ("time", "<i4"),
                 ("rain", "b"),
                 ("tb", "<f", header["_n_f"]),
-                ("angles", "<f" if version == 1 else "<i4"),
+                ("_angles", "<f" if version == 1 else "<i4"),
             ],
             header["n"],
         )
         _check_eof(file)
 
-    data_out = {"tb": np.empty((header["n"], header["_n_f"]))}
-    for key in data:
-        if key == "angles":
-            ele, azi = _decode_angles(data["angles"], "brt", version)
-            data_out["elevation_angle"], data_out["azimuth_angle"] = ele, azi
-        else:
-            data_out[key] = data[key]
-
+    ele, azi = _decode_angles(data["_angles"], version)
+    data["elevation_angle"], data["azimuth_angle"] = ele, azi
     header = _fix_header(header)
-    return header, data_out
+    return header, data
 
 
 def read_blb(file_name: str) -> tuple[dict, dict]:
@@ -264,22 +258,17 @@ def read_irt(file_name: str) -> tuple[dict, dict]:
             header |= _read_from_file(file, [("_f", "<f", (header["_n_f"],))])
         dt = [("time", "<i4"), ("rain", "b"), ("irt", "<f", (header["_n_f"],))]
         if version > 1:
-            dt += [("angles", "<f" if version == 2 else "<i4")]
+            dt += [("_angles", "<f" if version == 2 else "<i4")]
         data = _read_from_file(file, dt, header["n"])
         _check_eof(file)
 
-    data_out = {}
-    for key in data:
-        if key == "angles":
-            ele, azi = _decode_angles(data["angles"], "irt", version)
-            data_out["ir_elevation_angle"], data_out["ir_azimuth_angle"] = ele, azi
-        elif key == "irt":
-            data_out["irt"] = data[key] + 273.15
-        else:
-            data_out[key] = data[key]
+    if "_angles" in data:
+        ele, azi = _decode_angles(data["_angles"], 1 if version == 2 else 2)
+        data["ir_elevation_angle"], data["ir_azimuth_angle"] = ele, azi
+    data["irt"] += 273.15
 
     header = _fix_header(header)
-    return header, data_out
+    return header, data
 
 
 def read_hkd(file_name: str) -> tuple[dict, dict]:
@@ -398,32 +387,17 @@ def _check_eof(file: BinaryIO):
 
 
 def _decode_angles(
-    x: np.ndarray, suffix: str, version: Literal[1, 2, 3]
+    x: np.ndarray, method: Literal[1, 2]
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Decode elevation and azimuth angles.
-    >>> _decode_angles(np.array([1267438.5]), suffix="brt", version=1)
+    >>> _decode_angles(np.array([1267438.5]), method=1)
     (array([138.5]), array([267.4]))
-    >>> _decode_angles(np.array([1453031045, -900001232]), suffix="brt", version=2)
+    >>> _decode_angles(np.array([1453031045, -900001232]), method=2)
     (array([145.3, -90. ]), array([310.45,  12.32]))
     Based on `interpret_angle` from mwr_raw2l1 licensed under BSD 3-Clause:
     https://github.com/MeteoSwiss/mwr_raw2l1/blob/0738490d22f77138cdf9329bf102f319c78be584/mwr_raw2l1/readers/reader_rpg_helpers.py#L30
     """
-
-    method_dict = {
-        ("irt", 2): 1,
-        ("irt", 3): 2,
-        ("brt", 1): 1,
-        ("brt", 2): 2,
-        ("lwp", 1): 1,
-        ("lwp", 2): 2,
-        ("ivw", 1): 1,
-        ("ivw", 2): 2,
-    }
-
-    method = method_dict.get((suffix, version), None)
-    if method is None:
-        raise ValueError(f"Unknown suffix {suffix} and version {version} combination")
 
     if method == 1:
         # Description in the manual is quite unclear so here's an improved one:
