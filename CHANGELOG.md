@@ -1,3 +1,7 @@
+## 0.1.2 – 2023-05-02
+
+- Add MANIFEST.in
+
 ## 0.1.1 – 2023-05-02
 
 - First release
