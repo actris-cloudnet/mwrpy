@@ -15,7 +15,7 @@ setup(
     long_description_content_type="text/markdown",
     author="University of Cologne",
     author_email="actris-ccres-mwr@uni-koeln.de",
-    url="https://github.com/igmk/actris_mwr_pro",
+    url="https://github.com/actris-cloudnet/mwrpy",
     packages=find_packages(),
     include_package_data=True,
     python_requires=">=3.10",
