@@ -1,4 +1,4 @@
-name: mwrpy CI
+name: Tests
 
 on: [push,pull_request]
 
