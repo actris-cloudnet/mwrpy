@@ -245,8 +245,7 @@ ATTRIBUTES_2I01 = {
         units="kg m-2",
     ),
     "lwp_offset": MetaData(
-        long_name="Subtracted offset correction of retrieved\n"
-        "column-integrated liquid water path",
+        long_name="Subtracted offset correction of liquid water path",
         units="kg m-2",
     ),
 }

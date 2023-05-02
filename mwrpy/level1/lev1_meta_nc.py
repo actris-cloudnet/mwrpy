@@ -231,6 +231,11 @@ ATTRIBUTES_1B01 = {
         long_name="Receiver temperature stability",
         units="K",
     ),
+    "ir_zenith_angle": MetaData(
+        long_name="Infrared sensor zenith angle",
+        units="degree",
+        comment="90=horizon, 0=zenith",
+    ),
     # 'tn': MetaData(
     #     long_name='Receiver noise temperature',
     #     units='K',
@@ -242,11 +247,11 @@ ATTRIBUTES_1B11 = {
     "ir_wavelength": MetaData(
         long_name="Wavelength of infrared channels",
         standard_name="sensor_band_central_radiation_wavelength",
-        units="µm",
+        units="m",
     ),
     "ir_bandwidth": MetaData(
         long_name="Bandwidth of infrared channels",
-        units="µm",
+        units="m",
         comment="Channel centre frequency.",
     ),
     "ir_beamwidth": MetaData(

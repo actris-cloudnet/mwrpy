@@ -152,8 +152,8 @@ def prepare_data(
                 if len(file_list_irt) > 0:
                     rpg_irt = RpgBin(file_list_irt)
                     rpg_irt.data["irt"][rpg_irt.data["irt"] <= 125.5] = Fill_Value_Float
-                    rpg_bin.data["ir_wavelength"] = rpg_irt.header["_f"]
-                    rpg_bin.data["ir_bandwidth"] = params["ir_bandwidth"]
+                    rpg_bin.data["ir_wavelength"] = rpg_irt.header["_f"] * 1e-6
+                    rpg_bin.data["ir_bandwidth"] = params["ir_bandwidth"] * 1e-6
                     rpg_bin.data["ir_beamwidth"] = params["ir_beamwidth"]
                     add_interpol1d(
                         rpg_bin.data, rpg_irt.data["irt"], rpg_irt.data["time"], "irt"
