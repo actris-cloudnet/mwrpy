@@ -87,7 +87,7 @@ def isscalar(array: any) -> bool:
     return False
 
 
-def isbit(array: np.ndarray, nth_bit: int) -> np.ndarray:
+def isbit(array: int | np.ndarray, nth_bit: int) -> np.ndarray:
     """Tests if nth bit (0,1,2..) is set.
     Args:
         array: Integer array.
@@ -110,7 +110,7 @@ def isbit(array: np.ndarray, nth_bit: int) -> np.ndarray:
     return array & mask > 0
 
 
-def setbit(array: np.ndarray, nth_bit: int) -> np.ndarray:
+def setbit(array: int | np.ndarray, nth_bit: int) -> np.ndarray:
     """Sets nth bit (0, 1, 2..) on number.
     Args:
         array: Integer array.
@@ -253,11 +253,13 @@ def get_file_list(path_to_files: str, extension: str):
     if len(f_list) == 0:
         f_list = sorted(glob.glob(path_to_files + "/*." + extension.lower()))
     if len(f_list) == 0:
-        raise RuntimeError(
-            "Error: no binary files with extension "
-            + extension
-            + " found in directory "
-            + path_to_files
+        print(
+            [
+                "Error: no binary files with extension "
+                + extension
+                + " found in directory "
+                + path_to_files
+            ]
         )
     return f_list
 

@@ -1,4 +1,5 @@
 """RpgArray Class"""
+import locale
 from datetime import datetime, timezone
 
 import netCDF4
@@ -207,7 +208,6 @@ def init_file(
         dimensions: Dictionary containing dimension for this file.
         rpg_arrays: Dictionary containing :class:`RpgArray` instances.
         att_global: Dictionary containing site specific global attributes
-        date: Date string of file
     """
 
     nc_file = netCDF4.Dataset(file_name, "w", format="NETCDF4_CLASSIC")
@@ -262,6 +262,7 @@ def _write_vars2nc(nc_file: netCDF4.Dataset, mwr_variables: dict) -> None:
 
 def _add_standard_global_attributes(nc_file: netCDF4.Dataset, att_global) -> None:
     nc_file.mwrpy_version = version.__version__
+    locale.setlocale(locale.LC_TIME, "en_US.UTF-8")
     nc_file.processed = (
         datetime.now(tz=timezone.utc).strftime("%d %b %Y %H:%M:%S") + " UTC"
     )

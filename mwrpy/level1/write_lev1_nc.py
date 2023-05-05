@@ -5,10 +5,10 @@ from itertools import groupby
 from typing import TypeAlias
 
 import numpy as np
-import pandas as pd
 from numpy import ma
 
 from mwrpy import rpg_mwr
+from mwrpy.atmos import find_lwcl_free
 from mwrpy.level1.lev1_meta_nc import get_data_attributes
 from mwrpy.level1.met_quality_control import apply_met_qc
 from mwrpy.level1.quality_control import apply_qc
@@ -16,7 +16,6 @@ from mwrpy.level1.rpg_bin import RpgBin
 from mwrpy.utils import (
     add_interpol1d,
     add_time_bounds,
-    epoch2unix,
     get_file_list,
     isbit,
     read_yaml_config,
@@ -25,7 +24,7 @@ from mwrpy.utils import (
 
 Fill_Value_Float = -999.0
 Fill_Value_Int = -99
-
+FuncType: TypeAlias = Callable[[str], np.array]
 
 def lev1_to_nc(
     site: str,
@@ -49,7 +48,7 @@ def lev1_to_nc(
         update_lev1_attributes(global_attributes, data_type)
     rpg_bin = prepare_data(path_to_files, data_type, params, site)
     if data_type in ("1B01", "1C01"):
-        apply_qc(site, rpg_bin.data, params)
+        apply_qc(site, rpg_bin, params)
     if data_type in ("1B21", "1C01"):
         apply_met_qc(rpg_bin.data, params)
     hatpro = rpg_mwr.Rpg(rpg_bin.data)
@@ -328,53 +327,6 @@ def hkd_sanity_check(status: np.ndarray, params: dict) -> np.ndarray:
     return status_flag
 
 
-def find_lwcl_free(lev1: dict, ix: np.ndarray) -> tuple:
-    """Identification of liquid water cloud free periods
-    using TB variability at 31.4 GHz and IRT.
-    Uses pre-defined time index and additionally returns status of IRT availability
-    """
-
-    if "elevation_angle" in lev1:
-        elevation_angle = lev1["elevation_angle"][:]
-    else:
-        elevation_angle = 90 - lev1["zenith_angle"][:]
-
-    index = np.ones(len(ix)) * np.nan
-    status = np.ones(len(ix), dtype=np.int32)
-    freq_31 = np.where(np.round(lev1["frequency"][:], 1) == 31.4)[0]
-    if len(freq_31) == 1:
-        time = lev1["time"][ix]
-        tb = np.squeeze(lev1["tb"][ix, freq_31])
-        tb[(lev1["pointing_flag"][ix] == 1) | (elevation_angle[ix] < 89.0)] = np.nan
-        tb_df = pd.DataFrame({"Tb": tb}, index=pd.to_datetime(time, unit="s"))
-        tb_std = tb_df.rolling("2min", center=True, min_periods=10).std()
-        tb_mx = tb_std.rolling("20min", center=True, min_periods=100).max()
-
-        if "irt" in lev1:
-            tb_thres = 0.1
-            irt = lev1["irt"][ix, :]
-            irt[irt == Fill_Value_Float] = np.nan
-            irt = np.nanmean(irt, axis=1)
-            irt[
-                (lev1["pointing_flag"][ix] == 1) | (elevation_angle[ix] < 89.0)
-            ] = np.nan
-            irt_df = pd.DataFrame({"Irt": irt[:]}, index=pd.to_datetime(time, unit="s"))
-            irt_mx = irt_df.rolling("20min", center=True, min_periods=100).max()
-            index[(irt_mx["Irt"] > 263.15) & (tb_mx["Tb"] > tb_thres)] = 1
-            status[:] = 0
-
-        tb_thres = 0.2
-        index[(tb_mx["Tb"] > tb_thres)] = 1
-        df = pd.DataFrame({"index": index}, index=pd.to_datetime(time, unit="s"))
-        df = df.fillna(method="bfill", limit=120)
-        df = df.fillna(method="ffill", limit=120)
-        index = np.array(df["index"])
-        index[(tb_mx["Tb"] < tb_thres) & (index != 1.0)] = 0.0
-        index[(elevation_angle[ix] < 89.0) & (index != 1.0)] = 2.0
-
-    return np.nan_to_num(index, nan=2).astype(int), status
-
-
 def _add_bls(brt: RpgBin, bls: RpgBin, hkd: RpgBin, params: dict) -> None:
     """Add BLS boundary-layer scans using a linear time axis"""
 
@@ -445,8 +397,8 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict, site: str) -> 
     ]
     seqs = np.array(
         [
-            (key, sum(s[1] for s in seqs[:i]), len)
-            for i, (key, len) in enumerate(seqs)
+            (key, sum(s[1] for s in seqs[:i]), length)
+            for i, (key, length) in enumerate(seqs)
             if bool(key) is True
         ]
     )
@@ -573,7 +525,6 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict, site: str) -> 
         ind = np.argsort(brt.data["time"])
         brt.data["time"] = brt.data["time"][ind]
 
-        FuncType: TypeAlias = Callable[[str], np.array]
         names_add: dict[str, FuncType] = {
             "time_bnds": time_bnds_add,
             "elevation_angle": elevation_angle_add,
@@ -606,69 +557,3 @@ def _azi_correction(brt: dict, params: dict) -> None:
         360.0 + params["azi_cor"] - brt["azimuth_angle"][ind360]
     )
     brt["azimuth_angle"][brt["azimuth_angle"][:] < 0] += 360.0
-
-
-def cal_his(params: dict, glob_att: dict, time0: int) -> RpgBin:
-    """Load and add information from ABSCAL.HIS file"""
-    file_list_cal, rpg_cal = [], []
-    cal_type = [
-        "instrument performs no absolute calibration",
-        "liquid nitrogen calibration",
-        "sky tipping calibration",
-    ]
-    try:
-        file_list_cal = get_file_list(params["path_to_cal"], " ")
-    except RuntimeError:
-        print(
-            [
-                "No binary files with extension his found in directory "
-                + params["path_to_cal"]
-            ]
-        )
-
-    if len(file_list_cal) > 0:
-        rpg_cal = RpgBin(file_list_cal)
-        cal_times1 = epoch2unix(rpg_cal.data["t1"], rpg_cal.header["_time_ref"])
-        cal_times2 = epoch2unix(rpg_cal.data["t2"], rpg_cal.header["_time_ref"])
-        cal_ind1 = np.where(cal_times1 < time0)[0]
-        cal_ind2 = np.where(cal_times2 < time0)[0]
-
-        if (len(cal_ind1) > 0) & (len(cal_ind2) > 0):
-            if (
-                (rpg_cal.data["cal1_t"][cal_ind1[-1]] > 0)
-                & (rpg_cal.data["cal2_t"][cal_ind2[-1]] > 0)
-                & ((time0 - cal_times1[cal_ind1[-1]]) / 86400.0 < 183.0)
-                & ((time0 - cal_times2[cal_ind2[-1]]) / 86400.0 < 183.0)
-            ):
-                glob_att["instrument_calibration_status"] = "calibrated"
-            else:
-                glob_att["instrument_calibration_status"] = "needs calibration"
-
-            glob_att[
-                "receiver1_date_of_last_absolute_calibration"
-            ] = datetime.datetime.utcfromtimestamp(
-                epoch2unix(
-                    rpg_cal.data["t1"][cal_ind1[-1]], rpg_cal.header["_time_ref"]
-                )
-            ).strftime(
-                "%Y%m%d"
-            )
-            glob_att["receiver1_type_of_last_absolute_calibration"] = cal_type[
-                int(rpg_cal.data["cal1_t"][cal_ind1[-1]])
-            ]
-            glob_att[
-                "receiver2_date_of_last_absolute_calibration"
-            ] = datetime.datetime.utcfromtimestamp(
-                epoch2unix(
-                    rpg_cal.data["t2"][cal_ind2[-1]], rpg_cal.header["_time_ref"]
-                )
-            ).strftime(
-                "%Y%m%d"
-            )
-            glob_att["receiver2_type_of_last_absolute_calibration"] = cal_type[
-                int(rpg_cal.data["cal2_t"][cal_ind2[-1]])
-            ]
-        else:
-            glob_att["instrument_calibration_status"] = "needs calibration"
-
-    return rpg_cal

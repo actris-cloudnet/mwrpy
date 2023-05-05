@@ -20,6 +20,7 @@ setup(
     include_package_data=True,
     python_requires=">=3.10",
     install_requires=[
+        "numpy",
         "scipy",
         "netCDF4",
         "matplotlib",
@@ -28,6 +29,7 @@ setup(
         "pandas",
         "pyyaml",
         "timezonefinder",
+        "pytz",
     ],
     extras_require={
         "test": ["pylint", "mypy", "pytest", "pytest-flakefinder"],
