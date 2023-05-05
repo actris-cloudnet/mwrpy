@@ -215,8 +215,8 @@ def spectral_consistency(data: dict, site: str, date: list) -> np.ndarray:
         ele_ang = 90.
         ele_coeff = np.where(coeff["AG"] == ele_ang)[0]
         ele_ind = np.where(
-            (data["ele"][:] > ele_ang - 0.5)
-            & (data["ele"][:] < ele_ang + 0.5)
+            (data["elevation_angle"][:] > ele_ang - 0.5)
+            & (data["elevation_angle"][:] < ele_ang + 0.5)
             & (data["pointing_flag"][:] == 0)
         )[0]
         _, freq_ind, coeff_ind = np.intersect1d(
@@ -226,12 +226,12 @@ def spectral_consistency(data: dict, site: str, date: list) -> np.ndarray:
             return_indices=True,
         )
         c_w1, c_w2, fac = (
-            weights1(data["ele"][ele_ind]),
-            weights2(data["ele"][ele_ind]),
-            factor(data["ele"][ele_ind]),
+            weights1(data["elevation_angle"][ele_ind]),
+            weights2(data["elevation_angle"][ele_ind]),
+            factor(data["elevation_angle"][ele_ind]),
         )
-        in_sc, in_os = input_scale(data["ele"][ele_ind]), input_offset(data["ele"][ele_ind])
-        op_sc, op_os = output_scale(data["ele"][ele_ind]), output_offset(data["ele"][ele_ind])
+        in_sc, in_os = input_scale(data["elevation_angle"][ele_ind]), input_offset(data["elevation_angle"][ele_ind])
+        op_sc, op_os = output_scale(data["elevation_angle"][ele_ind]), output_offset(data["elevation_angle"][ele_ind])
 
         ret_in[ele_ind, 1:] = (ret_in[ele_ind, 1:] - in_os) * in_sc
         hidden_layer = np.ones((len(ele_ind), c_w1.shape[2] + 1), np.float32)

@@ -162,7 +162,7 @@ def read_bls(file_name: str) -> tuple[dict, dict]:
         data = _read_from_file(file, dt, header["n"] * header["_n_ang"])
         _check_eof(file)
 
-    data["ele"], data["azi"] = _decode_angles(data["_angles"], version)
+    data["elevation_angle"], data["azimuth_angle"] = _decode_angles(data["_angles"], version)
     header = _fix_header(header)
     return header, data
 
@@ -202,7 +202,7 @@ def read_brt(file_name: str) -> tuple[dict, dict]:
         _check_eof(file)
 
     ele, azi = _decode_angles(data["_angles"], version)
-    data["ele"], data["azi"] = ele, azi
+    data["elevation_angle"], data["azimuth_angle"] = ele, azi
     header = _fix_header(header)
     return header, data
 
@@ -299,7 +299,7 @@ def read_irt(file_name: str) -> tuple[dict, dict]:
 
     if "_angles" in data:
         ele, azi = _decode_angles(data["_angles"], 1 if version == 2 else 2)
-        data["ir_ele"], data["ir_azi"] = ele, azi
+        data["ir_elevation_angle"], data["ir_azimuth_angle"] = ele, azi
     data["irt"] += 273.15
 
     header = _fix_header(header)
@@ -315,7 +315,7 @@ def read_hkd(file_name: str) -> tuple[dict, dict]:
         )
         dt = [("time", "<i4"), ("alarm", "b")]
         if header["_sel"] & 0x1:
-            dt += [("station_longitude", "<f"), ("station_latitude", "<f")]
+            dt += [("longitude", "<f"), ("latitude", "<f")]
         if header["_sel"] & 0x2:
             dt += [("temp", "<f", 4)]
         if header["_sel"] & 0x4:
@@ -367,9 +367,9 @@ def read_met(file_name: str) -> tuple[dict, dict]:
             hdt.append(("_wind_direction_min", "<f"))
             hdt.append(("_wind_direction_max", "<f"))
         if header["_n_add"] & 0x4:
-            dt.append(("rain_rate", "<f"))
-            hdt.append(("_rain_rate_min", "<f"))
-            hdt.append(("_rain_rate_max", "<f"))
+            dt.append(("rainfall_rate", "<f"))
+            hdt.append(("_rainfall_rate_min", "<f"))
+            hdt.append(("_rainfall_rate_max", "<f"))
         if header["_n_add"] & 0x8:
             dt.append(("_adds4", "<f"))
             hdt.append(("_adds4_min", "<f"))

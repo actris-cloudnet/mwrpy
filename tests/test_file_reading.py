@@ -153,12 +153,12 @@ class TestBlbFileReading:
 
     def test_data(self):
         assert isinstance(self.data, dict)
-        expected_data_keys = {"time", "rf_mod", "temp_sfc", "tb"}
+        expected_data_keys = {"time", "rain", "temp_sfc", "tb"}
         assert set(self.data.keys()) == expected_data_keys
         assert len(self.data["time"]) == self.header["n"]
         assert self.data["time"][0] == 702432050
         assert self.data["time"][-1] == 702456651
-        assert np.isclose(self.data["rf_mod"], 4).all()
+        assert np.isclose(self.data["rain"], 4).all()
         assert np.isclose(np.mean(self.data["temp_sfc"]), 269.9, atol=1)
         assert np.isclose(np.mean(self.data["tb"]), 194.6, atol=1)
         assert self.data["tb"].shape == (
