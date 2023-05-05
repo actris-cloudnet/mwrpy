@@ -212,7 +212,7 @@ def spectral_consistency(data: dict, site: str, date: list) -> np.ndarray:
             factor,
         ) = get_mvr_coeff(site, "spc", data["frequency"][:])
         ret_in = retrieval_input(data, coeff)
-        ele_ang = 90.
+        ele_ang = 90.0
         ele_coeff = np.where(coeff["AG"] == ele_ang)[0]
         ele_ind = np.where(
             (data["elevation_angle"][:] > ele_ang - 0.5)
@@ -230,17 +230,26 @@ def spectral_consistency(data: dict, site: str, date: list) -> np.ndarray:
             weights2(data["elevation_angle"][ele_ind]),
             factor(data["elevation_angle"][ele_ind]),
         )
-        in_sc, in_os = input_scale(data["elevation_angle"][ele_ind]), input_offset(data["elevation_angle"][ele_ind])
-        op_sc, op_os = output_scale(data["elevation_angle"][ele_ind]), output_offset(data["elevation_angle"][ele_ind])
+        in_sc, in_os = input_scale(data["elevation_angle"][ele_ind]), input_offset(
+            data["elevation_angle"][ele_ind]
+        )
+        op_sc, op_os = output_scale(data["elevation_angle"][ele_ind]), output_offset(
+            data["elevation_angle"][ele_ind]
+        )
 
         ret_in[ele_ind, 1:] = (ret_in[ele_ind, 1:] - in_os) * in_sc
         hidden_layer = np.ones((len(ele_ind), c_w1.shape[2] + 1), np.float32)
         hidden_layer[:, 1:] = np.tanh(
-            fac[:].reshape((len(ele_ind), 1)) * np.einsum("ijk,ij->ik", c_w1, ret_in[ele_ind, :]))
+            fac[:].reshape((len(ele_ind), 1))
+            * np.einsum("ijk,ij->ik", c_w1, ret_in[ele_ind, :])
+        )
         rpg_dat["tb_spectrum"][ele_ind, :] = (
-                np.tanh(fac[:].reshape((len(ele_ind), 1)) * np.einsum("ijk,ik->ij", c_w2[:, coeff_ind, :],
-                                                                      hidden_layer)) * op_sc[:, coeff_ind] + op_os[:,
-                                                                                                             coeff_ind]
+            np.tanh(
+                fac[:].reshape((len(ele_ind), 1))
+                * np.einsum("ijk,ik->ij", c_w2[:, coeff_ind, :], hidden_layer)
+            )
+            * op_sc[:, coeff_ind]
+            + op_os[:, coeff_ind]
         )
 
         global_attributes["retrieval_elevation_angles"] = str(ele_ang)
@@ -259,21 +268,26 @@ def spectral_consistency(data: dict, site: str, date: list) -> np.ndarray:
             ).mean()
             tb_mean = tb_mean.reindex(tb_df.index, method="nearest")
 
-            fact = [5., 7.]  # factor for receiver retrieval uncertainty
+            fact = [5.0, 7.0]  # factor for receiver retrieval uncertainty
             # flag for individual channels based on channel retrieval uncertainty
             flag_ind[
                 (
-                        np.abs(tb_df["Tb"].values[:] - tb_mean["Tb"].values[:])
-                        > coeff["RM"][coeff_ind[ifreq], ele_coeff] * fact[data["receiver"][ifreq] - 1]
+                    np.abs(tb_df["Tb"].values[:] - tb_mean["Tb"].values[:])
+                    > coeff["RM"][coeff_ind[ifreq], ele_coeff]
+                    * fact[data["receiver"][ifreq] - 1]
                 ),
                 ifreq,
             ] = 1
-            abs_diff[:, ifreq] = np.abs(data["tb"][:, ifreq] - rpg_dat["tb_spectrum"][:, ifreq])
+            abs_diff[:, ifreq] = np.abs(
+                data["tb"][:, ifreq] - rpg_dat["tb_spectrum"][:, ifreq]
+            )
 
     else:
         c_list = get_coeff_list(site, "tbx")
         c_file = nc.Dataset(c_list[0])
-        global_attributes["retrieval_elevation_angles"] = str(c_file["elevation_predictor"][:])
+        global_attributes["retrieval_elevation_angles"] = str(
+            c_file["elevation_predictor"][:]
+        )
         global_attributes["retrieval_type"] = c_file.regression_type
         global_attributes["retrieval_frequencies"] = str(c_file["freq"][:])
         global_attributes["retrieval_description"] = c_file.retrieval_version
@@ -296,25 +310,35 @@ def spectral_consistency(data: dict, site: str, date: list) -> np.ndarray:
 
                 if (ele_ind.size > 0) & (freq_ind.size > 0):
                     rpg_dat["tb_spectrum"][ele_ind, ifreq] = (
-                            cfile["offset_mvr"][:]
-                            + np.sum(
-                        cfile["coefficient_mvr"][coeff_ind].T
-                        * np.array(data["tb"])[np.ix_(ele_ind, freq_ind)],
-                        axis=1,
-                    )
-                            + np.sum(
-                        cfile["coefficient_mvr"][coeff_ind + (len(data["frequency"]) - 1)].T
-                        * np.array(data["tb"])[np.ix_(ele_ind, freq_ind)] ** 2,
-                        axis=1,
-                    )
+                        cfile["offset_mvr"][:]
+                        + np.sum(
+                            cfile["coefficient_mvr"][coeff_ind].T
+                            * np.array(data["tb"])[np.ix_(ele_ind, freq_ind)],
+                            axis=1,
+                        )
+                        + np.sum(
+                            cfile["coefficient_mvr"][
+                                coeff_ind + (len(data["frequency"]) - 1)
+                            ].T
+                            * np.array(data["tb"])[np.ix_(ele_ind, freq_ind)] ** 2,
+                            axis=1,
+                        )
                     )
 
                     tb_df = pd.DataFrame(
-                        {"Tb": (data["tb"][:, ifreq] - rpg_dat["tb_spectrum"][:, ifreq])},
+                        {
+                            "Tb": (
+                                data["tb"][:, ifreq] - rpg_dat["tb_spectrum"][:, ifreq]
+                            )
+                        },
                         index=pd.to_datetime(data["time"][:], unit="s"),
                     )
                     tb_mean = tb_df.resample(
-                        "20min", origin="start", closed="left", label="left", offset="10min"
+                        "20min",
+                        origin="start",
+                        closed="left",
+                        label="left",
+                        offset="10min",
                     ).mean()
                     tb_mean = tb_mean.reindex(tb_df.index, method="nearest")
 
@@ -323,8 +347,12 @@ def spectral_consistency(data: dict, site: str, date: list) -> np.ndarray:
                     flag_ind[
                         ele_ind[
                             (
-                                    np.abs(tb_df["Tb"].values[ele_ind] - tb_mean["Tb"].values[ele_ind])
-                                    > cfile["predictand_err"][0] * fact[data["receiver"][ifreq] - 1]
+                                np.abs(
+                                    tb_df["Tb"].values[ele_ind]
+                                    - tb_mean["Tb"].values[ele_ind]
+                                )
+                                > cfile["predictand_err"][0]
+                                * fact[data["receiver"][ifreq] - 1]
                             )
                         ],
                         ifreq,

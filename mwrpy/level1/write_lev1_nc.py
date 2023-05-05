@@ -26,6 +26,7 @@ Fill_Value_Float = -999.0
 Fill_Value_Int = -99
 FuncType: TypeAlias = Callable[[str], np.array]
 
+
 def lev1_to_nc(
     site: str,
     data_type: str,
@@ -393,7 +394,7 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict, site: str) -> 
     )
     seqs = [
         (key, len(list(val)))
-        for key, val in groupby(hkd.data["status"][:] & 2**18 > 0)
+        for key, val in groupby(hkd.data["status"][:] & 2 ** 18 > 0)
     ]
     seqs = np.array(
         [

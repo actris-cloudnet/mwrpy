@@ -25,12 +25,12 @@ Fill_Value_Int = -99
 
 
 def lev2_to_nc(
-        site: str,
-        data_type: str,
-        lev1_path: str,
-        output_file: str,
-        temp_file: str | None = None,
-        hum_file: str | None = None,
+    site: str,
+    data_type: str,
+    lev1_path: str,
+    output_file: str,
+    temp_file: str | None = None,
+    hum_file: str | None = None,
 ):
     """This function reads Level 1 files,
     applies retrieval coefficients for Level 2 products
@@ -47,14 +47,14 @@ def lev2_to_nc(
     """
 
     if data_type not in (
-            "2P01",
-            "2P02",
-            "2P03",
-            "2P04",
-            "2P07",
-            "2P08",
-            "2I01",
-            "2I02",
+        "2P01",
+        "2P02",
+        "2P03",
+        "2P04",
+        "2P07",
+        "2P08",
+        "2I01",
+        "2I02",
     ):
         raise RuntimeError(
             ["Data type " + data_type + " not supported for file writing."]
@@ -92,12 +92,12 @@ def lev2_to_nc(
 
 
 def get_products(
-        site: str,
-        lev1: nc.Dataset,
-        data_type: str,
-        params: dict,
-        temp_file: str | None = None,
-        hum_file: str | None = None,
+    site: str,
+    lev1: nc.Dataset,
+    data_type: str,
+    params: dict,
+    temp_file: str | None = None,
+    hum_file: str | None = None,
 ) -> tuple[dict, dict, np.ndarray]:
     """Derive specified Level 2 products."""
 
@@ -138,7 +138,8 @@ def get_products(
                 np.abs(
                     (np.ones((len(elevation_angle[:]), len(coeff["AG"]))) * coeff["AG"])
                     - np.transpose(
-                        np.ones((len(coeff["AG"]), len(elevation_angle[:]))) * elevation_angle[:]
+                        np.ones((len(coeff["AG"]), len(elevation_angle[:])))
+                        * elevation_angle[:]
                     )
                 )
                 < 0.5,
@@ -152,18 +153,16 @@ def get_products(
         coeff["retrieval_elevation_angles"] = str(
             np.sort(np.unique(ele_retrieval(elevation_angle[index], coeff)))
         )
-        coeff["retrieval_frequencies"] = str(
-            np.sort(np.unique(coeff["FR"]))
-        )
+        coeff["retrieval_frequencies"] = str(np.sort(np.unique(coeff["FR"])))
 
         if coeff["RT"] < 2:
             coeff_offset = offset(elevation_angle[index])
             coeff_lin = lin(elevation_angle[index])
             coeff_quad = quad(elevation_angle[index])
             tmp_product = (
-                    coeff_offset[:]
-                    + np.einsum("ij,ij->i", ret_in[index, :], coeff_lin)
-                    + np.einsum("ij,ij->i", ret_in[index, :] ** 2, coeff_quad)
+                coeff_offset[:]
+                + np.einsum("ij,ij->i", ret_in[index, :], coeff_lin)
+                + np.einsum("ij,ij->i", ret_in[index, :] ** 2, coeff_quad)
             )
 
         else:
@@ -172,14 +171,25 @@ def get_products(
                 weights2(elevation_angle[index]),
                 factor(elevation_angle[index]),
             )
-            in_sc, in_os = input_scale(elevation_angle[index]), input_offset(elevation_angle[index])
-            op_sc, op_os = output_scale(elevation_angle[index]), output_offset(elevation_angle[index])
+            in_sc, in_os = input_scale(elevation_angle[index]), input_offset(
+                elevation_angle[index]
+            )
+            op_sc, op_os = output_scale(elevation_angle[index]), output_offset(
+                elevation_angle[index]
+            )
 
             ret_in[index, 1:] = (ret_in[index, 1:] - in_os[:, :]) * in_sc[:, :]
             hidden_layer = np.ones((len(index), c_w1.shape[2] + 1), np.float32)
-            hidden_layer[:, 1:] = np.tanh(fac[:] * np.einsum("ijk,ij->ik", c_w1, ret_in[index, :]))
+            hidden_layer[:, 1:] = np.tanh(
+                fac[:] * np.einsum("ijk,ij->ik", c_w1, ret_in[index, :])
+            )
             tmp_product = np.squeeze(
-                np.tanh(fac[:] * np.einsum("ij,ij->i", hidden_layer, c_w2).reshape((len(index), 1))) * op_sc + op_os
+                np.tanh(
+                    fac[:]
+                    * np.einsum("ij,ij->i", hidden_layer, c_w2).reshape((len(index), 1))
+                )
+                * op_sc
+                + op_os
             )
 
         if product == "lwp":
@@ -204,9 +214,7 @@ def get_products(
 
         coeff = get_mvr_coeff(site, ret, lev1["frequency"][:])
         if coeff[0]["RT"] < 2:
-            coeff, offset, lin, quad = get_mvr_coeff(
-                site, ret, lev1["frequency"][:]
-            )
+            coeff, offset, lin, quad = get_mvr_coeff(site, ret, lev1["frequency"][:])
         else:
             (
                 coeff,
@@ -227,7 +235,8 @@ def get_products(
                 np.abs(
                     (np.ones((len(elevation_angle[:]), len(coeff["AG"]))) * coeff["AG"])
                     - np.transpose(
-                        np.ones((len(coeff["AG"]), len(elevation_angle[:]))) * elevation_angle[:]
+                        np.ones((len(coeff["AG"]), len(elevation_angle[:])))
+                        * elevation_angle[:]
                     )
                 )
                 < 0.5,
@@ -241,9 +250,7 @@ def get_products(
         coeff["retrieval_elevation_angles"] = str(
             np.sort(np.unique(ele_retrieval(elevation_angle[index], coeff)))
         )
-        coeff["retrieval_frequencies"] = str(
-            np.sort(np.unique(coeff["FR"]))
-        )
+        coeff["retrieval_frequencies"] = str(np.sort(np.unique(coeff["FR"])))
 
         rpg_dat["altitude"] = coeff["AL"][:] + params["station_altitude"]
 
@@ -252,12 +259,12 @@ def get_products(
             coeff_lin = lin(elevation_angle[index])
             coeff_quad = quad(elevation_angle[index])
             rpg_dat[product] = (
-                    coeff_offset
-                    + np.einsum("ijk,ik->ij", coeff_lin, ret_in[index, :])
-                    + np.einsum("ijk,ik->ij", coeff_quad, ret_in[index, :] ** 2)
+                coeff_offset
+                + np.einsum("ijk,ik->ij", coeff_lin, ret_in[index, :])
+                + np.einsum("ijk,ik->ij", coeff_quad, ret_in[index, :] ** 2)
             )
             if (coeff["RT"] == 1) & (data_type == "2P03"):
-                rpg_dat[product][:, :] = rpg_dat[product][:, :] / 1000.
+                rpg_dat[product][:, :] = rpg_dat[product][:, :] / 1000.0
 
         else:
             c_w1, c_w2, fac = (
@@ -265,16 +272,26 @@ def get_products(
                 weights2(elevation_angle[index]),
                 factor(elevation_angle[index]),
             )
-            in_sc, in_os = input_scale(elevation_angle[index]), input_offset(elevation_angle[index])
-            op_sc, op_os = output_scale(elevation_angle[index]), output_offset(elevation_angle[index])
+            in_sc, in_os = input_scale(elevation_angle[index]), input_offset(
+                elevation_angle[index]
+            )
+            op_sc, op_os = output_scale(elevation_angle[index]), output_offset(
+                elevation_angle[index]
+            )
 
             ret_in[index, 1:] = (ret_in[index, 1:] - in_os) * in_sc
             hidden_layer = np.ones((len(index), c_w1.shape[2] + 1), np.float32)
             hidden_layer[:, 1:] = np.tanh(
-                fac[:].reshape((len(index), 1)) * np.einsum("ijk,ij->ik", c_w1, ret_in[index, :]))
+                fac[:].reshape((len(index), 1))
+                * np.einsum("ijk,ij->ik", c_w1, ret_in[index, :])
+            )
             rpg_dat[product] = (
-                    np.tanh(
-                        fac[:].reshape((len(index), 1)) * np.einsum("ijk,ik->ij", c_w2, hidden_layer)) * op_sc + op_os
+                np.tanh(
+                    fac[:].reshape((len(index), 1))
+                    * np.einsum("ijk,ik->ij", c_w2, hidden_layer)
+                )
+                * op_sc
+                + op_os
             )
             if product == "water_vapor_vmr":
                 rpg_dat[product] = rpg_dat[product] / 1000.0
@@ -283,11 +300,11 @@ def get_products(
 
         coeff = get_mvr_coeff(site, "tpb", lev1["frequency"][:])
         if coeff[0]["RT"] < 2:
-            coeff, offset, lin, quad = get_mvr_coeff(
+            coeff, offset, lin, quad = get_mvr_coeff(site, "tpb", lev1["frequency"][:])
+        else:
+            coeff, _, _, _, _, _, _, _ = get_mvr_coeff(
                 site, "tpb", lev1["frequency"][:]
             )
-        else:
-            coeff, _, _, _, _, _, _, _ = get_mvr_coeff(site, "tpb", lev1["frequency"][:])
 
         coeff["AG"] = np.sort(coeff["AG"])
         _, freq_ind, _ = np.intersect1d(
@@ -299,9 +316,7 @@ def get_products(
         _, freq_bl, _ = np.intersect1d(
             coeff["FR"], coeff["FR_BL"], assume_unique=False, return_indices=True
         )
-        coeff["retrieval_frequencies"] = str(
-            np.sort(np.unique(coeff["FR"]))
-        )
+        coeff["retrieval_frequencies"] = str(np.sort(np.unique(coeff["FR"])))
 
         ix0 = np.where(
             (elevation_angle[:] > coeff["AG"][0] - 0.5)
@@ -311,17 +326,27 @@ def get_products(
         )[0]
         ibl, tb = (
             np.empty([0, len(coeff["AG"])], np.int32),
-            np.ones((len(freq_ind), len(coeff["AG"]), 0), np.float32) * Fill_Value_Float,
+            np.ones((len(freq_ind), len(coeff["AG"]), 0), np.float32)
+            * Fill_Value_Float,
         )
 
         for ix0v in ix0:
             if (ix0v + len(coeff["AG"]) < len(lev1["time"])) & (
-                    np.allclose(elevation_angle[ix0v: ix0v + len(coeff["AG"])], coeff["AG"], atol=0.5)):
-                ibl = np.append(ibl, [np.array(range(ix0v, ix0v + len(coeff["AG"])))], axis=0)
+                np.allclose(
+                    elevation_angle[ix0v : ix0v + len(coeff["AG"])],
+                    coeff["AG"],
+                    atol=0.5,
+                )
+            ):
+                ibl = np.append(
+                    ibl, [np.array(range(ix0v, ix0v + len(coeff["AG"])))], axis=0
+                )
                 tb = np.concatenate(
                     (
                         tb,
-                        np.expand_dims(lev1["tb"][ix0v: ix0v + len(coeff["AG"]), freq_ind].T, 2),
+                        np.expand_dims(
+                            lev1["tb"][ix0v : ix0v + len(coeff["AG"]), freq_ind].T, 2
+                        ),
                     ),
                     axis=2,
                 )
@@ -337,28 +362,42 @@ def get_products(
         if coeff["RT"] < 2:
             tb_alg = []
             if len(freq_ind) - len(freq_bl) > 0:
-                tb_alg = np.squeeze(tb[0: len(freq_ind) - len(freq_bl), 0, :])
+                tb_alg = np.squeeze(tb[0 : len(freq_ind) - len(freq_bl), 0, :])
             for ifq, _ in enumerate(coeff["FR_BL"]):
                 if len(tb_alg) == 0:
                     tb_alg = np.squeeze(tb[freq_bl[ifq], :, :])
                 else:
-                    tb_alg = np.append(tb_alg, np.squeeze(tb[freq_bl[ifq], :, :]), axis=0)
+                    tb_alg = np.append(
+                        tb_alg, np.squeeze(tb[freq_bl[ifq], :, :]), axis=0
+                    )
 
-            rpg_dat["temperature"] = offset + np.einsum("jk,ij->ik", lin, tb_alg.T)
+            rpg_dat["temperature"] = offset(0) + np.einsum(
+                "jk,ij->ik", lin(0), tb_alg.T
+            )
 
         else:
             ret_in = retrieval_input(lev1, coeff)
-            ret_array = np.reshape(tb, (len(coeff["AG"]) * len(freq_ind), len(ibl)), "F")
+            ret_array = np.reshape(
+                tb, (len(coeff["AG"]) * len(freq_ind), len(ibl)), "F"
+            )
             ret_array = np.concatenate((np.ones((1, len(ibl)), np.float32), ret_array))
             for i_add in range(ret_in.shape[1] - len(coeff["FR"]) - 1, 0, -1):
                 ret_array = np.concatenate((ret_array, [ret_in[ibl[:, 0], -i_add]]))
-            ret_array[1:, :] = (ret_array[1:, :] - coeff["input_offset"][:, np.newaxis]) * coeff["input_scale"][:,
-                                                                                           np.newaxis]
-            hidden_layer = np.tanh(coeff["NP"][:] * np.einsum("ij,ik->kj", coeff["W1"], ret_array))
-            hidden_layer = np.concatenate((np.ones((len(ibl), 1), np.float32), hidden_layer), axis=1)
+            ret_array[1:, :] = (
+                ret_array[1:, :] - coeff["input_offset"][:, np.newaxis]
+            ) * coeff["input_scale"][:, np.newaxis]
+            hidden_layer = np.tanh(
+                coeff["NP"][:] * np.einsum("ij,ik->kj", coeff["W1"], ret_array)
+            )
+            hidden_layer = np.concatenate(
+                (np.ones((len(ibl), 1), np.float32), hidden_layer), axis=1
+            )
             rpg_dat["temperature"] = np.transpose(
-                np.tanh(coeff["NP"][:] * np.einsum("ij,kj->ik", coeff["W2"], hidden_layer))
-                * coeff["output_scale"][:, np.newaxis] + coeff["output_offset"][:, np.newaxis]
+                np.tanh(
+                    coeff["NP"][:] * np.einsum("ij,kj->ik", coeff["W2"], hidden_layer)
+                )
+                * coeff["output_scale"][:, np.newaxis]
+                + coeff["output_offset"][:, np.newaxis]
             )
 
     elif data_type in ("2P04", "2P07", "2P08"):
@@ -373,7 +412,9 @@ def get_products(
         coeff["retrieval_elevation_angles"] = str(
             np.unique(np.sort(np.concatenate([tem_ang, hum_ang])))
         )
-        coeff["retrieval_description"] = "derived product from: " + temp_file + ", " + hum_file
+        coeff["retrieval_description"] = (
+            "derived product from: " + temp_file + ", " + hum_file
+        )
         coeff["dependencies"] = temp_file + ", " + hum_file
 
         hum_int = interpol_2d(
@@ -383,16 +424,26 @@ def get_products(
         )
 
         rpg_dat["altitude"] = tem_dat.variables["altitude"][:]
-        pres = np.interp(tem_dat.variables["time"][:], lev1["time"][:], lev1["air_pressure"][:])
+        pres = np.interp(
+            tem_dat.variables["time"][:], lev1["time"][:], lev1["air_pressure"][:]
+        )
         if data_type == "2P04":
-            rpg_dat["relative_humidity"] = rel_hum(tem_dat.variables["temperature"][:, :], hum_int)
+            rpg_dat["relative_humidity"] = rel_hum(
+                tem_dat.variables["temperature"][:, :], hum_int
+            )
         if data_type == "2P07":
             rpg_dat["potential_temperature"] = pot_tem(
-                tem_dat.variables["temperature"][:, :], hum_int, pres, rpg_dat["altitude"]
+                tem_dat.variables["temperature"][:, :],
+                hum_int,
+                pres,
+                rpg_dat["altitude"],
             )
         if data_type == "2P08":
             rpg_dat["equivalent_potential_temperature"] = eq_pot_tem(
-                tem_dat.variables["temperature"][:, :], hum_int, pres, rpg_dat["altitude"]
+                tem_dat.variables["temperature"][:, :],
+                hum_int,
+                pres,
+                rpg_dat["altitude"],
             )
 
         _combine_lev1(
@@ -406,11 +457,11 @@ def get_products(
 
 
 def _combine_lev1(
-        lev1: nc.Dataset,
-        rpg_dat: dict,
-        index: np.ndarray,
-        data_type: str,
-        params: dict,
+    lev1: nc.Dataset,
+    rpg_dat: dict,
+    index: np.ndarray,
+    data_type: str,
+    params: dict,
 ) -> None:
     """add level1 data"""
     lev1_vars = [
@@ -574,21 +625,31 @@ def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
             doy = np.ones((len(lev1["time"][:]), 2), np.float32) * Fill_Value_Float
             tf = TimezoneFinder()
             timezone_str = tf.timezone_at(
-                lng=np.nanmedian(lev1["station_longitude"])[0], lat=np.nanmedian(lev1["station_latitude"])[0]
+                lng=np.nanmedian(lev1["station_longitude"])[0],
+                lat=np.nanmedian(lev1["station_latitude"])[0],
             )
             timezone = pytz.timezone(timezone_str)
             dtime = datetime.fromtimestamp(time_median, timezone)
             dyear = datetime(dtime.year, 12, 31, 0, 0).timetuple().tm_yday
             doy[:, 0] = np.cos(
-                datetime.fromtimestamp(time_median).timetuple().tm_yday / dyear * 2 * np.pi)
+                datetime.fromtimestamp(time_median).timetuple().tm_yday
+                / dyear
+                * 2
+                * np.pi
+            )
             doy[:, 1] = np.sin(
-                datetime.fromtimestamp(time_median).timetuple().tm_yday / dyear * 2 * np.pi)
+                datetime.fromtimestamp(time_median).timetuple().tm_yday
+                / dyear
+                * 2
+                * np.pi
+            )
             ret_in = np.concatenate((ret_in, doy), axis=1)
         if coeff.get("SU") == 1:
             sun = np.ones((len(lev1["time"][:]), 2), np.float32) * Fill_Value_Float
             tf = TimezoneFinder()
             timezone_str = tf.timezone_at(
-                lng=np.nanmedian(lev1["station_longitude"])[0], lat=np.nanmedian(lev1["station_latitude"])[0]
+                lng=np.nanmedian(lev1["station_longitude"])[0],
+                lat=np.nanmedian(lev1["station_latitude"])[0],
             )
             timezone = pytz.timezone(timezone_str)
             dtime = datetime.fromtimestamp(time_median, timezone)

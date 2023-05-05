@@ -22,7 +22,7 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
     """
 
     c_list = get_coeff_list(site, prefix)
-    coeff, f_offset, f_lin, f_quad = {}, {}, {}, {}
+    coeff = {}
 
     if (str(c_list[0][-3:]).lower() == "ret") & (len(c_list) == 1):
         with open(c_list[0], "r", encoding="utf8") as f:
@@ -43,10 +43,17 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                                 [float(idx) for idx in tmp.split()], np.float32
                             )
                     if name == "NS":
-                        name_list = ["input_offset", "input_scale", "output_offset", "output_scale"]
+                        name_list = [
+                            "input_offset",
+                            "input_scale",
+                            "output_offset",
+                            "output_scale",
+                        ]
                         for split_name in name_list:
                             if split_name in coeff:
-                                coeff[split_name] = np.vstack((coeff[split_name], value))
+                                coeff[split_name] = np.vstack(
+                                    (coeff[split_name], value)
+                                )
                             else:
                                 coeff[split_name] = value
                             if split_name != "output_scale":
@@ -63,7 +70,8 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                             str_rem, tmp = lines[line_num].split(":")
                             tmp = tmp.split()
                             value = np.array(
-                                [float(tmp[idx]) for idx in range(len(value))], np.float32
+                                [float(tmp[idx]) for idx in range(len(value))],
+                                np.float32,
                             )
                             w1_stack = np.vstack((w1_stack, value))
                         if name in coeff:
@@ -82,7 +90,8 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                             str_rem, tmp = lines[line_num].split(":")
                             tmp = tmp.split()
                             value = np.array(
-                                [float(tmp[idx]) for idx in range(len(value))], np.float32
+                                [float(tmp[idx]) for idx in range(len(value))],
+                                np.float32,
                             )
                             w2_stack = np.vstack((w2_stack, value))
                         if name in coeff:
@@ -91,7 +100,9 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                                     (coeff[name], w2_stack[:, :, np.newaxis]), axis=2
                                 )
                             elif (coeff[name].ndim == 2) & (w2_stack.ndim == 1):
-                                coeff[name] = np.concatenate((coeff[name], w2_stack[np.newaxis, :]), axis=0)
+                                coeff[name] = np.concatenate(
+                                    (coeff[name], w2_stack[np.newaxis, :]), axis=0
+                                )
                             elif (coeff[name].ndim == 2) & (w2_stack.ndim == 2):
                                 coeff[name] = np.stack((coeff[name], w2_stack), axis=2)
                             else:
@@ -107,9 +118,13 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                             rm_stack = np.vstack((rm_stack, float(tmp[0])))
                         if name in coeff:
                             if (coeff[name].ndim > 1) & (rm_stack.ndim > 1):
-                                coeff[name] = np.concatenate((coeff[name], rm_stack), axis=1)
+                                coeff[name] = np.concatenate(
+                                    (coeff[name], rm_stack), axis=1
+                                )
                             elif (coeff[name].ndim > 1) & (rm_stack.ndim == 1):
-                                coeff[name] = np.concatenate((coeff[name], rm_stack[np.newaxis, :]), axis=0)
+                                coeff[name] = np.concatenate(
+                                    (coeff[name], rm_stack[np.newaxis, :]), axis=0
+                                )
                             else:
                                 coeff[name] = np.vstack((coeff[name], rm_stack))
                         else:
@@ -124,7 +139,9 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                             tmp = tmp.split()
                             os_stack = np.vstack((os_stack, float(tmp[0])))
                         if name in coeff:
-                            coeff[name] = np.concatenate((coeff[name], os_stack), axis=1)
+                            coeff[name] = np.concatenate(
+                                (coeff[name], os_stack), axis=1
+                            )
                         else:
                             coeff[name] = os_stack
                     elif name == "TL":
@@ -134,7 +151,8 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                             str_rem, tmp = lines[line_num].split(":")
                             tmp = tmp.split()
                             value = np.array(
-                                [float(tmp[idx]) for idx in range(len(coeff["FR"]))], np.float32
+                                [float(tmp[idx]) for idx in range(len(coeff["FR"]))],
+                                np.float32,
                             )
                             tl_stack = np.vstack((tl_stack, value))
                         coeff[name] = tl_stack
@@ -145,7 +163,8 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                             str_rem, tmp = lines[line_num].split(":")
                             tmp = tmp.split()
                             value = np.array(
-                                [float(tmp[idx]) for idx in range(len(coeff["FR"]))], np.float32
+                                [float(tmp[idx]) for idx in range(len(coeff["FR"]))],
+                                np.float32,
                             )
                             tq_stack = np.vstack((tq_stack, value))
                         coeff[name] = tq_stack
@@ -193,7 +212,9 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                     freq[:], c_file["freq"][:], assume_unique=False, return_indices=True
                 )
                 if len(freq_coeff) < len(c_file["freq"][:]):
-                    raise RuntimeError(["Instrument and retrieval frequencies do not match."])
+                    raise RuntimeError(
+                        ["Instrument and retrieval frequencies do not match."]
+                    )
 
                 coeff["FR"][freq_ind, i_file] = c_file["freq"][freq_coeff]
                 coeff["TL"][i_file, freq_ind] = c_file["coefficient_mvr"][freq_coeff]
@@ -223,10 +244,14 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                     freq[:], c_file["freq"][:], assume_unique=False, return_indices=True
                 )
                 if len(freq_coeff) < len(c_file["freq"][:]):
-                    raise RuntimeError(["Instrument and retrieval frequencies do not match."])
+                    raise RuntimeError(
+                        ["Instrument and retrieval frequencies do not match."]
+                    )
 
                 coeff["FR"][freq_ind, i_file] = c_file["freq"][freq_coeff]
-                coeff["TL"][i_file, :, freq_ind] = c_file["coefficient_mvr"][freq_coeff, :]
+                coeff["TL"][i_file, :, freq_ind] = c_file["coefficient_mvr"][
+                    freq_coeff, :
+                ]
                 if c_file.regression_type == "quadratic":
                     coeff["TQ"][i_file, :, freq_ind] = c_file["coefficient_mvr"][
                         freq_coeff + len(freq_coeff), :
@@ -240,100 +265,147 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                 freq[:], c_file["freq"][:], assume_unique=False, return_indices=True
             )
             if len(freq_coeff) < len(c_file["freq"][:]):
-                raise RuntimeError(["Instrument and retrieval frequencies do not match."])
+                raise RuntimeError(
+                    ["Instrument and retrieval frequencies do not match."]
+                )
 
             coeff["AG"] = np.sort(c_file["elevation_predictor"][:])
             coeff["AL"] = c_file["height_grid"]
             coeff["FR"] = c_file["freq"]
             coeff["FR_BL"] = c_file["freq_bl"]
             coeff["n_height_grid"] = c_file.dimensions["n_height_grid"].size
-            f_offset = c_file["offset_mvr"][:]
-            f_lin, f_quad = c_file["coefficient_mvr"][:, :], []
+            coeff["OS"] = c_file["offset_mvr"][:]
+            coeff["TL"] = c_file["coefficient_mvr"][:, :]
 
         else:
             raise RuntimeError(
-                ["Prefix " + prefix + " not recognized for retrieval coefficient file(s)."]
+                [
+                    "Prefix "
+                    + prefix
+                    + " not recognized for retrieval coefficient file(s)."
+                ]
             )
 
     if (coeff["RT"] < 2) & (len(coeff["AL"]) == 1):
+
         def f_offset(x):
             return np.array(
                 [coeff["OS"][(np.abs(coeff["AG"] - v)).argmin()] for v in x]
             )
+
         if coeff["RT"] in (0, 1):
             coeff["TL"] = coeff["TL"][np.newaxis, :]
+
         def f_lin(x):
             return np.array(
                 [coeff["TL"][(np.abs(coeff["AG"] - v)).argmin(), :] for v in x]
             )
+
         if coeff["RT"] in (1, Fill_Value_Int):
             if coeff["RT"] == 1:
                 coeff["TQ"] = coeff["TQ"][np.newaxis, :]
+
             def f_quad(x):
                 return np.array(
                     [coeff["TQ"][(np.abs(coeff["AG"] - v)).argmin(), :] for v in x]
                 )
 
-    elif (coeff["RT"] < 2) & (len(coeff["AL"]) > 1) & (prefix != "tel"):
+    elif (coeff["RT"] < 2) & (len(coeff["AL"]) > 1) & (prefix != "tpb"):
+
         def f_offset(x):
             return np.array(
                 [coeff["OS"][:, (np.abs(coeff["AG"] - v)).argmin()] for v in x]
             )
+
         if coeff["RT"] in (0, 1):
             coeff["TL"] = coeff["TL"][np.newaxis, :, :]
+
         def f_lin(x):
             return np.array(
                 [coeff["TL"][(np.abs(coeff["AG"] - v)).argmin(), :, :] for v in x]
             )
+
         if coeff["RT"] in (1, Fill_Value_Int):
             if coeff["RT"] == 1:
                 coeff["TQ"] = coeff["TQ"][np.newaxis, :, :]
+
             def f_quad(x):
                 return np.array(
                     [coeff["TQ"][(np.abs(coeff["AG"] - v)).argmin(), :, :] for v in x]
                 )
 
-    elif (coeff["RT"] == 2):
-        if (len(coeff["AG"]) == 1):
+    elif (coeff["RT"] < 2) & (len(coeff["AL"]) > 1) & (prefix == "tpb"):
+
+        def f_offset(x):
+            return coeff["OS"]
+
+        def f_lin(x):
+            return coeff["TL"]
+
+        def f_quad(x):
+            return np.empty(0)
+
+    elif coeff["RT"] == 2:
+        if len(coeff["AG"]) == 1:
             coeff["W1"] = coeff["W1"][:, :, np.newaxis]
             coeff["W2"] = coeff["W2"][:, :, np.newaxis]
             coeff["input_scale"] = coeff["input_scale"][np.newaxis, :]
             coeff["input_offset"] = coeff["input_offset"][np.newaxis, :]
             coeff["output_scale"] = coeff["output_scale"][np.newaxis, :]
             coeff["output_offset"] = coeff["output_offset"][np.newaxis, :]
+
         def input_scale(x):
             return np.array(
                 [coeff["input_scale"][(np.abs(coeff["AG"] - v)).argmin(), :] for v in x]
             )
+
         def input_offset(x):
             return np.array(
-                [coeff["input_offset"][(np.abs(coeff["AG"] - v)).argmin(), :] for v in x]
+                [
+                    coeff["input_offset"][(np.abs(coeff["AG"] - v)).argmin(), :]
+                    for v in x
+                ]
             )
+
         def output_scale(x):
             return np.array(
-                [coeff["output_scale"][(np.abs(coeff["AG"] - v)).argmin(), :] for v in x]
+                [
+                    coeff["output_scale"][(np.abs(coeff["AG"] - v)).argmin(), :]
+                    for v in x
+                ]
             )
+
         def output_offset(x):
             return np.array(
-                [coeff["output_offset"][(np.abs(coeff["AG"] - v)).argmin(), :] for v in x]
+                [
+                    coeff["output_offset"][(np.abs(coeff["AG"] - v)).argmin(), :]
+                    for v in x
+                ]
             )
-        def Weights1(x):
+
+        def weights1(x):
             return np.array(
                 [coeff["W1"][:, :, (np.abs(coeff["AG"] - v)).argmin()] for v in x]
             )
+
         if len(coeff["AL"]) > 1:
-            def Weights2(x):
+
+            def weights2(x):
                 return np.array(
                     [coeff["W2"][:, :, (np.abs(coeff["AG"] - v)).argmin()] for v in x]
                 )
+
         else:
-            def Weights2(x):
+
+            def weights2(x):
                 return np.array(
                     [coeff["W2"][(np.abs(coeff["AG"] - v)).argmin(), :] for v in x]
                 )
-        def factor(x):
-            return np.array([coeff["NP"][(np.abs(coeff["AG"] - v)).argmin()] for v in x])
 
+        def factor(x):
+            return np.array(
+                [coeff["NP"][(np.abs(coeff["AG"] - v)).argmin()] for v in x]
+            )
 
     if str(c_list[0][-3:]).lower() == "ret":
         retrieval_type = ["linear regression", "quadratic regression", "neural network"]
@@ -362,8 +434,8 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
             input_offset,
             output_scale,
             output_offset,
-            Weights1,
-            Weights2,
+            weights1,
+            weights2,
             factor,
         )
     )

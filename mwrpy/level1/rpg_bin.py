@@ -162,7 +162,9 @@ def read_bls(file_name: str) -> tuple[dict, dict]:
         data = _read_from_file(file, dt, header["n"] * header["_n_ang"])
         _check_eof(file)
 
-    data["elevation_angle"], data["azimuth_angle"] = _decode_angles(data["_angles"], version)
+    data["elevation_angle"], data["azimuth_angle"] = _decode_angles(
+        data["_angles"], version
+    )
     header = _fix_header(header)
     return header, data
 
@@ -422,7 +424,7 @@ def _check_eof(file: BinaryIO):
 
 
 def _decode_angles(
-        x: np.ndarray, method: Literal[1, 2]
+    x: np.ndarray, method: Literal[1, 2]
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Decode elevation and azimuth angles.

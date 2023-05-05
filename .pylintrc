@@ -1,5 +1,5 @@
 [TYPECHECK]
-ignored-modules	= numpy, netCDF4, scipy, ephem
+ignored-modules	= numpy, netCDF4, scipy, ephem, timezonefinder, metpy
 
 [MESSAGES CONTROL]
 disable =
@@ -15,6 +15,7 @@ disable =
   too-many-instance-attributes,
   fixme,
   duplicate-code,
+  too-many-function-args,
 
 
 [format]
