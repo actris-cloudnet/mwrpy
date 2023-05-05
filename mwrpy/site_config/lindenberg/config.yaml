@@ -1,0 +1,104 @@
+# Site config file
+
+type: hatpro
+
+params:
+    station_altitude: 104.
+    station_longitude: 14.118
+    station_latitude: 52.208
+    
+    # path to level1 data and path for processed files
+    data_in: /data/obs/site/lin/linhat/l1/
+    data_out: /data/obs/site/lin/linhat/actris/
+    
+    # path to ABSCAL.HIS file
+    path_to_cal: /data/obs/site/lin/linhat/
+
+    # integration time for BL scans in seconds 
+    scan_time: 100.
+
+    # integration time of measurements in seconds
+    int_time: 1
+
+    # Azimuth angle is transformed to geographical coordinates (E=90 and W=270), currently only for RPG scanners.
+    # If you do not want to transform the coordinates set azi_cor to -999.
+    azi_cor: -999.
+    # Azimuth correction:
+    # Set az_cor to the angle that RPG software gives when instrument is pointing to the North.
+    const_azi: -999.
+
+    # quality flag status for level 1 data; 0: flag active
+    # Bit 1: missing_tb
+    # Bit 2: tb_below_threshold
+    # Bit 3: tb_above_threshold
+    # Bit 4: spectral_consistency_above_threshold
+    # Bit 5: receiver_sanity_failed
+    # Bit 6: rain_detected
+    # Bit 7: sun_moon_in_beam
+    # Bit 8: tb_offset_above_threshold
+    flag_status: [0, 0, 0, 0, 0, 0, 0, 1]
+    
+    # availability of IR
+    ir_flag: True
+
+
+global_specs:
+    # A succinct description of what is in the dataset, composed of instrument type and site name
+    title: HATPRO G5 MWR at Lindenberg, Germany
+    
+    # Versioning of the datasets (containing date and software version)
+    history:
+    
+    # Where the original data was produced
+    institution: DWD
+    
+    # Miscellaneous Information about the dataset or methods used to produce it
+    comment:
+    
+    # References that describe the data or methods used to produce it
+    references:
+    
+    # Name of measurement station
+    site_location: lindenberg
+    
+    # E-PROFILE instrument identifier. “A” if there is only one instrument on the station. Additional instruments are identified with the letters B, C, etc.
+    instrument_id: A
+    
+    # WIGOS Station identifier acording to WIGOS convention
+    wigos_station_id: 0-20000-0-10393
+    
+    # Department responsible for the instrument
+    principal_investigator:
+    
+    # Instrument generation
+    instrument_generation: G5    
+    
+    # Specific to mainboard
+    instrument_hw_id:
+    
+    # Name of network(s) that instrument may be part of
+    network_name: ACTRIS
+    
+    # Name of campaign instrument may collect data for
+    campaign_name:
+    
+    # List of files the data set is depending on
+    dependencies:
+    
+    # Data license
+    license:  
+    
+    # Logbook repair/replacement work performed
+    instrument_history:
+    
+    # Fabrication year of the infrared radiometer
+    ir_instrument_fabrication_year:
+    
+    # Logbook repair/replacement work performed
+    ir_instrument_history:
+    
+    # Fabrication year of the weather station
+    met_instrument_fabrication_year:
+    
+    # Logbook repair/replacement work performed
+    met_instrument_history:
