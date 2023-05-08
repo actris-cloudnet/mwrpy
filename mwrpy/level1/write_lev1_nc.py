@@ -32,7 +32,7 @@ def lev1_to_nc(
     data_type: str,
     path_to_files: str,
     output_file: str | None = None,
-):
+) -> rpg_mwr.Rpg:
     """This function reads one day of RPG MWR binary files,
     adds attributes and writes it into netCDF file.
 
