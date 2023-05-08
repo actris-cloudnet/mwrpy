@@ -58,7 +58,7 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                                 coeff[split_name] = value
                             if split_name != "output_scale":
                                 line_num += 1
-                                str_rem, tmp = lines[line_num].split(":")
+                                _, tmp = lines[line_num].split(":")
                                 value = np.array(
                                     [float(idx) for idx in tmp.split()], np.float32
                                 )
@@ -67,7 +67,7 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                         w1_stack = value
                         while lines[line_num + 1][0:2] != "W2":
                             line_num += 1
-                            str_rem, tmp = lines[line_num].split(":")
+                            _, tmp = lines[line_num].split(":")
                             tmp = tmp.split()
                             value = np.array(
                                 [float(tmp[idx]) for idx in range(len(value))],
@@ -85,9 +85,9 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                             coeff[name] = w1_stack
                     elif name == "W2":
                         w2_stack = value
-                        for i_w2 in range(len(coeff["AL"]) - 1):
+                        for _ in range(len(coeff["AL"]) - 1):
                             line_num += 1
-                            str_rem, tmp = lines[line_num].split(":")
+                            _, tmp = lines[line_num].split(":")
                             tmp = tmp.split()
                             value = np.array(
                                 [float(tmp[idx]) for idx in range(len(value))],
@@ -111,9 +111,9 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                             coeff[name] = w2_stack
                     elif name == "RM":
                         rm_stack = value
-                        for i_rm in range(len(coeff["AL"]) - 1):
+                        for _ in range(len(coeff["AL"]) - 1):
                             line_num += 1
-                            str_rem, tmp = lines[line_num].split(":")
+                            _, tmp = lines[line_num].split(":")
                             tmp = tmp.split()
                             rm_stack = np.vstack((rm_stack, float(tmp[0])))
                         if name in coeff:
@@ -133,9 +133,9 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                         if "AL" not in coeff:
                             coeff["AL"] = [0]
                         os_stack = value
-                        for i_rm in range(len(coeff["AL"]) - 1):
+                        for _ in range(len(coeff["AL"]) - 1):
                             line_num += 1
-                            str_rem, tmp = lines[line_num].split(":")
+                            _, tmp = lines[line_num].split(":")
                             tmp = tmp.split()
                             os_stack = np.vstack((os_stack, float(tmp[0])))
                         if name in coeff:
@@ -146,9 +146,9 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                             coeff[name] = os_stack
                     elif name == "TL":
                         tl_stack = value
-                        for i_tl in range(len(coeff["AL"]) - 1):
+                        for _ in range(len(coeff["AL"]) - 1):
                             line_num += 1
-                            str_rem, tmp = lines[line_num].split(":")
+                            _, tmp = lines[line_num].split(":")
                             tmp = tmp.split()
                             value = np.array(
                                 [float(tmp[idx]) for idx in range(len(coeff["FR"]))],
@@ -158,9 +158,9 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                         coeff[name] = tl_stack
                     elif name == "TQ":
                         tq_stack = value
-                        for i_tq in range(len(coeff["AL"]) - 1):
+                        for _ in range(len(coeff["AL"]) - 1):
                             line_num += 1
-                            str_rem, tmp = lines[line_num].split(":")
+                            _, tmp = lines[line_num].split(":")
                             tmp = tmp.split()
                             value = np.array(
                                 [float(tmp[idx]) for idx in range(len(coeff["FR"]))],
@@ -336,13 +336,13 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
 
     elif (coeff["RT"] < 2) & (len(coeff["AL"]) > 1) & (prefix == "tpb"):
 
-        def f_offset(x):
+        def f_offset():
             return coeff["OS"]
 
-        def f_lin(x):
+        def f_lin():
             return coeff["TL"]
 
-        def f_quad(x):
+        def f_quad():
             return np.empty(0)
 
     elif coeff["RT"] == 2:

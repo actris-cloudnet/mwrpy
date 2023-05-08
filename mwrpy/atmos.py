@@ -150,7 +150,7 @@ def winddir(spd: np.ndarray, drc: np.ndarray):
 
 
 def find_lwcl_free(lev1: dict, ix: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """Identification of liquid water cloud free periods using TB variability at 31.4 GHz and IRT.
+    """Identifying liquid water cloud free periods using 31.4 GHz TB variability + IRT.
     Uses pre-defined time index and additionally returns status of IRT availability"""
 
     if "elevation_angle" in lev1:

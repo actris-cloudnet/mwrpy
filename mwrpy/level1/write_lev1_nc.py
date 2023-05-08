@@ -24,7 +24,7 @@ from mwrpy.utils import (
 
 Fill_Value_Float = -999.0
 Fill_Value_Int = -99
-FuncType: TypeAlias = Callable[[str], np.array]
+FuncType: TypeAlias = Callable[[str], np.ndarray]
 
 
 def lev1_to_nc(
@@ -392,14 +392,14 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict, site: str) -> 
         [],
         [],
     )
-    seqs = [
+    seqs_all = [
         (key, len(list(val)))
         for key, val in groupby(hkd.data["status"][:] & 2 ** 18 > 0)
     ]
     seqs = np.array(
         [
-            (key, sum(s[1] for s in seqs[:i]), length)
-            for i, (key, length) in enumerate(seqs)
+            (key, sum(s[1] for s in seqs_all[:i]), length)
+            for i, (key, length) in enumerate(seqs_all)
             if bool(key) is True
         ]
     )

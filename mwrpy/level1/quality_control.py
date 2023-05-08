@@ -36,13 +36,12 @@ def apply_qc(site: str, data_in: RpgBin, params: dict) -> None:
     """
 
     data = data_in.data
-    date = data_in.date
 
     data["quality_flag"] = np.zeros(data["tb"].shape, dtype=np.int32)
     data["quality_flag_status"] = np.zeros(data["tb"].shape, dtype=np.int32)
 
     if params["flag_status"][3] == 0:
-        ind_bit4 = spectral_consistency(data, site, date)
+        ind_bit4 = spectral_consistency(data, site)
     ind_bit6 = np.where(data["rain"] == 1)
     ind_bit7 = orbpos(data, params)
 
@@ -189,7 +188,7 @@ def orbpos(data: dict, params: dict) -> np.ndarray:
     return flag_ind
 
 
-def spectral_consistency(data: dict, site: str, date: list) -> np.ndarray:
+def spectral_consistency(data: dict, site: str) -> np.ndarray:
     """Applies spectral consistency coefficients for given frequency index,
     writes 2S02 product and returns indices to be flagged"""
 
@@ -197,7 +196,7 @@ def spectral_consistency(data: dict, site: str, date: list) -> np.ndarray:
     abs_diff = ma.masked_all(data["tb"].shape, dtype=np.float32)
     rpg_dat = {}
     rpg_dat["tb_spectrum"] = np.ones(data["tb"].shape) * np.nan
-    global_attributes, params = read_yaml_config(site)
+    global_attributes, _ = read_yaml_config(site)
 
     c_list = get_coeff_list(site, "spc")
     if len(c_list) > 0:
@@ -343,7 +342,7 @@ def spectral_consistency(data: dict, site: str, date: list) -> np.ndarray:
                     tb_mean = tb_mean.reindex(tb_df.index, method="nearest")
 
                     fact = [2.5, 3.5]  # factor for receiver retrieval uncertainty
-                    # flag for individual channels based on channel retrieval uncertainty
+                    # flag for individual channels based on retrieval uncertainty
                     flag_ind[
                         ele_ind[
                             (

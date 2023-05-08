@@ -5,7 +5,7 @@ import os
 import re
 import time
 from datetime import date, datetime, timedelta, timezone
-from typing import Iterator, NamedTuple
+from typing import Iterator, NamedTuple, Any
 
 import netCDF4
 import numpy as np
@@ -67,7 +67,7 @@ def epoch2unix(epoch_time, time_ref, epoch: Epoch = (2001, 1, 1)):
     return unix_time
 
 
-def isscalar(array: any) -> bool:
+def isscalar(array: Any) -> bool:
     """Tests if input is scalar.
     By "scalar" we mean that array has a single value.
     Examples:

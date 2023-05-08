@@ -2,7 +2,7 @@
 import locale
 from datetime import datetime, timezone
 
-import matplotlib.ticker as ticker
+from matplotlib import ticker
 import netCDF4
 import numpy as np
 from numpy import ma, ndarray

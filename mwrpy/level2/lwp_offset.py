@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 
-from mwrpy.level1.write_lev1_nc import find_lwcl_free
+from mwrpy.atmos import find_lwcl_free
 
 Fill_Value_Float = -999.0
 

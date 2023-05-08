@@ -81,7 +81,7 @@ def generate_figure(
     image_name: str | None = None,
     sub_title: bool = True,
     title: bool = True,
-) -> Dimensions:
+) -> tuple[Dimensions, str]:
     """Generates a mwrpy figure.
     Args:
         nc_file (str): Input file.
@@ -102,7 +102,7 @@ def generate_figure(
         Dimensions of the generated figure in pixels.
         File name of the generated figure.
     Examples:
-        >>> from plots import generate_figure
+        >>> from mwrpy.plots import generate_figure
         >>> generate_figure('lev2_file.nc', ['lwp'])
     """
 
@@ -141,7 +141,7 @@ def generate_figure(
         file_name = handle_saving(
             nc_file, image_name, save_path, show, case_date, valid_names
         )
-    return Dimensions(fig, axes)
+    return Dimensions(fig, axes), file_name
 
 
 def _mark_gaps(
@@ -467,7 +467,7 @@ def _plot_colormesh_data(
         nbin = 6
 
     if name == "relative_humidity":
-        data[data_in.mask == True] = np.nan
+        data[data_in.mask] = np.nan
         data[data > 1.0] = 1.0
         data[data < 0.0] = 0.0
         data *= 100.0
@@ -482,7 +482,6 @@ def _plot_colormesh_data(
         hum_time = seconds2hours(read_nc_fields(hum_file, "time"))
         hum_flag = _get_ret_flag(hum_file, hum_time)
         hum_tmp, width = _calculate_rolling_mean(hum_time, hum_flag, win=15 / 60)
-        # hum_flag = np.interp(hum_time, hum_time[int(width / 2 - 1) : int(-width / 2)], hum_tmp)
         hum_flag = np.interp(
             axes[0], hum_time[int(width / 2 - 1) : int(-width / 2)], hum_tmp
         )

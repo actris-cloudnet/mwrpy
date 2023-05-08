@@ -16,6 +16,7 @@ disable =
   fixme,
   duplicate-code,
   too-many-function-args,
+  too-many-branches,
 
 
 [format]

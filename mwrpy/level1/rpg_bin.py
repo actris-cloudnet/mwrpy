@@ -155,9 +155,9 @@ def read_bls(file_name: str) -> tuple[dict, dict]:
         dt = [
             ("time", "<i4"),
             ("rain", "b"),
-            (f"temp_sfc", "<f"),
-            (f"tb", "<f", header["_n_f"]),
-            (f"_angles", "<i4"),
+            ("temp_sfc", "<f"),
+            ("tb", "<f", header["_n_f"]),
+            ("_angles", "<i4"),
         ]
         data = _read_from_file(file, dt, header["n"] * header["_n_ang"])
         _check_eof(file)

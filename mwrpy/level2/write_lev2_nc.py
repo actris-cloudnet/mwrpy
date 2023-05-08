@@ -371,8 +371,8 @@ def get_products(
                         tb_alg, np.squeeze(tb[freq_bl[ifq], :, :]), axis=0
                     )
 
-            rpg_dat["temperature"] = offset(0) + np.einsum(
-                "jk,ij->ik", lin(0), tb_alg.T
+            rpg_dat["temperature"] = offset() + np.einsum(
+                "jk,ij->ik", lin(), np.transpose(tb_alg)
             )
 
         else:
@@ -405,7 +405,7 @@ def get_products(
         tem_dat, tem_freq, tem_ang = load_product(temp_file)
         hum_dat, hum_freq, hum_ang = load_product(hum_file)
 
-        coeff, index = {}, []
+        coeff, index = {}, np.empty(0, np.int32)
         coeff["retrieval_frequencies"] = str(
             np.unique(np.sort(np.concatenate([tem_freq, hum_freq])))
         )
