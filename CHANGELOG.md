@@ -1,3 +1,8 @@
+## 0.1.5 – 2023-05-08
+
+- Comment suspicious timezone conversion to make tests pass
+- Test with Python 3.11
+
 ## 0.1.4 – 2023-05-08
 
 - Update MANIFEST.in
