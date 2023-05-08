@@ -99,9 +99,9 @@ class Rpg:
         return data
 
     def _get_date(self):
-        epoch = datetime(1970, 1, 1).timestamp()
+        # epoch = datetime(1970, 1, 1).timestamp()
         time_median = float(ma.median(self.raw_data["time"]))
-        time_median += epoch
+        # time_median += epoch
         return datetime.utcfromtimestamp(time_median).strftime("%Y-%m-%d")
 
     def find_valid_times(self):
