@@ -1,2 +1,3 @@
 recursive-exclude tests *
 recursive-include mwrpy/site_config *
+include mwrpy/py.typed
