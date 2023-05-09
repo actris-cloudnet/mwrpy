@@ -1,6 +1,7 @@
 # MWRpy
 
-[![Tests](https://github.com/actris-cloudnet/mwrpy/actions/workflows/test.yml/badge.svg)](https://github.com/actris-cloudnet/mwrpy/actions/workflows/test.yml)
+[![MWRpy tests](https://github.com/actris-cloudnet/mwrpy/actions/workflows/test.yml/badge.svg)](https://github.com/actris-cloudnet/mwrpy/actions/workflows/test.yml)
+[![PyPI version](https://badge.fury.io/py/mwrpy.svg)](https://badge.fury.io/py/mwrpy)
 
 ### Usage
 

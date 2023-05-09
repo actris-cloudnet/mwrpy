@@ -78,7 +78,7 @@ def lev2_to_nc(
                 _combine_lev1(lev1, rpg_dat, index, d_type, params)
                 hatpro = rpg_mwr.Rpg(rpg_dat)
                 hatpro.data = get_data_attributes(hatpro.data, d_type)
-                rpg_mwr.save_rpg(hatpro, output_file, global_attributes, d_type)
+                rpg_mwr.save_rpg(hatpro, output_file, global_attributes, d_type, lev1.date)
 
         global_attributes, params = read_yaml_config(site)
         rpg_dat, coeff, index = get_products(
