@@ -4,7 +4,6 @@ from datetime import datetime, timezone
 
 import netCDF4
 import numpy as np
-from numpy import ma
 
 from mwrpy import utils, version
 from mwrpy.utils import MetaData
@@ -90,7 +89,6 @@ class Rpg:
 
     def __init__(self, raw_data: dict):
         self.raw_data = raw_data
-        self.date = self._get_date()
         self.data = self._init_data()
 
     def _init_data(self) -> dict:
@@ -99,47 +97,8 @@ class Rpg:
             data[key] = RpgArray(self.raw_data[key], key)
         return data
 
-    def _get_date(self):
-        epoch = datetime(1970, 1, 1).timestamp()
-        time_median = float(ma.median(self.raw_data["time"]))
-        time_median += epoch
-        return datetime.utcfromtimestamp(time_median).strftime("%Y-%m-%d")
 
-    def find_valid_times(self):
-        """Sorts timestamps and finds valid times"""
-        # sort timestamps
-        time = self.data["time"].data[:]
-        ind = time.argsort()
-        self._screen(ind)
-
-        # remove duplicate timestamps
-        time = self.data["time"].data[:]
-        _, ind = np.unique(time, return_index=True)
-        self._screen(ind)
-
-        # find valid date
-        time = self.data["time"].data[:]
-        ind = np.zeros(len(time), dtype=int)
-        for time_i, time_v in enumerate(time):
-            if "-".join(utils.seconds2date(time_v)[:3]) == self.date:
-                ind[time_i] = 1
-        self._screen(np.where(ind == 1)[0])
-
-    def _screen(self, ind: np.ndarray):
-        if len(ind) < 1:
-            raise RuntimeError(["Error: no valid data for date: " + self.date])
-        n_time = len(self.data["time"].data)
-        for _, array in self.data.items():
-            data = array.data
-            if data.ndim > 0 and data.shape[0] == n_time:
-                if data.ndim == 1:
-                    screened_data = data[ind]
-                else:
-                    screened_data = data[ind, :]
-                data = screened_data
-
-
-def save_rpg(rpg: Rpg, output_file: str, att: dict, data_type: str) -> None:
+def save_rpg(rpg: Rpg, output_file: str, att: dict, data_type: str, date: str) -> None:
     """Saves the RPG MWR file."""
 
     if data_type == "1B01":
@@ -196,7 +155,7 @@ def save_rpg(rpg: Rpg, output_file: str, att: dict, data_type: str) -> None:
         )
 
     with init_file(output_file, dims, rpg.data, att) as rootgrp:
-        setattr(rootgrp, "date", rpg.date)
+        setattr(rootgrp, "date", date)
 
 
 def init_file(

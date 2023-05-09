@@ -79,19 +79,17 @@ class RpgBin:
             datetime.datetime.utcfromtimestamp(
                 utils.epoch2unix(time_median, self.header["_time_ref"])
             )
-            .strftime("%Y %m %d")
-            .split()
+            .strftime("%Y-%m-%d")
         )
         today = float(datetime.datetime.today().strftime("%Y"))
-        if float(date[0]) > today:
+        if float(date[0:4]) > today:
             date = (
                 datetime.datetime.utcfromtimestamp(
                     utils.epoch2unix(
                         time_median, self.header["_time_ref"], (1970, 1, 1)
                     )
                 )
-                .strftime("%Y %m %d")
-                .split()
+                .strftime("%Y-%m-%d")
             )
         return date
 
@@ -110,7 +108,7 @@ class RpgBin:
         time = self.data["time"]
         ind = np.zeros(len(time), dtype=np.int32)
         for i, t in enumerate(time):
-            if utils.seconds2date(t)[:3] == self.date:
+            if "-".join(utils.seconds2date(t)[:3]) == self.date:
                 ind[i] = 1
         self._screen(np.where(ind == 1)[0])
 
@@ -119,13 +117,13 @@ class RpgBin:
             raise RuntimeError(["Error: no valid data for date: " + str(self.date)])
         n_time = len(self.data["time"])
         for key, array in self.data.items():
-            data = array
-            if data.ndim > 0 and data.shape[0] == n_time:
-                if data.ndim == 1:
-                    screened_data = data[ind]
-                else:
-                    screened_data = data[ind, :]
-                self.data[key] = screened_data
+            if isinstance(array, (list, tuple, np.ndarray)):
+                if array.shape[0] == n_time:
+                    if array.ndim == 1:
+                        screened_data = array[ind]
+                    else:
+                        screened_data = array[ind, :]
+                    self.data[key] = screened_data
 
 
 def read_bls(file_name: str) -> tuple[dict, dict]:

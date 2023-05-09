@@ -52,11 +52,11 @@ def lev1_to_nc(
         apply_qc(site, rpg_bin, params)
     if data_type in ("1B21", "1C01"):
         apply_met_qc(rpg_bin.data, params)
+    rpg_bin.find_valid_times()
     hatpro = rpg_mwr.Rpg(rpg_bin.data)
-    hatpro.find_valid_times()
     hatpro.data = get_data_attributes(hatpro.data, data_type)
     if output_file is not None:
-        rpg_mwr.save_rpg(hatpro, output_file, global_attributes, data_type)
+        rpg_mwr.save_rpg(hatpro, output_file, global_attributes, data_type, rpg_bin.date)
     return hatpro
 
 
