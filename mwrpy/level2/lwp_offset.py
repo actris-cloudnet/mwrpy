@@ -19,13 +19,8 @@ def correct_lwp_offset(
 
     Args:
         lev1: Level 1 data.
-        lwp: Lwp array.
+        lwp_org: Lwp array.
         index: Index to use.
-        site: site: Name of site.
-
-    Examples:
-        >>> from level2.lwp_offset import correct_lwp_offset
-        >>> correct_lwp_offset(lev1, lwp, index, 'site_name')
     """
 
     if "elevation_angle" in lev1:
@@ -35,7 +30,7 @@ def correct_lwp_offset(
 
     lwcl_i, _ = find_lwcl_free(lev1, index)
     lwp = np.copy(lwp_org)
-    lwp[(lwcl_i != 0) | (lwp > 0.04) | (elevation_angle[index] < 89.0)] = np.nan
+    lwp[(lwcl_i != 1) | (lwp > 0.04) | (elevation_angle[index] < 89.0)] = np.nan
     time = lev1["time"][index]
     if max(time) > 25:
         lwp_df = pd.DataFrame({"Lwp": lwp}, index=pd.to_datetime(time, unit="s"))
