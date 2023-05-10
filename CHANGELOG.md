@@ -1,3 +1,7 @@
+## 0.1.6 – 2023-05-10
+
+- Fix bug in lwp offset calculation
+
 ## 0.1.5 – 2023-05-08
 
 - Comment suspicious timezone conversion to make tests pass
