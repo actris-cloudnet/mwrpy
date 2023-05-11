@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from numpy import ma
 
-from mwrpy.utils import get_coeff_list, setbit
+from mwrpy.utils import get_coeff_list, setbit, time_to_datetime_index
 
 Fill_Value_Float = -999.0
 Fill_Value_Int = -99
@@ -226,10 +226,10 @@ def spectral_consistency(data: dict, c_file: list) -> np.ndarray:
                         axis=1,
                     )
                 )
-
+                ind = time_to_datetime_index(data["time"][:])
                 tb_df = pd.DataFrame(
                     {"Tb": (data["tb"][:, ifreq] - tb_ret[:, ifreq])},
-                    index=pd.to_datetime(data["time"][:], unit="s"),
+                    index=ind,
                 )
                 tb_mean = tb_df.resample(
                     "20min", origin="start", closed="left", label="left", offset="10min"
