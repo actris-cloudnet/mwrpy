@@ -252,7 +252,7 @@ def get_products(
         )
         coeff["retrieval_frequencies"] = str(np.sort(np.unique(coeff["FR"])))
 
-        rpg_dat["altitude"] = coeff["AL"][:] + params["station_altitude"]
+        rpg_dat["height"] = coeff["AL"][:] + params["altitude"]
 
         if coeff["RT"] < 2:
             coeff_offset = offset(elevation_angle[index])
@@ -357,7 +357,7 @@ def get_products(
             )
 
         index = ibl[:, -1]
-        rpg_dat["altitude"] = coeff["AL"][:] + params["station_altitude"]
+        rpg_dat["height"] = coeff["AL"][:] + params["altitude"]
 
         if coeff["RT"] < 2:
             tb_alg = []
@@ -423,7 +423,7 @@ def get_products(
             tem_dat.variables["time"][:],
         )
 
-        rpg_dat["altitude"] = tem_dat.variables["altitude"][:]
+        rpg_dat["height"] = tem_dat.variables["height"][:]
         pres = np.interp(
             tem_dat.variables["time"][:], lev1["time"][:], lev1["air_pressure"][:]
         )
@@ -436,14 +436,14 @@ def get_products(
                 tem_dat.variables["temperature"][:, :],
                 hum_int,
                 pres,
-                rpg_dat["altitude"],
+                rpg_dat["height"],
             )
         if data_type == "2P08":
             rpg_dat["equivalent_potential_temperature"] = eq_pot_tem(
                 tem_dat.variables["temperature"][:, :],
                 hum_int,
                 pres,
-                rpg_dat["altitude"],
+                rpg_dat["height"],
             )
 
         _combine_lev1(
@@ -474,7 +474,7 @@ def _combine_lev1(
         "latitude",
         "longitude",
     ]
-    if index:
+    if index.any():
         for ivars in lev1_vars:
             if ivars not in lev1.variables:
                 continue
@@ -557,7 +557,7 @@ def ele_retrieval(ele_obs: np.ndarray, coeff: dict) -> np.ndarray:
 def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
     """Get retrieval input"""
 
-    time_median = np.nanmedian(lev1["time"][:])[0]
+    time_median = np.nanmedian(lev1["time"][:])
     if time_median < 24:
         date = [lev1.year, lev1.month, lev1.day]
         time_median = decimal_hour2unix(date, time_median)

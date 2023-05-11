@@ -259,7 +259,7 @@ def _append_hkd(
 
     hkd = RpgBin(file_list_hkd)
 
-    if all(hkd.data["latitude"] == Fill_Value_Float):
+    if "latitude" not in hkd.data:
         add_interpol1d(
             rpg_bin.data,
             np.ones(len(hkd.data["time"])) * params["latitude"],
@@ -274,7 +274,7 @@ def _append_hkd(
             hkd.data["time"][idx],
             "latitude",
         )
-    if all(hkd.data["longitude"] == Fill_Value_Float):
+    if "longitude" not in hkd.data:
         add_interpol1d(
             rpg_bin.data,
             np.ones(len(hkd.data["time"])) * params["longitude"],
@@ -425,8 +425,8 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict, site: str) -> 
             >= blb.header["_n_ang"]
         ):
             scan_quadrant = 0.0  # scan quadrant, 0 deg: 1st, 180 deg: 2nd
-            if (isbit(blb.data["rf_mod"][time_ind], 1)) & (
-                not isbit(blb.data["rf_mod"][time_ind], 2)
+            if (isbit(blb.data["rain"][time_ind], 1)) & (
+                not isbit(blb.data["rain"][time_ind], 2)
             ):
                 scan_quadrant = 180.0
 
@@ -473,7 +473,7 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict, site: str) -> 
                 (
                     rain_add,
                     np.ones(blb.header["_n_ang"], np.int32)
-                    * int(isbit(blb.data["rf_mod"][time_ind], 0)),
+                    * int(isbit(blb.data["rain"][time_ind], 0)),
                 )
             )
             elevation_angle_add = np.concatenate(

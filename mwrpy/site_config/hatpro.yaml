@@ -44,7 +44,7 @@ params:
     # rainfall_rate [mm/h]
     # wind_direction [°]
     # wind_speed [m/s]
-    met_thresholds: [[213.15, 333.15], [0., 1.], [900., 1100.], [0., 300.], [0., 360.], [0., 100.]]
+    met_thresholds: [[213.15, 333.15], [0., 1.], [90000., 110000.], [0., 300.], [0., 360.], [0., 100.]]
 
 
 # Missing entries are filled with site specific config file
