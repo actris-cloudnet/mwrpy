@@ -10,7 +10,7 @@ from numpy import ma
 from mwrpy.level1.rpg_bin import RpgBin
 from mwrpy.level2.get_ret_coeff import get_mvr_coeff
 from mwrpy.level2.write_lev2_nc import retrieval_input
-from mwrpy.utils import get_coeff_list, setbit, read_yaml_config
+from mwrpy.utils import get_coeff_list, read_yaml_config, setbit
 
 Fill_Value_Float = -999.0
 Fill_Value_Int = -99
@@ -294,7 +294,6 @@ def spectral_consistency(data: dict, site: str) -> np.ndarray:
 
         for ifreq, _ in enumerate(data["frequency"]):
             with nc.Dataset(c_list[ifreq]) as cfile:
-
                 _, freq_ind, coeff_ind = np.intersect1d(
                     data["frequency"],
                     cfile["freq"],

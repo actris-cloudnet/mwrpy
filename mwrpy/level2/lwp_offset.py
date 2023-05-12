@@ -2,7 +2,8 @@
 import numpy as np
 import pandas as pd
 
-from mwrpy.atmos import find_lwcl_free
+from mwrpy import utils
+from mwrpy.level1.write_lev1_nc import find_lwcl_free
 
 Fill_Value_Float = -999.0
 
@@ -17,10 +18,6 @@ def correct_lwp_offset(
         lev1: Level 1 data.
         lwp_org: Lwp array.
         index: Index to use.
-
-    Examples:
-        >>> from mwrpy.level2.lwp_offset import correct_lwp_offset
-        >>> correct_lwp_offset(lev1, lwp, index, 'site_name')
     """
 
     if "elevation_angle" in lev1:
@@ -31,11 +28,8 @@ def correct_lwp_offset(
     lwcl_i, _ = find_lwcl_free(lev1, index)
     lwp = np.copy(lwp_org)
     lwp[(lwcl_i != 0) | (lwp > 0.04) | (elevation_angle[index] < 89.0)] = np.nan
-    time = lev1["time"][index]
-    if max(time) > 25:
-        lwp_df = pd.DataFrame({"Lwp": lwp}, index=pd.to_datetime(time, unit="s"))
-    else:
-        lwp_df = pd.DataFrame({"Lwp": lwp}, index=pd.to_datetime(time, unit="h"))
+    ind = utils.time_to_datetime_index(lev1["time"][index])
+    lwp_df = pd.DataFrame({"Lwp": lwp}, index=ind)
     lwp_std = lwp_df.rolling("2min", center=True, min_periods=10).std()
     lwp_max = lwp_std.rolling("20min", center=True, min_periods=100).max()
     lwp_df[lwp_max > 0.002] = np.nan

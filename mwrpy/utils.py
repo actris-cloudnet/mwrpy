@@ -5,10 +5,11 @@ import os
 import re
 import time
 from datetime import date, datetime, timedelta, timezone
-from typing import Iterator, NamedTuple, Any
+from typing import Any, Iterator, NamedTuple
 
 import netCDF4
 import numpy as np
+import pandas as pd
 import yaml
 from numpy import ma
 from scipy import signal
@@ -494,3 +495,8 @@ def date_range(
     """Returns range between two dates (datetimes)."""
     for n in range(int((end_date - start_date).days)):
         yield start_date + timedelta(n)
+
+
+def time_to_datetime_index(time_array: np.ndarray) -> pd.DatetimeIndex:
+    time_units = "s" if max(time_array) > 25 else "h"
+    return pd.to_datetime(time_array, unit=time_units)
