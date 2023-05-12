@@ -78,7 +78,7 @@ def lev2_to_nc(
                 _combine_lev1(lev1, rpg_dat, index, d_type, params)
                 hatpro = rpg_mwr.Rpg(rpg_dat)
                 hatpro.data = get_data_attributes(hatpro.data, d_type)
-                rpg_mwr.save_rpg(hatpro, output_file, global_attributes, d_type, lev1.date)
+                rpg_mwr.save_rpg(hatpro, output_file, global_attributes, d_type)
 
         global_attributes, params = read_yaml_config(site)
         rpg_dat, coeff, index = get_products(
@@ -88,7 +88,7 @@ def lev2_to_nc(
         _add_att(global_attributes, coeff)
         hatpro = rpg_mwr.Rpg(rpg_dat)
         hatpro.data = get_data_attributes(hatpro.data, data_type)
-        rpg_mwr.save_rpg(hatpro, output_file, global_attributes, data_type, lev1.date)
+        rpg_mwr.save_rpg(hatpro, output_file, global_attributes, data_type)
 
 
 def get_products(
@@ -210,7 +210,7 @@ def get_products(
         if data_type == "2P01":
             product, ret = "temperature", "tpt"
         else:
-            product, ret = "water_vapor_vmr", "hpt"
+            product, ret = "absolute_humidity", "hpt"
 
         coeff = get_mvr_coeff(site, ret, lev1["frequency"][:])
         if coeff[0]["RT"] < 2:
@@ -293,11 +293,10 @@ def get_products(
                 * op_sc
                 + op_os
             )
-            if product == "water_vapor_vmr":
+            if product == "absolute_humidity":
                 rpg_dat[product] = rpg_dat[product] / 1000.0
 
     elif data_type == "2P02":
-
         coeff = get_mvr_coeff(site, "tpb", lev1["frequency"][:])
         if coeff[0]["RT"] < 2:
             coeff, offset, lin, quad = get_mvr_coeff(site, "tpb", lev1["frequency"][:])
@@ -401,7 +400,6 @@ def get_products(
             )
 
     elif data_type in ("2P04", "2P07", "2P08"):
-
         tem_dat, tem_freq, tem_ang = load_product(temp_file)
         hum_dat, hum_freq, hum_ang = load_product(hum_file)
 
@@ -419,7 +417,7 @@ def get_products(
 
         hum_int = interpol_2d(
             hum_dat.variables["time"][:],
-            hum_dat.variables["water_vapor_vmr"][:, :],
+            hum_dat.variables["absolute_humidity"][:, :],
             tem_dat.variables["time"][:],
         )
 
@@ -447,7 +445,7 @@ def get_products(
             )
 
         _combine_lev1(
-            tem_dat.variables,
+            tem_dat,
             rpg_dat,
             np.arange(len(tem_dat.variables["time"][:])),
             data_type,
@@ -570,6 +568,9 @@ def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
     )
     bias = np.ones((len(lev1["time"][:]), 1), np.float32)
 
+    latitude = float(np.median(lev1["latitude"][:]))
+    longitude = float(np.median(lev1["longitude"][:]))
+
     if coeff["RT"] == Fill_Value_Int:
         ret_in = lev1["tb"][:, :]
     elif coeff["RT"] in (0, 1):
@@ -625,8 +626,8 @@ def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
             doy = np.ones((len(lev1["time"][:]), 2), np.float32) * Fill_Value_Float
             tf = TimezoneFinder()
             timezone_str = tf.timezone_at(
-                lng=np.nanmedian(lev1["station_longitude"])[0],
-                lat=np.nanmedian(lev1["station_latitude"])[0],
+                lng=longitude,
+                lat=latitude,
             )
             timezone = pytz.timezone(timezone_str)
             dtime = datetime.fromtimestamp(time_median, timezone)
@@ -648,8 +649,8 @@ def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
             sun = np.ones((len(lev1["time"][:]), 2), np.float32) * Fill_Value_Float
             tf = TimezoneFinder()
             timezone_str = tf.timezone_at(
-                lng=np.nanmedian(lev1["station_longitude"])[0],
-                lat=np.nanmedian(lev1["station_latitude"])[0],
+                lng=longitude,
+                lat=latitude,
             )
             timezone = pytz.timezone(timezone_str)
             dtime = datetime.fromtimestamp(time_median, timezone)

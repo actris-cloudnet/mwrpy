@@ -7,6 +7,7 @@ from metpy.units import masked_array
 from numpy import ma
 
 import mwrpy.constants as con
+from mwrpy import utils
 
 HPA_TO_P = 100
 
@@ -66,7 +67,7 @@ def rh_err(T: np.ndarray, q: np.ndarray, dT: np.ndarray, dq: np.ndarray) -> np.n
     es = calc_saturation_vapor_pressure(T)
     drh_dq = con.RW * T / es
     des_dT = es * 17.67 * 243.5 / ((T - con.T0) + 243.5) ** 2
-    drh_dT = q * con.RW / es ** 2 * (es - T * des_dT)
+    drh_dT = q * con.RW / es**2 * (es - T * des_dT)
     drh = np.sqrt((drh_dq * dq) ** 2 + (drh_dT * dT) ** 2)
 
     return drh
@@ -107,7 +108,7 @@ def calc_saturation_vapor_pressure(temperature: np.ndarray) -> np.ndarray:
         Saturation vapor pressure (Pa).
     """
     ratio = con.T0 / temperature
-    inv_ratio = ratio ** -1
+    inv_ratio = ratio**-1
     return (
         10
         ** (
@@ -162,10 +163,10 @@ def find_lwcl_free(lev1: dict, ix: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     status = np.ones(len(ix), dtype=np.int32)
     freq_31 = np.where(np.round(lev1["frequency"][:], 1) == 31.4)[0]
     if len(freq_31) == 1:
-        time = lev1["time"][ix]
         tb = np.squeeze(lev1["tb"][ix, freq_31])
         tb[(lev1["pointing_flag"][ix] == 1) | (elevation_angle[ix] < 89.0)] = np.nan
-        tb_df = pd.DataFrame({"Tb": tb}, index=pd.to_datetime(time, unit="s"))
+        ind = utils.time_to_datetime_index(lev1["time"][ix])
+        tb_df = pd.DataFrame({"Tb": tb}, index=ind)
         tb_std = tb_df.rolling("2min", center=True, min_periods=10).std()
         tb_mx = tb_std.rolling("20min", center=True, min_periods=100).max()
 
@@ -177,14 +178,14 @@ def find_lwcl_free(lev1: dict, ix: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
             irt[
                 (lev1["pointing_flag"][ix] == 1) | (elevation_angle[ix] < 89.0)
             ] = np.nan
-            irt_df = pd.DataFrame({"Irt": irt[:]}, index=pd.to_datetime(time, unit="s"))
+            irt_df = pd.DataFrame({"Irt": irt[:]}, index=ind)
             irt_mx = irt_df.rolling("20min", center=True, min_periods=100).max()
             index[(irt_mx["Irt"] > 263.15) & (tb_mx["Tb"] > tb_thres)] = 1
             status[:] = 0
 
         tb_thres = 0.2
         index[(tb_mx["Tb"] > tb_thres)] = 1
-        df = pd.DataFrame({"index": index}, index=pd.to_datetime(time, unit="s"))
+        df = pd.DataFrame({"index": index}, index=ind)
         df = df.fillna(method="bfill", limit=120)
         df = df.fillna(method="ffill", limit=120)
         index = np.array(df["index"])

@@ -12,7 +12,7 @@ product = [
     ("2I02", "iwv"),
     ("2P01", "temperature"),
     ("2P02", "temperature"),
-    ("2P03", "water_vapor_vmr"),
+    ("2P03", "absolute_humidity"),
     ("2P04", "relative_humidity"),
     ("2P07", "potential_temperature"),
     ("2P08", "equivalent_potential_temperature"),

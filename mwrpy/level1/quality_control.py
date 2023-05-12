@@ -16,11 +16,11 @@ Fill_Value_Float = -999.0
 Fill_Value_Int = -99
 
 
-def apply_qc(site: str, data_in: RpgBin, params: dict) -> None:
+def apply_qc(site: str, data: dict, params: dict) -> None:
     """This function performs the quality control of level 1 data.
     Args:
         site: Name of site.
-        data_in: Level 1 data.
+        data: Level 1 data.
         params: Site specific parameters.
 
     Returns:
@@ -34,9 +34,6 @@ def apply_qc(site: str, data_in: RpgBin, params: dict) -> None:
         apply_qc('site', 'lev1_data', 'params')
 
     """
-
-    data = data_in.data
-
     data["quality_flag"] = np.zeros(data["tb"].shape, dtype=np.int32)
     data["quality_flag_status"] = np.zeros(data["tb"].shape, dtype=np.int32)
 
