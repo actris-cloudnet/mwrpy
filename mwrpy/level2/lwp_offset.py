@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 
 from mwrpy import utils
-from mwrpy.atmos import find_lwcl_free
 
 
 def correct_lwp_offset(
