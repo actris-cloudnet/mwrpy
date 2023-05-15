@@ -1,3 +1,7 @@
+## 0.1.8 – 2023-05-12
+
+- Speed up the code
+
 ## 0.1.7 – 2023-05-11
 
 - Fix time unit issues
