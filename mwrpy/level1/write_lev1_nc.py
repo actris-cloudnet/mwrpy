@@ -173,7 +173,7 @@ def prepare_data(
             (
                 rpg_bin.data["liquid_cloud_flag"],
                 rpg_bin.data["liquid_cloud_flag_status"],
-            ) = atmos.find_lwcl_free(rpg_bin.data, np.arange(len(rpg_bin.data["time"])))
+            ) = atmos.find_lwcl_free(rpg_bin.data)
 
             try:
                 file_list_met = get_file_list(path_to_files, "MET")

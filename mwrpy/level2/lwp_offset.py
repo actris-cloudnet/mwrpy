@@ -5,8 +5,6 @@ import pandas as pd
 from mwrpy import utils
 from mwrpy.atmos import find_lwcl_free
 
-Fill_Value_Float = -999.0
-
 
 def correct_lwp_offset(
     lev1: dict, lwp_org: np.ndarray, index: np.ndarray
@@ -25,7 +23,7 @@ def correct_lwp_offset(
     else:
         elevation_angle = 90 - lev1["zenith_angle"][:]
 
-    lwcl_i, _ = find_lwcl_free(lev1, index)
+    lwcl_i = lev1["liquid_cloud_flag"][index]
     lwp = np.copy(lwp_org)
     lwp[(lwcl_i != 0) | (lwp > 0.04) | (elevation_angle[index] < 89.0)] = np.nan
     ind = utils.time_to_datetime_index(lev1["time"][index])
@@ -35,9 +33,11 @@ def correct_lwp_offset(
     lwp_df[lwp_max > 0.002] = np.nan
     lwp_offset = lwp_df.rolling("20min", center=True, min_periods=100).mean()
 
+    if np.isnan(lwp_offset["Lwp"][-1]):
+        lwp_offset["Lwp"][-1] = 0.0
     lwp_offset = lwp_offset.interpolate(method="linear")
     lwp_offset = lwp_offset.fillna(method="bfill")
-    lwp_offset["Lwp"][np.isnan(lwp_offset["Lwp"])] = 0
+    lwp_offset["Lwp"][np.isnan(lwp_offset["Lwp"])] = 0.0
     lwp_org -= lwp_offset["Lwp"].values
 
     return lwp_org, lwp_offset["Lwp"].values

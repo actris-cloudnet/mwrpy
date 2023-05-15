@@ -150,7 +150,7 @@ def winddir(spd: np.ndarray, drc: np.ndarray):
     return Dv
 
 
-def find_lwcl_free(lev1: dict, ix: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def find_lwcl_free(lev1: dict) -> tuple[np.ndarray, np.ndarray]:
     """Identifying liquid water cloud free periods using 31.4 GHz TB variability + IRT.
     Uses pre-defined time index and additionally returns status of IRT availability"""
 
@@ -159,37 +159,37 @@ def find_lwcl_free(lev1: dict, ix: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     else:
         elevation_angle = 90 - lev1["zenith_angle"][:]
 
-    index = np.ones(len(ix)) * np.nan
-    status = np.ones(len(ix), dtype=np.int32)
+    index = np.ones(len(lev1["time"]), dtype=np.float32) * np.nan
+    status = np.ones(len(lev1["time"]), dtype=np.int32)
     freq_31 = np.where(np.round(lev1["frequency"][:], 1) == 31.4)[0]
     if len(freq_31) == 1:
-        tb = np.squeeze(lev1["tb"][ix, freq_31])
-        tb[(lev1["pointing_flag"][ix] == 1) | (elevation_angle[ix] < 89.0)] = np.nan
-        ind = utils.time_to_datetime_index(lev1["time"][ix])
+        tb = np.squeeze(lev1["tb"][:, freq_31])
+        tb[(lev1["pointing_flag"][:] == 1) | (elevation_angle[:] < 89.0)] = np.nan
+        ind = utils.time_to_datetime_index(lev1["time"][:])
         tb_df = pd.DataFrame({"Tb": tb}, index=ind)
         tb_std = tb_df.rolling("2min", center=True, min_periods=10).std()
         tb_mx = tb_std.rolling("20min", center=True, min_periods=100).max()
 
         if "irt" in lev1:
             tb_thres = 0.1
-            irt = lev1["irt"][ix, :]
+            irt = lev1["irt"][:, :]
             irt[irt == -999.0] = np.nan
             irt = np.nanmean(irt, axis=1)
             irt[
-                (lev1["pointing_flag"][ix] == 1) | (elevation_angle[ix] < 89.0)
+                (lev1["pointing_flag"][:] == 1) | (elevation_angle[:] < 89.0)
             ] = np.nan
             irt_df = pd.DataFrame({"Irt": irt[:]}, index=ind)
             irt_mx = irt_df.rolling("20min", center=True, min_periods=100).max()
-            index[(irt_mx["Irt"] > 263.15) & (tb_mx["Tb"] > tb_thres)] = 1
+            index[(irt_mx["Irt"] > 263.15) & (tb_mx["Tb"] > tb_thres)] = 1.0
             status[:] = 0
 
         tb_thres = 0.2
-        index[(tb_mx["Tb"] > tb_thres)] = 1
+        index[(tb_mx["Tb"] > tb_thres)] = 1.0
         df = pd.DataFrame({"index": index}, index=ind)
         df = df.fillna(method="bfill", limit=120)
         df = df.fillna(method="ffill", limit=120)
         index = np.array(df["index"])
         index[(tb_mx["Tb"] < tb_thres) & (index != 1.0)] = 0.0
-        index[(elevation_angle[ix] < 89.0) & (index != 1.0)] = 2.0
+        index[(elevation_angle[:] < 89.0) & (index != 1.0)] = 2.0
 
     return np.nan_to_num(index, nan=2).astype(int), status
