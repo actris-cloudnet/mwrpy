@@ -297,9 +297,16 @@ def spectral_consistency(data: dict, site: str) -> np.ndarray:
                     assume_unique=False,
                     return_indices=True,
                 )
+                print(data.keys())
                 ele_ind = np.where(
-                    (data["ele"][:] > cfile["elevation_predictand"][:] - 0.5)
-                    & (data["ele"][:] < cfile["elevation_predictand"][:] + 0.5)
+                    (
+                        data["elevation_angle"][:]
+                        > cfile["elevation_predictand"][:] - 0.5
+                    )
+                    & (
+                        data["elevation_angle"][:]
+                        < cfile["elevation_predictand"][:] + 0.5
+                    )
                     & (data["pointing_flag"][:] == 0)
                 )[0]
 
