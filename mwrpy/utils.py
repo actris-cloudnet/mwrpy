@@ -267,19 +267,15 @@ def get_file_list(path_to_files: str, extension: str):
 
 def read_yaml_config(site: str) -> tuple[dict, dict]:
     """Reads config yaml files."""
+    dir_name = os.path.dirname(__file__)
+    site_config_file = os.path.join(dir_name, "site_config", site, "config.yaml")
+    if not os.path.exists(site_config_file):
+        raise NotImplementedError(
+            f"Site config file {site_config_file} does not exist."
+        )
 
-    params = {
-        "altitude": 108.0,
-        "longitude": 6.407,
-        "latitude": 50.906,
-        "scan_time": 50.0,
-        "int_time": 1,
-        "azi_cor": -999.0,
-        "const_azi": -999.0,
-        "flag_status": [0, 0, 0, 1, 0, 0, 0, 0],
-        "ir_flag": True,
-        "site_name": site,
-    }
+    with open(site_config_file, "r", encoding="utf8") as f:
+        params = yaml.load(f, Loader=SafeLoader)["params"]
 
     global_specs = {
         "title": "HATPRO Level 1B data",
@@ -288,7 +284,6 @@ def read_yaml_config(site: str) -> tuple[dict, dict]:
         "global_specs": global_specs,
         "params": params,
     }
-    dir_name = os.path.dirname(__file__)
     inst_file = os.path.join(dir_name, "site_config/hatpro.yaml")
     with open(inst_file, "r", encoding="utf8") as f:
         inst_config = yaml.load(f, Loader=SafeLoader)
