@@ -39,4 +39,7 @@ def test_level2_processing():
 
     for file in (lev1_file, lev2_file, temp_file, hum_file):
         if os.path.exists(file):
-            os.remove(file)
+            try:
+                os.remove(file)
+            except PermissionError:
+                pass
