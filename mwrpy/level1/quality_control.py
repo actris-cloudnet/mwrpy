@@ -297,7 +297,6 @@ def spectral_consistency(data: dict, site: str) -> np.ndarray:
                     assume_unique=False,
                     return_indices=True,
                 )
-                print(data.keys())
                 ele_ind = np.where(
                     (
                         data["elevation_angle"][:]
