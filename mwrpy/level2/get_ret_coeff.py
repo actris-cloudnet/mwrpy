@@ -197,7 +197,6 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
         N = len(c_list)
 
         if prefix in ("lwp", "iwv"):
-
             coeff["AG"] = np.ones(N) * Fill_Value_Float
             coeff["FR"] = np.ones([len(freq), N]) * Fill_Value_Float
             coeff["TL"] = np.zeros([N, len(freq)])
@@ -225,7 +224,6 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                 coeff["OS"][i_file] = c_file["offset_mvr"][0]
 
         elif prefix in ("tpt", "hpt"):
-
             c_file = nc.Dataset(c_list[0])
             n_height_grid = c_file.dimensions["n_height_grid"].size
 
@@ -259,7 +257,6 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                 coeff["OS"][:, i_file] = c_file["offset_mvr"][:]
 
         elif prefix == "tpb":
-
             c_file = nc.Dataset(c_list[0])
             _, freq_ind, freq_coeff = np.intersect1d(
                 freq[:], c_file["freq"][:], assume_unique=False, return_indices=True

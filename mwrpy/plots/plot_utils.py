@@ -2,9 +2,9 @@
 import locale
 from datetime import datetime, timezone
 
-from matplotlib import ticker
 import netCDF4
 import numpy as np
+from matplotlib import ticker
 from numpy import ma, ndarray
 
 from mwrpy.utils import (
