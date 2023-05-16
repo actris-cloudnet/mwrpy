@@ -1,3 +1,8 @@
+## 0.2.0 – 2023-05-16
+
+- Read coefficients for all sites
+- Add tests
+
 ## 0.1.8 – 2023-05-12
 
 - Speed up the code
