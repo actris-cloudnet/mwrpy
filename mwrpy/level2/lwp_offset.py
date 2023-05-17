@@ -32,8 +32,9 @@ def correct_lwp_offset(
         (lwcl_i != 0)
         | (lwp > 0.04)
         | (elevation_angle[index] < 89.0)
-        | (lwp_max["Lwp"][:].values > 0.003)
+        | (lwp_max["Lwp"][:] > 0.003)
     ] = np.nan
+    lwp_df = pd.DataFrame({"Lwp": lwp}, index=ind)
     lwp_offset = lwp_df.rolling("20min", center=True, min_periods=100).mean()
 
     lwp_offset = lwp_offset.interpolate(method="linear")
