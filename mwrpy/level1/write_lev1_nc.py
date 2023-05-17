@@ -69,6 +69,8 @@ def prepare_data(
 
     if data_type in ("1B01", "1C01"):
         brt_files = get_file_list(path_to_files, "BRT")
+        if len(brt_files) == 0:
+            raise FileNotFoundError("No BRT files found")
         rpg_bin = RpgBin(brt_files)
         rpg_bin.data["tb"] = rpg_bin.data["tb"][:, np.argsort(params["bandwidth"])]
         rpg_bin.data["frequency"] = rpg_bin.header["_f"][
@@ -93,7 +95,7 @@ def prepare_data(
             (
                 rpg_bin.data["liquid_cloud_flag"],
                 rpg_bin.data["liquid_cloud_flag_status"],
-            ) = atmos.find_lwcl_free(rpg_bin.data, np.arange(len(rpg_bin.data["time"])))
+            ) = atmos.find_lwcl_free(rpg_bin.data)
         else:
             (
                 rpg_bin.data["liquid_cloud_flag"],

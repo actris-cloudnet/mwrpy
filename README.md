@@ -7,7 +7,10 @@
 
 ```python
 import mwrpy
-hatpro = mwrpy.lev1_to_nc("hyytiala", "1C01", "/path/to/files/")
+hatpro = mwrpy.lev1_to_nc("hyytiala", "1C01", "/path/to/files/", "mwc-l1c.nc")
+product = "2P01"
+mwrpy.level2.lev2_to_nc("hyytiala", product, "mwc-l1c.nc", "product.nc")
+
 ```
 
 

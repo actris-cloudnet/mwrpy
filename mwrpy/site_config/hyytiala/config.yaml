@@ -8,8 +8,8 @@ params:
     latitude: 61.844
 
     # path to level1 data and path for processed files
-    data_in: /home/tmarke/Dokumente/ACTRIS/mwr_pro_actris/data/
-    data_out: /home/tmarke/Dokumente/ACTRIS/mwr_pro_actris/data/
+    data_in: /tmp/data/
+    data_out: /tmp/data/
 
     # path to ABSCAL.HIS file
     path_to_cal: /home/tmarke/Dokumente/ACTRIS/mwr_pro_actris/

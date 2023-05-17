@@ -27,7 +27,7 @@ Fill_Value_Int = -99
 def lev2_to_nc(
     site: str,
     data_type: str,
-    lev1_path: str,
+    lev1_file: str,
     output_file: str,
     temp_file: str | None = None,
     hum_file: str | None = None,
@@ -39,7 +39,7 @@ def lev2_to_nc(
     Args:
         site: Name of site.
         data_type: Data type of the netCDF file.
-        lev1_path: Path of Level 1 file.
+        lev1_file: Path of Level 1 file.
         output_file: Name of output file.
         temp_file: Name of temperature product file.
         hum_file: Name of humidity product file.
@@ -60,7 +60,9 @@ def lev2_to_nc(
             ["Data type " + data_type + " not supported for file writing."]
         )
 
-    with nc.Dataset(lev1_path) as lev1:
+    global_attributes, params = read_yaml_config(site)
+
+    with nc.Dataset(lev1_file) as lev1:
         if data_type == "2P02":
             bl_scan = _test_bl_scan(site, lev1)
             if not bl_scan:
@@ -71,7 +73,6 @@ def lev2_to_nc(
             if not bl_scan:
                 t_product = "2P01"
             for d_type in [t_product, "2P03"]:
-                global_attributes, params = read_yaml_config(site)
                 rpg_dat, coeff, index = get_products(
                     site, lev1, d_type, params, temp_file=temp_file, hum_file=hum_file
                 )
@@ -80,7 +81,6 @@ def lev2_to_nc(
                 hatpro.data = get_data_attributes(hatpro.data, d_type)
                 rpg_mwr.save_rpg(hatpro, output_file, global_attributes, d_type)
 
-        global_attributes, params = read_yaml_config(site)
         rpg_dat, coeff, index = get_products(
             site, lev1, data_type, params, temp_file=temp_file, hum_file=hum_file
         )

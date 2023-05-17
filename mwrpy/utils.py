@@ -1,10 +1,11 @@
 """Module for general helper functions."""
 
+import datetime
 import glob
+import logging
 import os
 import re
 import time
-from datetime import date, datetime, timedelta, timezone
 from typing import Any, Iterator, NamedTuple
 
 import netCDF4
@@ -58,12 +59,16 @@ def epoch2unix(epoch_time, time_ref, epoch: Epoch = (2001, 1, 1)):
 
     """
 
-    delta = (datetime(*epoch) - datetime(1970, 1, 1, 0, 0, 0)).total_seconds()
+    delta = (
+        datetime.datetime(*epoch) - datetime.datetime(1970, 1, 1, 0, 0, 0)
+    ).total_seconds()
     unix_time = epoch_time + int(delta)
     if time_ref == 0:
         for index, _ in enumerate(unix_time):
             unix_time[index] = time.mktime(
-                datetime.fromtimestamp(unix_time[index], timezone.utc).timetuple()
+                datetime.datetime.fromtimestamp(
+                    unix_time[index], datetime.timezone.utc
+                ).timetuple()
             )
     return unix_time
 
@@ -196,9 +201,15 @@ def seconds2date(time_in_seconds: float, epoch: Epoch = (1970, 1, 1)) -> list:
         [year, month, day, hours, minutes, seconds] formatted as '05' etc (UTC).
     """
 
-    epoch_in_seconds = datetime.timestamp(datetime(*epoch, tzinfo=timezone.utc))
+    epoch_in_seconds = datetime.datetime.timestamp(
+        datetime.datetime(*epoch, tzinfo=datetime.timezone.utc)
+    )
     timestamp = time_in_seconds + epoch_in_seconds
-    return datetime.utcfromtimestamp(timestamp).strftime("%Y %m %d %H %M %S").split()
+    return (
+        datetime.datetime.utcfromtimestamp(timestamp)
+        .strftime("%Y %m %d %H %M %S")
+        .split()
+    )
 
 
 def str_to_numeric(value: str) -> int | float:
@@ -235,15 +246,13 @@ def get_coeff_list(site: str, prefix: str):
     if len(c_list) > 0:
         c_list = sorted(c_list[0])
     else:
-        print(
-            [
-                "No coefficient files for product "
-                + prefix
-                + " found in directory "
-                + "/site_config/"
-                + site
-                + "/coefficients/"
-            ]
+        logging.warning(
+            "No coefficient files for product "
+            + prefix
+            + " found in directory "
+            + "/site_config/"
+            + site
+            + "/coefficients/"
         )
     return c_list
 
@@ -254,37 +263,53 @@ def get_file_list(path_to_files: str, extension: str):
     if len(f_list) == 0:
         f_list = sorted(glob.glob(path_to_files + "/*." + extension.lower()))
     if len(f_list) == 0:
-        print(
-            [
-                "Error: no binary files with extension "
-                + extension
-                + " found in directory "
-                + path_to_files
-            ]
+        logging.warning(
+            "Error: no binary files with extension "
+            + extension
+            + " found in directory "
+            + path_to_files
         )
     return f_list
 
 
+# def read_yaml_config(site: str) -> tuple[dict, dict]:
+#     print(site)
+#     """Reads config yaml files."""
+#     dir_name = os.path.dirname(__file__)
+#     site_config_file = os.path.join(dir_name, "site_config", site, "config.yaml")
+#     if not os.path.exists(site_config_file):
+#         raise NotImplementedError(
+#             f"Site config file {site_config_file} does not exist."
+#         )
+#
+#     with open(site_config_file, "r", encoding="utf8") as f:
+#         params = yaml.load(f, Loader=SafeLoader)["params"]
+#
+#     global_specs = {
+#         "title": "HATPRO Level 1B data",
+#     }
+#     site_config = {
+#         "global_specs": global_specs,
+#         "params": params,
+#     }
+#     inst_file = os.path.join(dir_name, "site_config/hatpro.yaml")
+#     with open(inst_file, "r", encoding="utf8") as f:
+#         inst_config = yaml.load(f, Loader=SafeLoader)
+#
+#
+#     inst_config["global_specs"].update(site_config["global_specs"])
+#     for name in inst_config["params"].keys():
+#         site_config["params"][name] = inst_config["params"][name]
+#
+#     return inst_config["global_specs"], site_config["params"]
+
+
 def read_yaml_config(site: str) -> tuple[dict, dict]:
     """Reads config yaml files."""
-    dir_name = os.path.dirname(__file__)
-    site_config_file = os.path.join(dir_name, "site_config", site, "config.yaml")
-    if not os.path.exists(site_config_file):
-        raise NotImplementedError(
-            f"Site config file {site_config_file} does not exist."
-        )
-
-    with open(site_config_file, "r", encoding="utf8") as f:
-        params = yaml.load(f, Loader=SafeLoader)["params"]
-
-    global_specs = {
-        "title": "HATPRO Level 1B data",
-    }
-    site_config = {
-        "global_specs": global_specs,
-        "params": params,
-    }
-    inst_file = os.path.join(dir_name, "site_config/hatpro.yaml")
+    site_file = "mwrpy/site_config/" + site + "/config.yaml"
+    with open(site_file, "r", encoding="utf8") as f:
+        site_config = yaml.load(f, Loader=SafeLoader)
+    inst_file = "mwrpy/site_config/" + site_config["type"] + ".yaml"
     with open(inst_file, "r", encoding="utf8") as f:
         inst_config = yaml.load(f, Loader=SafeLoader)
     inst_config["global_specs"].update(site_config["global_specs"])
@@ -296,6 +321,7 @@ def read_yaml_config(site: str) -> tuple[dict, dict]:
 
 def update_lev1_attributes(attributes: dict, data_type: str) -> None:
     """Removes attributes that are not needed for specified Level 1 data type"""
+
     if data_type == "1B01":
         att_del = ["ir_instrument", "met_instrument", "_accuracy"]
         key = " "
@@ -446,12 +472,12 @@ def convolve2DFFT(slab, kernel, max_missing=0.1):
 def date_string_to_date(date_string: str) -> datetime.date:
     """Convert YYYY-MM-DD to Python date."""
     date_arr = [int(x) for x in date_string.split("-")]
-    return date(*date_arr)
+    return datetime.date(*date_arr)
 
 
 def get_time() -> str:
     """Returns current UTC-time."""
-    return f"{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} +00:00"
+    return f"{datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} +00:00"
 
 
 def get_date_from_past(n: int, reference_date: str | None = None) -> str:
@@ -463,7 +489,7 @@ def get_date_from_past(n: int, reference_date: str | None = None) -> str:
         str: Date as "YYYY-MM-DD".
     """
     reference = reference_date or get_time().split()[0]
-    the_date = date_string_to_date(reference) - timedelta(n)
+    the_date = date_string_to_date(reference) - datetime.timedelta(n)
     return str(the_date)
 
 
@@ -481,7 +507,7 @@ def get_processing_dates(args) -> tuple[str, str]:
 
 
 def isodate2date(date_str: str) -> datetime.date:
-    return datetime.strptime(date_str, "%Y-%m-%d").date()
+    return datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
 
 
 def date_range(
@@ -489,7 +515,7 @@ def date_range(
 ) -> Iterator[datetime.date]:
     """Returns range between two dates (datetimes)."""
     for n in range(int((end_date - start_date).days)):
-        yield start_date + timedelta(n)
+        yield start_date + datetime.timedelta(n)
 
 
 def time_to_datetime_index(time_array: np.ndarray) -> pd.DatetimeIndex:
