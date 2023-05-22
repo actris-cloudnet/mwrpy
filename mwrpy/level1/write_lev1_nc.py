@@ -1,5 +1,6 @@
 """Module for writing Level 1 netCDF files"""
 import datetime
+import logging
 from collections.abc import Callable
 from itertools import groupby
 from typing import TypeAlias
@@ -123,11 +124,9 @@ def prepare_data(
             try:
                 file_list_bls = get_file_list(path_to_files, "BLS")
             except RuntimeError:
-                print(
-                    [
-                        "No binary files with extension bls found in directory "
-                        + path_to_files
-                    ]
+                logging.error(
+                    "No binary files with extension bls found in directory "
+                    + path_to_files
                 )
             if len(file_list_bls) > 0:
                 rpg_bls = RpgBin(file_list_bls)
@@ -149,7 +148,7 @@ def prepare_data(
                 try:
                     file_list_irt = get_file_list(path_to_files, "IRT")
                 except RuntimeError as err:
-                    print(err)
+                    logging.error(err)
                 if len(file_list_irt) > 0:
                     rpg_irt = RpgBin(file_list_irt)
                     rpg_irt.data["irt"][rpg_irt.data["irt"] <= 125.5] = Fill_Value_Float
@@ -180,7 +179,7 @@ def prepare_data(
             try:
                 file_list_met = get_file_list(path_to_files, "MET")
             except RuntimeError as err:
-                print(err)
+                logging.error(err)
             rpg_met = RpgBin(file_list_met)
             add_interpol1d(
                 rpg_bin.data,

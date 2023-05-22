@@ -272,38 +272,6 @@ def get_file_list(path_to_files: str, extension: str):
     return f_list
 
 
-# def read_yaml_config(site: str) -> tuple[dict, dict]:
-#     print(site)
-#     """Reads config yaml files."""
-#     dir_name = os.path.dirname(__file__)
-#     site_config_file = os.path.join(dir_name, "site_config", site, "config.yaml")
-#     if not os.path.exists(site_config_file):
-#         raise NotImplementedError(
-#             f"Site config file {site_config_file} does not exist."
-#         )
-#
-#     with open(site_config_file, "r", encoding="utf8") as f:
-#         params = yaml.load(f, Loader=SafeLoader)["params"]
-#
-#     global_specs = {
-#         "title": "HATPRO Level 1B data",
-#     }
-#     site_config = {
-#         "global_specs": global_specs,
-#         "params": params,
-#     }
-#     inst_file = os.path.join(dir_name, "site_config/hatpro.yaml")
-#     with open(inst_file, "r", encoding="utf8") as f:
-#         inst_config = yaml.load(f, Loader=SafeLoader)
-#
-#
-#     inst_config["global_specs"].update(site_config["global_specs"])
-#     for name in inst_config["params"].keys():
-#         site_config["params"][name] = inst_config["params"][name]
-#
-#     return inst_config["global_specs"], site_config["params"]
-
-
 def read_yaml_config(site: str) -> tuple[dict, dict]:
     """Reads config yaml files."""
     site_file = "mwrpy/site_config/" + site + "/config.yaml"
