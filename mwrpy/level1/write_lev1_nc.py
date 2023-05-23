@@ -375,23 +375,13 @@ def _add_bls(brt: RpgBin, bls: RpgBin, hkd: RpgBin, params: dict) -> None:
 def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict, site: str) -> None:
     """Add BLB boundary-layer scans using a linear time axis"""
 
-    (
-        time_add,
-        time_bnds_add,
-        elevation_angle_add,
-        azimuth_angle_add,
-        rain_add,
-        tb_add,
-        status_add,
-    ) = (
-        np.empty([0], dtype=np.int32),
-        [],
-        [],
-        [],
-        [],
-        [],
-        [],
-    )
+    time_bnds_add: np.ndarray = np.empty([0], dtype=np.int32)
+    time_add: np.ndarray = np.empty([0], dtype=np.int32)
+    elevation_angle_add: np.ndarray = np.empty([0], dtype=np.int32)
+    azimuth_angle_add: np.ndarray = np.empty([0], dtype=np.int32)
+    rain_add: np.ndarray = np.empty([0], dtype=np.int32)
+    tb_add: np.ndarray = np.empty([0], dtype=np.int32)
+    status_add: np.ndarray = np.empty([0], dtype=np.int32)
     seqs_all = [
         (key, len(list(val)))
         for key, val in groupby(hkd.data["status"][:] & 2**18 > 0)
@@ -526,7 +516,7 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict, site: str) -> 
         ind = np.argsort(brt.data["time"])
         brt.data["time"] = brt.data["time"][ind]
 
-        names_add: dict[str, FuncType] = {
+        names_add: dict[str, FuncType | np.ndarray] = {
             "time_bnds": time_bnds_add,
             "elevation_angle": elevation_angle_add,
             "azimuth_angle": azimuth_angle_add,
