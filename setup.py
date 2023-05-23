@@ -32,6 +32,6 @@ setup(
         "pytz",
     ],
     extras_require={
-        "test": ["pylint", "mypy", "pytest", "pytest-flakefinder"],
+        "test": ["pylint", "mypy", "pytest", "pytest-flakefinder", "types-pytz"],
     },
 )
