@@ -13,11 +13,15 @@ The data format including metadata information, variable names and file naming i
 
 ## Installation
 
+From GitHub:
+
 ```shell
+git clone https://github.com/actris-cloudnet/mwrpy.git
+cd mwrpy
 python3 -m venv venv
 source venv/bin/activate
 pip3 install --upgrade pip
-pip3 install mwrpy
+pip3 install .
 ```
 
 MWRpy requires Python 3.10 or newer.
