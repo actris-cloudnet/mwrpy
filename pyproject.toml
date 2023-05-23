@@ -1,0 +1,54 @@
+[project]
+name = "mwrpy"
+description = "Python package for Microwave Radiometer processing in ACTRIS"
+readme = "README.md"
+authors = [{name = "University of Cologne", email = "actris-ccres-mwr@uni-koeln.de"}]
+requires-python = ">=3.10"
+dependencies = [
+  "ephem",
+  "matplotlib",
+  "metpy",
+  "netCDF4",
+  "pandas",
+  "pyyaml",
+  "scipy",
+  "timezonefinder",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+test = ["mypy", "pylint", "pytest", "pytest-flakefinder"]
+
+[project.urls]
+homepage = "https://github.com/actris-cloudnet/mwrpy"
+repository = "https://github.com/actris-cloudnet/mwrpy"
+changelog = "https://github.com/actris-cloudnet/mwrpy/blob/main/CHANGELOG.md"
+
+[tool.pylint]
+max-line-length = 88
+ignored-modules = ["ephem", "metpy", "netCDF4", "numpy", "scipy", "timezonefinder"]
+disable = [
+  "duplicate-code",
+  "fixme",
+  "invalid-name",
+  "logging-fstring-interpolation",
+  "logging-not-lazy",
+  "missing-class-docstring",
+  "missing-function-docstring",
+  "missing-module-docstring",
+  "too-few-public-methods",
+  "too-many-arguments",
+  "too-many-branches",
+  "too-many-function-args",
+  "too-many-instance-attributes",
+  "too-many-lines",
+  "too-many-locals",
+  "too-many-statements",
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "mwrpy.version.__version__"}
+
+[tool.tomlsort]
+trailing_comma_inline_array = true
+sort_inline_arrays = true

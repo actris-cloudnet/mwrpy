@@ -42,10 +42,11 @@ MWRpy can be run using the command line tool `mwrpy/cli.py`:
 
     usage: mwrpy/cli.py [-h] -s SITE [-d YYYY-MM-DD] [--start YYYY-MM-DD]
                            [--stop YYYY-MM-DD] [-p ...] [{process,plot}]
+
 Arguments:
 
 | Short | Long         | Default           | Description                                                                        |
-|:------|:-------------|:------------------|:-----------------------------------------------------------------------------------|
+| :---- | :----------- | :---------------- | :--------------------------------------------------------------------------------- |
 | `-h`  | `--help`     |                   | Show help and exit.                                                                |
 | `-s`  | `--site`     |                   | Site to process data from, e.g, `hyytiala`. Required.                              |
 | `-d`  | `--date`     |                   | Single date to be processed. Alternatively, `--start` and `--stop` can be defined. |
@@ -55,31 +56,31 @@ Arguments:
 
 Commands:
 
-| Command    | Description                      |
-|:-----------|:---------------------------------|
-| `process`  | Process data and generate plots. |
-| `plot`     | Only generate plots.             |
+| Command   | Description                      |
+| :-------- | :------------------------------- |
+| `process` | Process data and generate plots. |
+| `plot`    | Only generate plots.             |
 
 ### Data types
 
 #### Level 1
 
-* 1B01: MWR brightnesss temperatures from .BRT and .BLB/.BLS files
-* 1B11: IR brightnesss temperatures from .IRT files
-* 1B21: Weather station data from .MET files
-* 1C01: Combined data type with time corresponding to 1B01
+- 1B01: MWR brightnesss temperatures from .BRT and .BLB/.BLS files
+- 1B11: IR brightnesss temperatures from .IRT files
+- 1B21: Weather station data from .MET files
+- 1C01: Combined data type with time corresponding to 1B01
 
 #### Level 2
 
-* 2I01: Liquid water path (LWP)
-* 2I02: Integrated water vapor (IWV)
-* 2P01: Temperature profiles from single-pointing observations
-* 2P02: Temperature profiles from multiple-pointing observations
-* 2P03: Absolute humidity profiles
-* 2P04: Relative humidity profiles (derived from 2P01/2P02 + 2P03)
-* 2P07: Potential temperature (derived from 2P01/2P02 + 2P03)
-* 2P08: Equivalent potential temperature (derived from 2P01/2P02 + 2P03)
-* 2S02: Brightness temperature spectrum
+- 2I01: Liquid water path (LWP)
+- 2I02: Integrated water vapor (IWV)
+- 2P01: Temperature profiles from single-pointing observations
+- 2P02: Temperature profiles from multiple-pointing observations
+- 2P03: Absolute humidity profiles
+- 2P04: Relative humidity profiles (derived from 2P01/2P02 + 2P03)
+- 2P07: Potential temperature (derived from 2P01/2P02 + 2P03)
+- 2P08: Equivalent potential temperature (derived from 2P01/2P02 + 2P03)
+- 2S02: Brightness temperature spectrum
 
 ## Licence
 
