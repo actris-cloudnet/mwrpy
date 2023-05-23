@@ -274,10 +274,11 @@ def get_file_list(path_to_files: str, extension: str):
 
 def read_yaml_config(site: str) -> tuple[dict, dict]:
     """Reads config yaml files."""
-    site_file = "mwrpy/site_config/" + site + "/config.yaml"
+    dir_name = os.path.dirname(os.path.realpath(__file__))
+    site_file = os.path.join(dir_name, "site_config", site, "config.yaml")
     with open(site_file, "r", encoding="utf8") as f:
         site_config = yaml.load(f, Loader=SafeLoader)
-    inst_file = "mwrpy/site_config/" + site_config["type"] + ".yaml"
+    inst_file = os.path.join(dir_name, "site_config", f"{site_config['type']}.yaml")
     with open(inst_file, "r", encoding="utf8") as f:
         inst_config = yaml.load(f, Loader=SafeLoader)
     inst_config["global_specs"].update(site_config["global_specs"])
