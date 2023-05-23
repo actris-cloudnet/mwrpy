@@ -26,10 +26,10 @@ def _get_ret_flag(nc_file: str, time: ndarray) -> ndarray:
     f_lev1 = read_nc_fields(lev1_file, "frequency")
     freq = get_ret_freq(nc_file)
     _, freq_ind, _ = np.intersect1d(
-        f_lev1.data, freq, assume_unique=False, return_indices=True
+        f_lev1, freq, assume_unique=False, return_indices=True
     )
     _, q_ind, t_ind = np.intersect1d(
-        seconds2hours(t_lev1.data), time.data, assume_unique=False, return_indices=True
+        seconds2hours(t_lev1), time.data, assume_unique=False, return_indices=True
     )
     quality_flag = quality_flag[q_ind, :]
     site = _read_location(nc_file)

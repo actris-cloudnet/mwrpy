@@ -217,18 +217,17 @@ def init_file(
     return nc_file
 
 
-def _get_dimensions(nc_file: netCDF4.Dataset, data: np.ndarray) -> tuple:
+def _get_dimensions(nc_file: netCDF4.Dataset, data: np.ndarray) -> tuple | tuple[str]:
     """Finds correct dimensions for a variable."""
-
     if utils.isscalar(data):
         return ()
-    variable_size = ()
     file_dims = nc_file.dimensions
     array_dims = data.shape
+    dim_names = []
     for length in array_dims:
         dim = [key for key in file_dims.keys() if file_dims[key].size == length][0]
-        variable_size = variable_size + (dim,)
-    return variable_size
+        dim_names.append(dim)
+    return tuple(dim_names)
 
 
 def _write_vars2nc(nc_file: netCDF4.Dataset, mwr_variables: dict) -> None:

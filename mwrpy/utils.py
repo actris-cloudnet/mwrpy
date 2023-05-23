@@ -93,7 +93,7 @@ def isscalar(array: Any) -> bool:
     return False
 
 
-def isbit(array: int | np.ndarray, nth_bit: int) -> np.ndarray:
+def isbit(array: np.ndarray, nth_bit: int) -> np.ndarray:
     """Tests if nth bit (0,1,2..) is set.
     Args:
         array: Integer array.
@@ -116,7 +116,7 @@ def isbit(array: int | np.ndarray, nth_bit: int) -> np.ndarray:
     return array & mask > 0
 
 
-def setbit(array: int | np.ndarray, nth_bit: int) -> np.ndarray:
+def setbit(array: np.ndarray, nth_bit: int) -> np.ndarray:
     """Sets nth bit (0, 1, 2..) on number.
     Args:
         array: Integer array.
@@ -243,16 +243,15 @@ def get_coeff_list(site: str, prefix: str):
     c_list = [x for x in s_list if x]
 
     if len(c_list) > 0:
-        c_list = sorted(c_list[0])
-    else:
-        logging.warning(
-            "No coefficient files for product "
-            + prefix
-            + " found in directory "
-            + "/site_config/"
-            + site
-            + "/coefficients/"
-        )
+        return sorted(c_list[0])
+    logging.warning(
+        "No coefficient files for product "
+        + prefix
+        + " found in directory "
+        + "/site_config/"
+        + site
+        + "/coefficients/"
+    )
     return c_list
 
 
@@ -372,19 +371,17 @@ def read_nc_field_name(nc_file: str, name: str) -> str:
     return long_name
 
 
-def read_nc_fields(nc_file: str, names: str | list) -> ma.MaskedArray | list:
+def read_nc_fields(nc_file: str, name: str) -> np.ndarray:
     """Reads selected variables from a netCDF file.
     Args:
         nc_file: netCDF file name.
-        names: Variables to be read, e.g. 'temperature' or ['ldr', 'lwp'].
+        name: Variable to be read, e.g. 'lwp'.
     Returns:
-        ndarray/list: Array in case of one variable passed as a string.
-        List of arrays otherwise.
+        np.ndarray
     """
-    names = [names] if isinstance(names, str) else names
+    assert os.path.isfile(nc_file), f"File {nc_file} does not exist."
     with netCDF4.Dataset(nc_file) as nc:
-        data = [nc.variables[name][:] for name in names]
-    return data[0] if len(data) == 1 else data
+        return nc.variables[name][:]
 
 
 def append_data(data_in: dict, key: str, array: ma.MaskedArray) -> dict:

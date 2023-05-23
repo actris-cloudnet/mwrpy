@@ -12,6 +12,9 @@ from mwrpy import utils
 Fill_Value_Float = -999.0
 Fill_Value_Int = -99
 
+Dim = int | tuple[int, ...]
+Field = tuple[str, str] | tuple[str, str, Dim]
+
 
 def stack_files(file_list: list[str]) -> tuple[dict, dict]:
     """This function calls extension specific reader and stacks data and header."""
@@ -109,7 +112,7 @@ class RpgBin:
             raise RuntimeError(["Error: no valid data for date: " + str(self.date)])
         n_time = len(self.data["time"])
         for key, array in self.data.items():
-            if isinstance(array, (list, tuple, np.ndarray)):
+            if isinstance(array, np.ndarray):
                 if array.shape[0] == n_time:
                     if array.ndim == 1:
                         screened_data = array[ind]
@@ -142,7 +145,7 @@ def read_bls(file_name: str) -> tuple[dict, dict]:
         )
         header |= _read_from_file(file, [("_ang", "<f", header["_n_ang"])])
 
-        dt = [
+        dt: list[Field] = [
             ("time", "<i4"),
             ("rain", "b"),
             ("temp_sfc", "<f"),
@@ -225,7 +228,7 @@ def read_blb(file_name: str) -> tuple[dict, dict]:
             file, [("_f", "<f", header["_n_f"]), ("_n_ang", "<i4")]
         )
         header |= _read_from_file(file, [("_ang", "<f", header["_n_ang"])])
-        dt = [("time", "<i4"), ("rain", "b")]
+        dt: list[Field] = [("time", "<i4"), ("rain", "b")]
         for n in range(header["_n_f"]):
             dt += [(f"tb_{n}", "<f", header["_n_ang"])]
             dt += [(f"temp_sfc_{n}", "<f")]
@@ -283,7 +286,11 @@ def read_irt(file_name: str) -> tuple[dict, dict]:
         else:
             header |= _read_from_file(file, [("_n_f", "<i4")])
             header |= _read_from_file(file, [("_f", "<f", (header["_n_f"],))])
-        dt = [("time", "<i4"), ("rain", "b"), ("irt", "<f", (header["_n_f"],))]
+        dt: list[Field] = [
+            ("time", "<i4"),
+            ("rain", "b"),
+            ("irt", "<f", (header["_n_f"],)),
+        ]
         if version > 1:
             dt += [("_angles", "<f" if version == 2 else "<i4")]
         data = _read_from_file(file, dt, header["n"])
@@ -305,7 +312,7 @@ def read_hkd(file_name: str) -> tuple[dict, dict]:
             file,
             [("_code", "<i4"), ("n", "<i4"), ("_time_ref", "<i4"), ("_sel", "<i4")],
         )
-        dt = [("time", "<i4"), ("alarm", "b")]
+        dt: list[Field] = [("time", "<i4"), ("alarm", "b")]
         if header["_sel"] & 0x1:
             dt += [("longitude", "<f"), ("latitude", "<f")]
         if header["_sel"] & 0x2:
@@ -335,14 +342,14 @@ def read_met(file_name: str) -> tuple[dict, dict]:
             header |= _read_from_file(file, [("_n_add", "b")])
         else:
             raise ValueError(f"Error: MET file code {header['_code']} not supported")
-        dt = [
+        dt: list[Field] = [
             ("time", "<i4"),
             ("rain", "b"),
             ("air_pressure", "<f"),
             ("air_temperature", "<f"),
             ("relative_humidity", "<f"),
         ]
-        hdt = [
+        hdt: list[Field] = [
             ("_air_pressure_min", "<f"),
             ("_air_pressure_max", "<f"),
             ("_air_temperature_min", "<f"),
@@ -390,10 +397,6 @@ def read_met(file_name: str) -> tuple[dict, dict]:
     data["relative_humidity"] /= 100  # Converted in the original code
     header = _fix_header(header)
     return header, data
-
-
-Dim = int | tuple[int, ...]
-Field = tuple[str, str] | tuple[str, str, Dim]
 
 
 def _read_from_file(file: BinaryIO, fields: list[Field], count: int = 1) -> dict:
@@ -452,6 +455,7 @@ def _decode_angles(
 
 def _fix_header(header: dict) -> dict:
     """Maybe can get rid of this function later."""
+    header = header.copy()
     for key in header:
         if key in ["_code", "_time_ref", "_sel", "_n_add"]:
             header[key] = np.array(header[key], dtype=int)

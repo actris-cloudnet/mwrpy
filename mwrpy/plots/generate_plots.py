@@ -73,7 +73,7 @@ def generate_figure(
     nc_file: str,
     field_names: list,
     show: bool = False,
-    save_path: str = None,
+    save_path: str | None = None,
     max_y: int = 5,
     ele_range: tuple[float, float] = (
         0.0,
@@ -84,7 +84,7 @@ def generate_figure(
     image_name: str | None = None,
     sub_title: bool = True,
     title: bool = True,
-) -> tuple[Dimensions, str]:
+) -> tuple[Dimensions, str] | None:
     """Generates a mwrpy figure.
     Args:
         nc_file (str): Input file.
@@ -110,25 +110,33 @@ def generate_figure(
     """
 
     valid_fields, valid_names = _find_valid_fields(nc_file, field_names)
-    file_name = []
     if len(valid_fields) > 0:
         is_height = _is_height_dimension(nc_file)
         fig, axes = _initialize_figure(len(valid_fields), dpi)
 
         for ax, field, name in zip(axes, valid_fields, valid_names):
             time = _read_time_vector(nc_file)
-            if ATTRIBUTES[name].ele is not None:
-                ele_range = ATTRIBUTES[name].ele
+            elevation_range = ATTRIBUTES[name].ele
+            if elevation_range is None:
+                elevation_range = ele_range
             ax.set_facecolor(_COLORS["lightgray"])
             if name not in ("elevation_angle", "azimuth_angle"):
-                time = _elevation_filter(nc_file, time, ele_range)
-                field = _elevation_filter(nc_file, field, ele_range)
+                time = _elevation_filter(nc_file, time, elevation_range)
+                field = _elevation_filter(nc_file, field, elevation_range)
             if title:
                 _set_title(ax, name, nc_file, "")
             if not is_height:
                 source = ATTRIBUTES[name].source
                 _plot_instrument_data(
-                    ax, field, name, source, time, fig, nc_file, ele_range, pointing
+                    ax,
+                    field,
+                    name,
+                    source,
+                    time,
+                    fig,
+                    nc_file,
+                    elevation_range,
+                    pointing,
                 )
             else:
                 ax_value = _read_ax_values(nc_file)
@@ -144,7 +152,8 @@ def generate_figure(
         file_name = handle_saving(
             nc_file, image_name, save_path, show, case_date, valid_names
         )
-    return Dimensions(fig, axes), file_name
+        return Dimensions(fig, axes), file_name
+    return None
 
 
 def _mark_gaps(
@@ -307,8 +316,8 @@ def _initialize_figure(n_subplots: int, dpi) -> tuple:
 
 def _read_ax_values(full_path: str) -> tuple[ndarray, ndarray]:
     """Returns time and height arrays."""
-    fields = ["time", "altitude"]
-    time, height = read_nc_fields(full_path, fields)
+    time = read_nc_fields(full_path, "time")
+    height = read_nc_fields(full_path, "height")
     height_km = height / 1000
     return time, height_km
 
@@ -337,7 +346,7 @@ def _screen_high_altitudes(data_field: ndarray, ax_values: tuple, max_y: int) ->
     return data_field, (ax_values[0], alt)
 
 
-def _set_ax(ax, max_y: float, ylabel: str = None, min_y: float = 0.0):
+def _set_ax(ax, max_y: float, ylabel: str | None = None, min_y: float = 0.0):
     """Sets ticks and tick labels for plt.imshow()."""
     ticks_x_labels = _get_standard_time_ticks()
     ax.set_ylim(min_y, max_y)
@@ -416,6 +425,7 @@ def _plot_segment_data(ax, data: ma.MaskedArray, name: str, axes: tuple, nc_file
         pl = ax.pcolor(*axes, data.T, cmap=cmap, shading="nearest", vmin=-0.5, vmax=1.5)
     else:
         variables = ATTRIBUTES[name]
+        assert variables.clabel is not None
         clabel = [x[0] for x in variables.clabel]
         cbar = [x[1] for x in variables.clabel]
         cmap = ListedColormap(cbar)
@@ -435,9 +445,7 @@ def _plot_segment_data(ax, data: ma.MaskedArray, name: str, axes: tuple, nc_file
         colorbar.ax.set_yticklabels(clabel, fontsize=13)
 
 
-def _plot_colormesh_data(
-    ax, data_in: ma.MaskedArray, name: str, axes: tuple, nc_file: str
-):
+def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_file: str):
     """Plots continuous 2D variable.
     Creates only one plot, so can be used both one plot and subplot type of figs.
     Args:
@@ -447,7 +455,7 @@ def _plot_colormesh_data(
         axes (tuple): Time and height 1D arrays.
         nc_file (str): Input file.
     """
-    data = data_in
+    data = data_in.copy()
     variables = ATTRIBUTES[name]
     nbin = 7
     nlev1 = 31
@@ -470,6 +478,7 @@ def _plot_colormesh_data(
         nbin = 6
 
     if name == "relative_humidity":
+        assert isinstance(data_in, ma.MaskedArray)
         data[data_in.mask] = np.nan
         data[data > 1.0] = 1.0
         data[data < 0.0] = 0.0
@@ -505,17 +514,17 @@ def _plot_colormesh_data(
 
     if np.ma.median(np.diff(axes[0][:])) < 5 / 60:
         data, _ = _calculate_rolling_mean(axes[0], data, win=15 / 60)
-        time, data = _mark_gaps(axes[0][:], data, 35, 10)
+        time, data = _mark_gaps(axes[0][:], ma.MaskedArray(data), 35, 10)
     else:
         time, data = _mark_gaps(
             axes[0][:],
-            data_in,
+            ma.MaskedArray(data_in),
             np.ma.median(np.diff(axes[0][:])) * 60.0
             + np.ma.median(np.diff(axes[0][:])) * 10.0,
             0,
         )
 
-    pl = ax.contourf(
+    ax.contourf(
         time,
         axes[1],
         data.T,
@@ -525,7 +534,6 @@ def _plot_colormesh_data(
         alpha=0.5,
     )
 
-    data = np.copy(data_in)
     flag = _get_ret_flag(nc_file, axes[0])
 
     if np.ma.median(np.diff(axes[0][:])) < 5 / 60:
@@ -535,12 +543,12 @@ def _plot_colormesh_data(
         )
         data_in[(flag > 0) | (hum_flag > 0), :] = np.nan
         data, _ = _calculate_rolling_mean(axes[0], data_in, win=15 / 60)
-        time, data = _mark_gaps(axes[0][:], data, 35, 10)
+        time, data = _mark_gaps(axes[0][:], ma.MaskedArray(data), 35, 10)
     else:
         data_in[(flag > 0) | (hum_flag > 0), :] = np.nan
         time, data = _mark_gaps(
             axes[0][:],
-            data_in,
+            ma.MaskedArray(data_in),
             np.ma.median(np.diff(axes[0][:])) * 60.0
             + np.ma.median(np.diff(axes[0][:])) * 10.0,
             0,
@@ -558,6 +566,7 @@ def _plot_colormesh_data(
         extend=variables.cbar_ext,
     )
     ds = int(np.round(len(time) * 0.05))
+    assert isinstance(nlev, int)
     cp = ax.contour(
         time[ds : len(time) - ds],
         axes[1],
@@ -567,14 +576,14 @@ def _plot_colormesh_data(
         linewidths=0.0001,
     )
     cbl = plt.clabel(cp, fontsize=8)
-    ta = []
+    ta = np.array([])
     for l in cbl:
         l.set_va("bottom")
         l.set_weight("bold")
         if float(l.get_text()) in ta:
             l.set_visible(False)
         ta = np.append(ta, [float(l.get_text())])
-    cp = ax.contour(
+    ax.contour(
         time,
         axes[1],
         data.T,
@@ -733,7 +742,8 @@ def _plot_sen(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
     variables = ATTRIBUTES[name]
     pointing_flag = read_nc_fields(nc_file, "pointing_flag")
     quality_flag = read_nc_fields(nc_file, "quality_flag")
-    qf = _get_freq_flag(quality_flag, [6])
+    qf = _get_freq_flag(quality_flag, np.array([6]))
+    assert variables.plot_range is not None
     vmin, vmax = variables.plot_range
     time = _nan_time_gaps(time, 15.0 / 60.0)
     time1 = time[(pointing_flag == 1)]
@@ -782,10 +792,11 @@ def _plot_sen(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
     _set_ax(ax, vmax, variables.ylabel, vmin)
 
 
-def _plot_irt(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
+def _plot_irt(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
     """Plot for infrared temperatures."""
 
     variables = ATTRIBUTES[name]
+    assert variables.plot_range is not None
     vmin, vmax = variables.plot_range
     ir_wavelength = read_nc_fields(nc_file, "ir_wavelength")
     if not data_in[:, 0].mask.all():
@@ -819,7 +830,11 @@ def _plot_mqf(ax, data_in: ndarray, time: ndarray, nc_file: str):
 
     qf = _get_bit_flag(data_in, np.arange(6))
     _plot_segment_data(
-        ax, qf, "met_quality_flag", (time, np.linspace(0.5, 5.5, 6)), nc_file
+        ax,
+        ma.MaskedArray(qf),
+        "met_quality_flag",
+        (time, np.linspace(0.5, 5.5, 6)),
+        nc_file,
     )
     ax.set_yticks(np.arange(6))
     ax.yaxis.set_ticklabels([])
@@ -844,9 +859,13 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
     )
     frequency = read_nc_fields(nc_file, "frequency")
 
-    qf = _get_bit_flag(data_in[:, 0], [5, 6])
+    qf = _get_bit_flag(data_in[:, 0], np.array([5, 6]))
     _plot_segment_data(
-        axs[0], qf, "quality_flag_0", (time, np.linspace(0.5, 1.5, 2)), nc_file
+        axs[0],
+        ma.MaskedArray(qf),
+        "quality_flag_0",
+        (time, np.linspace(0.5, 1.5, 2)),
+        nc_file,
     )
     axs[0].set_yticks(np.arange(2))
     axs[0].yaxis.set_ticklabels([])
@@ -857,12 +876,12 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
     case_date = _read_date(nc_file)
     gtim = _gap_array(time, case_date)
 
-    qf1 = _get_freq_flag(data_in[:, np.array(params["receiver"]) == 1], [4])
-    qf2 = _get_freq_flag(data_in[:, np.array(params["receiver"]) == 2], [4])
+    qf1 = _get_freq_flag(data_in[:, np.array(params["receiver"]) == 1], np.array([4]))
+    qf2 = _get_freq_flag(data_in[:, np.array(params["receiver"]) == 2], np.array([4]))
     qf = np.column_stack((qf1 - 1, qf2 + 1))
     _plot_segment_data(
         axs[1],
-        qf,
+        ma.MaskedArray(qf),
         "quality_flag_1",
         (time, np.linspace(0.5, len(frequency) - 0.5, len(frequency))),
         nc_file,
@@ -870,7 +889,7 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
     axs[1].set_title(ATTRIBUTES["quality_flag_1"].name)
 
     if params["flag_status"][3] == 0:
-        qf = _get_freq_flag(data_in, [3])
+        qf = _get_freq_flag(data_in, np.array([3]))
         if len(gtim) > 0:
             time_i, data_g = np.linspace(time[0], time[-1], len(time)), np.zeros(
                 (len(time), 20), np.float32
@@ -880,21 +899,21 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
                 data_g[xind, :] = 1.0
             _plot_segment_data(
                 axs[2],
-                data_g,
+                ma.MaskedArray(data_g),
                 "tb_qf",
                 (time_i, np.linspace(0.5, 20.0 - 0.5, 20)),
                 nc_file,
             )
         _plot_segment_data(
             axs[2],
-            qf,
+            ma.MaskedArray(qf),
             "quality_flag_2",
             (time, np.linspace(0.5, len(frequency) - 0.5, len(frequency))),
             nc_file,
         )
         axs[2].set_title(ATTRIBUTES["quality_flag_2"].name)
 
-    qf = _get_freq_flag(data_in, [1, 2])
+    qf = _get_freq_flag(data_in, np.array([1, 2]))
     if len(gtim) > 0:
         time_i, data_g = np.linspace(time[0], time[-1], len(time)), np.zeros(
             (len(time), 20), np.float32
@@ -904,14 +923,14 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
             data_g[xind, :] = 1.0
         _plot_segment_data(
             axs[nsub - 1],
-            data_g,
+            ma.MaskedArray(data_g),
             "tb_qf",
             (time_i, np.linspace(0.5, 20.0 - 0.5, 20)),
             nc_file,
         )
     _plot_segment_data(
         axs[nsub - 1],
-        qf,
+        ma.MaskedArray(qf),
         "quality_flag_3",
         (time, np.linspace(0.5, len(frequency) - 0.5, len(frequency))),
         nc_file,
@@ -928,8 +947,9 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
         for label in axs[i].yaxis.get_majorticklabels():
             label.set_transform(label.get_transform() + offset)
         _set_ax(axs[i], len(frequency), "Frequency [GHz]")
+        ind1, ind2 = axs[i].get_xlim()
         axs[i].plot(
-            np.linspace(*axs[i].get_xlim(), len(time)),
+            np.linspace(ind1, ind2, len(time)),
             np.ones(len(time)) * np.sum(np.array(params["receiver"]) == 1),
             "k-",
             linewidth=1,
@@ -966,10 +986,10 @@ def _plot_tb(
         lev1_file = _get_lev1(nc_file)
         quality_flag = read_nc_fields(lev1_file, "quality_flag")
         quality_flag = _elevation_filter(
-            lev1_file, quality_flag, [ang[-1] - 0.5, ang[-1] + 0.5]
+            lev1_file, quality_flag, (ang[-1] - 0.5, ang[-1] + 0.5)
         )
         quality_flag = _pointing_filter(
-            lev1_file, quality_flag, [ang[-1] - 0.5, ang[-1] + 0.5], 0
+            lev1_file, quality_flag, (ang[-1] - 0.5, ang[-1] + 0.5), 0
         )
         qf = np.copy(quality_flag)
         quality_flag[~isbit(quality_flag, 3)] = 0
@@ -1049,7 +1069,8 @@ def _plot_tb(
         )
 
     trans = ScaledTranslation(10 / 72, -5 / 72, fig.dpi_scale_trans)
-    tb_m, tb_s = [], []
+    tb_m: np.ndarray = np.ndarray([])
+    tb_s: np.ndarray = np.ndarray([])
 
     for i, axi in enumerate(axs.T.flatten()):
         no_flag = np.where(quality_flag[:, i] == 0)[0]
@@ -1248,7 +1269,7 @@ def _plot_tb(
                 data_g[isbit(qf[:, 0], 5), :] = 1.0
                 _plot_segment_data(
                     axa[irec],
-                    data_g,
+                    ma.MaskedArray(data_g),
                     "tb_missing",
                     (time, np.linspace(0, np.nanmax(tb_m[no_flag, irec]) + 0.5, 10)),
                     nc_file,
@@ -1267,7 +1288,7 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
         data_in *= 100.0
         ylabel = "relative humidity (%)"
         ax.set_title("Relative and absolute humidity", fontsize=14)
-    data, time = _get_unmasked_values(data_in, time)
+    data, time = _get_unmasked_values(ma.MaskedArray(data_in), time)
     if name == "wind_direction":
         spd = read_nc_fields(nc_file, "wind_speed")
         rolling_mean, width = dir_avg(time, spd, data)
@@ -1288,7 +1309,9 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
         ax.plot(
             time, rolling_mean, "o", fillstyle="full", color="darkblue", markersize=3
         )
-    vmin, vmax = ATTRIBUTES[name].plot_range
+    plot_range = ATTRIBUTES[name].plot_range
+    assert plot_range is not None
+    vmin, vmax = plot_range
     if name == "air_pressure":
         vmin, vmax = np.nanmin(data) - 1.0, np.nanmax(data) + 1.0
     if (name == "wind_speed") | (name == "rainfall_rate"):
@@ -1433,6 +1456,7 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
 
         ax2.yaxis.set_major_locator(FixedLocator(ticks))
         ax2.yaxis.set_major_formatter(FormatStrFormatter("%.3f"))
+        assert ylabel is not None
         _set_ax(ax, vmax, "rain rate (" + ylabel + ")", min_y=vmin)
         ax3 = ax.twinx()
         ax3.plot(time, data, ".", alpha=0.8, color=_COLORS["darksky"], markersize=1)
@@ -1456,7 +1480,9 @@ def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
     data0, time0 = data_in[flag == 0], time[flag == 0]
     if len(data0) == 0:
         data0, time0 = data_in, time
-    vmin, vmax = ATTRIBUTES[name].plot_range
+    plot_range = ATTRIBUTES[name].plot_range
+    assert plot_range is not None
+    vmin, vmax = plot_range
     if name == "iwv":
         vmin, vmax = np.nanmin(data0) - 1.0, np.nanmax(data0) + 1.0
     else:
@@ -1489,7 +1515,7 @@ def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
 
         _plot_segment_data(
             ax,
-            data_g,
+            ma.MaskedArray(data_g),
             "tb_missing",
             (time_i, np.linspace(vmin, vmax, 10)),
             nc_file,
