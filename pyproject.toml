@@ -41,6 +41,10 @@ check_untyped_defs = true
 module = ["ephem.*", "matplotlib.*", "metpy.*", "mpl_toolkits.*", "netCDF4.*", "pandas.*", "scipy.*"]
 ignore_missing_imports = true
 
+[tool.mypy]
+check_untyped_defs = true
+ignore_missing_imports = true
+
 [tool.pylint]
 max-line-length = 88
 ignored-modules = ["ephem", "metpy", "netCDF4", "numpy", "scipy", "timezonefinder"]
