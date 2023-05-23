@@ -33,7 +33,7 @@ def main(args):
             if product not in PRODUCT_NAME:
                 logging.error(f"Product {product} not recognised")
                 continue
-            if not args.figure:
+            if args.command != "plot":
                 logging.info(f"Processing {product} product, {args.site} {date}")
                 process_product(product, date, args.site)
             logging.info(f"Plotting {product} product, {args.site} {date}")
@@ -120,15 +120,3 @@ def _get_filename(prod: str, date_in: datetime.date, site: str) -> str:
 def _get_raw_file_path(date_in: datetime.date, site: str) -> str:
     _, params = read_yaml_config(site)
     return os.path.join(params["data_in"], date_in.strftime("%Y/%m/%d/"))
-
-
-def add_arguments(subparser):
-    parser = subparser.add_parser("process", help="Process MWR Level 1 and 2 data.")
-    parser.add_argument(
-        "-f",
-        "--figure",
-        action="store_true",
-        help="Produce figures only; no processing",
-        default=False,
-    )
-    return subparser

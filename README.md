@@ -3,7 +3,7 @@
 [![MWRpy tests](https://github.com/actris-cloudnet/mwrpy/actions/workflows/test.yml/badge.svg)](https://github.com/actris-cloudnet/mwrpy/actions/workflows/test.yml)
 [![PyPI version](https://badge.fury.io/py/mwrpy.svg)](https://badge.fury.io/py/mwrpy)
 
-MWRpy is a Python based software to process RPG Microwave Radiometer data and is developed at the University of Cologne, Germany as part of the [Aerosol, Clouds and Trace Gases Research Infrastructure (ACTRIS)](https://actris.eu/).
+MWRpy is a Python software to process RPG Microwave Radiometer data and is developed at the University of Cologne, Germany as part of the [Aerosol, Clouds and Trace Gases Research Infrastructure (ACTRIS)](https://actris.eu/).
 
 The software features reading raw data, Level 1 quality control, generation of Level 2 data products and visualization.
 
@@ -37,7 +37,7 @@ defines the input and output data paths etc. For example, this is the
 MWRpy can be run using the command line tool `mwrpy/cli.py`:
 
     usage: mwrpy/cli.py [-h] -s SITE [-d YYYY-MM-DD] [--start YYYY-MM-DD]
-                           [--stop YYYY-MM-DD] [-p ...] COMMAND ...
+                           [--stop YYYY-MM-DD] [-p ...] [{process,plot}]
 Arguments:
 
 | Short | Long         | Default           | Description                                                                        |
@@ -51,10 +51,10 @@ Arguments:
 
 Commands:
 
-| Command   | Description                      |
-|:----------|:---------------------------------|
-| `process` | Process data and generate plots. |
-| `plot`    | Only generate plots.             |
+| Command    | Description                      |
+|:-----------|:---------------------------------|
+| `process`  | Process data and generate plots. |
+| `plot`     | Only generate plots.             |
 
 ### Data types
 

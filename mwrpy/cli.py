@@ -9,32 +9,21 @@ import sys
 
 from mwrpy import process_mwrpy, utils
 
-# import warnings
-
-
-# warnings.simplefilter("ignore", UserWarning)
-# warnings.simplefilter("ignore", RuntimeWarning)
-
-modules = {
-    "process": process_mwrpy,
-}
-
 
 def main(args):
     args = _parse_args(args)
-    cmd = args.cmd
-    modules[cmd].main(args)
+    process_mwrpy.main(args)
 
 
 def _parse_args(args):
-    parser = argparse.ArgumentParser(
-        description="MWRpy processing main wrapper.", epilog="Have fun!"
+    parser = argparse.ArgumentParser(description="MWRpy processing main wrapper.")
+    parser.add_argument(
+        "command",
+        nargs="?",
+        choices=["process", "plot"],
+        default="process",
+        help="Command to execute.",
     )
-    subparsers = parser.add_subparsers(
-        title="Command", help="Command to execute.", required=True, dest="cmd"
-    )
-    for module in modules.values():
-        subparsers = module.add_arguments(subparsers)
     group = parser.add_argument_group(title="General options")
     group.add_argument(
         "-s",
@@ -46,7 +35,7 @@ def _parse_args(args):
     group.add_argument(
         "-p",
         "--products",
-        help="Products to be processed, e.g., 1C01, 2I02, 2P03, stats.\
+        help="Products to be processed, e.g., 1C01, 2I02, 2P03.\
                             Default is all regular products.",
         type=lambda s: s.split(","),
         default=[
