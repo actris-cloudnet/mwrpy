@@ -24,9 +24,9 @@ jobs:
     - name: Test with pytest-flakefinder
       run: |
         pytest --flake-finder --flake-runs=2
-    # - name: Lint with pylint
-    #   run: |
-    #     pylint mwrpy --errors-only
+    - name: Lint with pylint
+      run: |
+        pylint mwrpy
     # - name: Typecheck with mypy
     #   run: |
     #     mypy --ignore-missing-imports --check-untyped-defs mwrpy/
