@@ -357,7 +357,7 @@ def get_products(
         rpg_dat["height"] = coeff["AL"][:] + params["altitude"]
 
         if coeff["RT"] < 2:
-            tb_alg = []
+            tb_alg: np.ndarray = np.array([])
             if len(freq_ind) - len(freq_bl) > 0:
                 tb_alg = np.squeeze(tb[0 : len(freq_ind) - len(freq_bl), 0, :])
             for ifq, _ in enumerate(coeff["FR_BL"]):
@@ -398,6 +398,8 @@ def get_products(
             )
 
     elif data_type in ("2P04", "2P07", "2P08"):
+        assert temp_file is not None
+        assert hum_file is not None
         tem_dat, tem_freq, tem_ang = load_product(temp_file)
         hum_dat, hum_freq, hum_ang = load_product(hum_file)
 
@@ -555,6 +557,7 @@ def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
 
     time_median = np.nanmedian(lev1["time"][:])
     if time_median < 24:
+        assert isinstance(lev1, nc.Dataset)
         date = [lev1.year, lev1.month, lev1.day]
         time_median = decimal_hour2unix(date, time_median)
 
@@ -576,7 +579,9 @@ def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
     else:
         ret_in = np.concatenate((bias, lev1["tb"][:, freq_ind]), axis=1)
 
-        if coeff.get("TS")[0] == 1:
+        _data = coeff.get("TS")
+        assert _data is not None and len(_data) > 0
+        if _data[0] == 1:
             ret_in = np.concatenate(
                 (
                     ret_in,
@@ -584,7 +589,9 @@ def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
                 ),
                 axis=1,
             )
-        if coeff.get("HS")[0] == 1:
+        _data = coeff.get("HS")
+        assert _data is not None and len(_data) > 0
+        if _data[0] == 1:
             ret_in = np.concatenate(
                 (
                     ret_in,
@@ -592,7 +599,9 @@ def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
                 ),
                 axis=1,
             )
-        if coeff.get("PS")[0] == 1:
+        _data = coeff.get("PS")
+        assert _data is not None and len(_data) > 0
+        if _data[0] == 1:
             ret_in = np.concatenate(
                 (
                     ret_in,
@@ -627,6 +636,7 @@ def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
                 lng=longitude,
                 lat=latitude,
             )
+            assert timezone_str is not None
             timezone = pytz.timezone(timezone_str)
             dtime = datetime.fromtimestamp(time_median, timezone)
             dyear = datetime(dtime.year, 12, 31, 0, 0).timetuple().tm_yday
@@ -650,6 +660,7 @@ def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
                 lng=longitude,
                 lat=latitude,
             )
+            assert timezone_str is not None
             timezone = pytz.timezone(timezone_str)
             dtime = datetime.fromtimestamp(time_median, timezone)
             sun[:, 0] = np.cos(
