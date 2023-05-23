@@ -56,9 +56,7 @@ def lev2_to_nc(
         "2I01",
         "2I02",
     ):
-        raise RuntimeError(
-            ["Data type " + data_type + " not supported for file writing."]
-        )
+        raise ValueError(f"Data type {data_type} not recognised")
 
     global_attributes, params = read_yaml_config(site)
 
@@ -109,10 +107,7 @@ def get_products(
     rpg_dat, coeff, index = {}, {}, np.empty(0)
 
     if data_type in ("2I01", "2I02"):
-        if data_type == "2I01":
-            product = "lwp"
-        else:
-            product = "iwv"
+        product = "lwp" if data_type == "2I01" else "iwv"
 
         coeff = get_mvr_coeff(site, product, lev1["frequency"][:])
         if coeff[0]["RT"] < 2:
@@ -490,7 +485,7 @@ def _combine_lev1(
 
 
 def _add_att(global_attributes: dict, coeff: dict) -> None:
-    "add retrieval and calibration attributes"
+    """Add retrieval and calibration attributes"""
     fields = [
         "retrieval_type",
         "retrieval_elevation_angles",
@@ -513,7 +508,7 @@ def _add_att(global_attributes: dict, coeff: dict) -> None:
 
 
 def load_product(filename: str):
-    """load existing lev2 file for deriving other products"""
+    """Load existing lev2 file for deriving other products"""
     file = nc.Dataset(filename)
     ret_freq = get_ret_freq(filename)
     ret_ang = get_ret_ang(filename)

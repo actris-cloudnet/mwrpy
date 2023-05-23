@@ -30,6 +30,9 @@ def main(args):
     stop_date = isodate2date(_stop_date)
     for date in date_range(start_date, stop_date):
         for product in args.products:
+            if product not in PRODUCT_NAME:
+                logging.error(f"Product {product} not recognised")
+                continue
             if not args.figure:
                 logging.info(f"Processing {product} product, {args.site} {date}")
                 process_product(product, date, args.site)
