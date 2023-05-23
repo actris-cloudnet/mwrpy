@@ -26,6 +26,8 @@ jobs:
       - name: Lint with pylint
         run: |
           pylint mwrpy
-    # - name: Typecheck with mypy
-    #   run: |
-    #     mypy --ignore-missing-imports --check-untyped-defs mwrpy/
+          pylint tests
+      - name: Typecheck with mypy
+        run: |
+          mypy mwrpy
+          mypy tests

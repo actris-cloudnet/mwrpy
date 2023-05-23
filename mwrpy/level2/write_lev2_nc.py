@@ -142,7 +142,9 @@ def get_products(
                 < 0.5,
                 axis=1,
             )
-        )[0]
+        )[
+            0
+        ]  # type: ignore
         if len(index) == 0:
             raise RuntimeError(
                 ["No suitable data found for processing for data type: " + data_type]
@@ -240,7 +242,9 @@ def get_products(
                 < 0.5,
                 axis=1,
             )
-        )[0]
+        )[
+            0
+        ]  # type: ignore
         if len(index) == 0:
             raise RuntimeError(
                 ["No suitable data found for processing for data type: " + data_type]
@@ -354,7 +358,7 @@ def get_products(
                 ["No suitable data found for processing for data type: " + data_type]
             )
 
-        index = ibl[:, -1]
+        index = ibl[:, -1]  # type: ignore
         rpg_dat["height"] = coeff["AL"][:] + params["altitude"]
 
         if coeff["RT"] < 2:
@@ -369,8 +373,8 @@ def get_products(
                         tb_alg, np.squeeze(tb[freq_bl[ifq], :, :]), axis=0
                     )
 
-            rpg_dat["temperature"] = offset() + np.einsum(
-                "jk,ij->ik", lin(), np.transpose(tb_alg)
+            rpg_dat["temperature"] = offset(0) + np.einsum(
+                "jk,ij->ik", lin(0), np.transpose(tb_alg)
             )
 
         else:
@@ -380,7 +384,11 @@ def get_products(
             )
             ret_array = np.concatenate((np.ones((1, len(ibl)), np.float32), ret_array))
             for i_add in range(ret_in.shape[1] - len(coeff["FR"]) - 1, 0, -1):
-                ret_array = np.concatenate((ret_array, [ret_in[ibl[:, 0], -i_add]]))
+                ibl_ind = ibl[:, 0]
+                ret_ind = ret_in[ibl_ind, -i_add]
+                xx = np.array([ret_ind])
+                ret_array = np.concatenate((ret_array, xx))
+
             ret_array[1:, :] = (
                 ret_array[1:, :] - coeff["input_offset"][:, np.newaxis]
             ) * coeff["input_scale"][:, np.newaxis]

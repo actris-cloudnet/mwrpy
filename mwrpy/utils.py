@@ -93,7 +93,7 @@ def isscalar(array: Any) -> bool:
     return False
 
 
-def isbit(array: int | np.ndarray, nth_bit: int) -> np.ndarray:
+def isbit(array: np.ndarray, nth_bit: int) -> np.ndarray:
     """Tests if nth bit (0,1,2..) is set.
     Args:
         array: Integer array.
@@ -116,7 +116,7 @@ def isbit(array: int | np.ndarray, nth_bit: int) -> np.ndarray:
     return array & mask > 0
 
 
-def setbit(array: int | np.ndarray, nth_bit: int) -> np.ndarray:
+def setbit(array: np.ndarray, nth_bit: int) -> np.ndarray:
     """Sets nth bit (0, 1, 2..) on number.
     Args:
         array: Integer array.
@@ -243,16 +243,15 @@ def get_coeff_list(site: str, prefix: str):
     c_list = [x for x in s_list if x]
 
     if len(c_list) > 0:
-        c_list = sorted(c_list[0])
-    else:
-        logging.warning(
-            "No coefficient files for product "
-            + prefix
-            + " found in directory "
-            + "/site_config/"
-            + site
-            + "/coefficients/"
-        )
+        return sorted(c_list[0])
+    logging.warning(
+        "No coefficient files for product "
+        + prefix
+        + " found in directory "
+        + "/site_config/"
+        + site
+        + "/coefficients/"
+    )
     return c_list
 
 
