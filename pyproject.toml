@@ -1,9 +1,18 @@
 [project]
 name = "mwrpy"
 description = "Python package for Microwave Radiometer processing in ACTRIS"
-readme = "README.md"
 authors = [{name = "University of Cologne", email = "actris-ccres-mwr@uni-koeln.de"}]
+readme = "README.md"
+license = {file = "LICENSE"}
 requires-python = ">=3.10"
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Scientific/Engineering",
+]
 dependencies = [
   "ephem",
   "matplotlib",
