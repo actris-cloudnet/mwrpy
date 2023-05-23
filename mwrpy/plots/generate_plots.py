@@ -256,7 +256,7 @@ def _find_valid_fields(nc_file: str, names: list) -> tuple[list, list]:
 def _is_height_dimension(full_path: str) -> bool:
     """Checks for height dimension in netCDF file."""
     with netCDF4.Dataset(full_path) as nc:
-        is_height = "altitude" in nc.variables
+        is_height = "height" in nc.variables
     return is_height
 
 
@@ -304,7 +304,7 @@ def _initialize_figure(n_subplots: int, dpi) -> tuple:
 
 def _read_ax_values(full_path: str) -> tuple[ndarray, ndarray]:
     """Returns time and height arrays."""
-    fields = ["time", "altitude"]
+    fields = ["time", "height"]
     time, height = read_nc_fields(full_path, fields)
     height_km = height / 1000
     return time, height_km
@@ -793,7 +793,7 @@ def _plot_irt(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
             markersize=0.75,
             fillstyle="full",
             color="sienna",
-            label=str(ir_wavelength[0]) + " µm",
+            label=str(ir_wavelength[0]) + " m",
         )
     if data_in.shape[1] > 1:
         if not data_in[:, 1].mask.all():
@@ -804,7 +804,7 @@ def _plot_irt(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
                 markersize=0.75,
                 fillstyle="full",
                 color=_COLORS["shockred"],
-                label=str(ir_wavelength[1]) + " µm",
+                label=str(ir_wavelength[1]) + " m",
             )
     ax.set_ylim((vmin, vmax))
     ax.legend(loc="upper right", markerscale=6)
@@ -1052,8 +1052,8 @@ def _plot_tb(
         no_flag = np.where(quality_flag[:, i] == 0)[0]
         if len(np.array(no_flag)) == 0:
             no_flag = np.arange(len(time))
-        tb_m = np.append(tb_m, [np.mean(data_in[no_flag, i])])  # TB mean
-        tb_s = np.append(tb_s, [np.std(data_in[no_flag, i])])  # TB std
+        tb_m = np.append(tb_m, [np.nanmean(data_in[no_flag, i])])  # TB mean
+        tb_s = np.append(tb_s, [np.nanstd(data_in[no_flag, i])])  # TB std
         axi.plot(
             time,
             np.ones(len(time)) * tb_m[i],
@@ -1065,12 +1065,12 @@ def _plot_tb(
         flag = np.where(quality_flag[:, i] > 0)[0]
         axi.plot(time[flag], data_in[flag, i], "ro", markersize=0.75, fillstyle="full")
         axi.set_facecolor(_COLORS["lightgray"])
-        dif = np.max(data_in[no_flag, i]) - np.min(data_in[no_flag, i])
+        dif = np.nanmax(data_in[no_flag, i]) - np.nanmin(data_in[no_flag, i])
         _set_ax(
             axi,
-            np.max(data_in[no_flag, i]) + 0.25 * dif,
+            np.nanmax(data_in[no_flag, i]) + 0.25 * dif,
             "",
-            np.min(data_in[no_flag, i]) - 0.25 * dif,
+            np.nanmin(data_in[no_flag, i]) - 0.25 * dif,
         )
         if i in (6, 13):
             _set_labels(fig, axi, nc_file)
@@ -1111,8 +1111,8 @@ def _plot_tb(
         axaK.set_xticklabels(axaK.get_xticks(), rotation=30)
         axaK.set_xlim(
             [
-                np.floor(np.min(frequency[np.array(params["receiver"]) == 1]) - 0.1),
-                np.ceil(np.max(frequency[np.array(params["receiver"]) == 1]) + 0.1),
+                np.floor(np.nanmin(frequency[np.array(params["receiver"]) == 1]) - 0.1),
+                np.ceil(np.nanmax(frequency[np.array(params["receiver"]) == 1]) + 0.1),
             ]
         )
         minv = np.nanmin(
@@ -1143,8 +1143,8 @@ def _plot_tb(
         axaV.set_xticklabels(axaV.get_xticks(), rotation=30)
         axaV.set_xlim(
             [
-                np.floor(np.min(frequency[np.array(params["receiver"]) == 2]) - 0.1),
-                np.ceil(np.max(frequency[np.array(params["receiver"]) == 2]) + 0.1),
+                np.floor(np.nanmin(frequency[np.array(params["receiver"]) == 2]) - 0.1),
+                np.ceil(np.nanmax(frequency[np.array(params["receiver"]) == 2]) + 0.1),
             ]
         )
         minv = np.nanmin(
@@ -1240,26 +1240,30 @@ def _plot_tb(
             axa[irec].set_xlabel("Time (UTC)", fontsize=12)
             axa[irec].set_ylim([0, np.nanmax(tb_m[no_flag, irec]) + 0.5])
 
-            if len(np.where(isbit(qf[:, 0], 5))[0]) > 0:
-                data_g = np.zeros((len(time), 10), np.float32)
-                data_g[isbit(qf[:, 0], 5), :] = 1.0
-                _plot_segment_data(
-                    axa[irec],
-                    data_g,
-                    "tb_missing",
-                    (time, np.linspace(0, np.nanmax(tb_m[no_flag, irec]) + 0.5, 10)),
-                    nc_file,
-                )
-                handles, labels = axa[irec].get_legend_handles_labels()
-                handles.append(Patch(facecolor=_COLORS["gray"]))
-                labels.append("rain_detected")
-                axa[irec].legend(handles, labels, loc="upper right")
+            # if len(np.where(isbit(qf[:, 0], 5))[0]) > 0:
+            #     data_g = np.zeros((len(time), 10), np.float32)
+            #     data_g[isbit(qf[:, 0], 5), :] = 1.0
+            #     _plot_segment_data(
+            #         axa[irec],
+            #         data_g,
+            #         "tb_missing",
+            #         (time, np.linspace(0, np.nanmax(tb_m[no_flag, irec]) + 0.5, 10)),
+            #         nc_file,
+            #     )
+            #     handles, labels = axa[irec].get_legend_handles_labels()
+            #     handles.append(Patch(facecolor=_COLORS["gray"]))
+            #     labels.append("rain_detected")
+            #     axa[irec].legend(handles, labels, loc="upper right")
 
 
 def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
     """Plot for meteorological sensors."""
 
     ylabel = ATTRIBUTES[name].ylabel
+    if name == "rainfall_rate":
+        data_in *= 1000.0 * 3600.0
+    if name == "air_pressure":
+        data_in /= 100.0
     if name == "relative_humidity":
         data_in *= 100.0
         ylabel = "relative humidity (%)"
@@ -1276,11 +1280,7 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
         time, time[int(width / 2 - 1) : int(-width / 2)], rolling_mean
     )
 
-    if (
-        (name != "rainfall_rate")
-        | (name != "air_temperature")
-        | (name != "relative_humidity")
-    ):
+    if name not in ("rainfall_rate", "air_temperature", "relative_humidity"):
         ax.plot(time, data, ".", alpha=0.8, color=_COLORS["darksky"], markersize=1)
         ax.plot(
             time, rolling_mean, "o", fillstyle="full", color="darkblue", markersize=3
@@ -1288,7 +1288,7 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
     vmin, vmax = ATTRIBUTES[name].plot_range
     if name == "air_pressure":
         vmin, vmax = np.nanmin(data) - 1.0, np.nanmax(data) + 1.0
-    if (name == "wind_speed") | (name == "rainfall_rate"):
+    if name in ("wind_speed", "rainfall_rate"):
         vmin, vmax = 0.0, np.nanmax([np.nanmax(data) + 1.0, 2.0])
 
     _set_ax(ax, vmax, ylabel, min_y=vmin)
@@ -1428,7 +1428,7 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
         ticks = f(ax.get_yticks())
         ax2.yaxis.set_major_locator(FixedLocator(ticks))
         ax2.yaxis.set_major_formatter(FormatStrFormatter("%.3f"))
-        _set_ax(ax, vmax, "rain rate (" + ylabel + ")", min_y=vmin)
+        _set_ax(ax, vmax, "rainfall rate (" + ylabel + ")", min_y=vmin)
         ax3 = ax.twinx()
         ax3.plot(time, data, ".", alpha=0.8, color=_COLORS["darksky"], markersize=1)
         ax3.plot(

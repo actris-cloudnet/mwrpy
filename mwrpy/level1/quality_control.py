@@ -1,5 +1,6 @@
 """Quality control for level1 data."""
 import datetime
+import os
 
 import ephem
 import netCDF4 as nc
@@ -7,6 +8,8 @@ import numpy as np
 import pandas as pd
 from numpy import ma
 
+from mwrpy import rpg_mwr
+from mwrpy.level1.lev1_meta_nc import get_data_attributes
 from mwrpy.level1.rpg_bin import RpgBin
 from mwrpy.level2.get_ret_coeff import get_mvr_coeff
 from mwrpy.level2.write_lev2_nc import retrieval_input
@@ -16,11 +19,11 @@ Fill_Value_Float = -999.0
 Fill_Value_Int = -99
 
 
-def apply_qc(site: str, data: dict, params: dict) -> None:
+def apply_qc(site: str, data_in: RpgBin, params: dict) -> None:
     """This function performs the quality control of level 1 data.
     Args:
         site: Name of site.
-        data: Level 1 data.
+        data_in: Level 1 data.
         params: Site specific parameters.
 
     Returns:
@@ -34,11 +37,13 @@ def apply_qc(site: str, data: dict, params: dict) -> None:
         apply_qc('site', 'lev1_data', 'params')
 
     """
+    data = data_in.data
+
     data["quality_flag"] = np.zeros(data["tb"].shape, dtype=np.int32)
     data["quality_flag_status"] = np.zeros(data["tb"].shape, dtype=np.int32)
 
     if params["flag_status"][3] == 0:
-        ind_bit4 = spectral_consistency(data, site)
+        ind_bit4 = spectral_consistency(data, site, data_in.date)
     ind_bit6 = np.where(data["rain"] == 1)
     ind_bit7 = orbpos(data, params)
 
@@ -185,7 +190,7 @@ def orbpos(data: dict, params: dict) -> np.ndarray:
     return flag_ind
 
 
-def spectral_consistency(data: dict, site: str) -> np.ndarray:
+def spectral_consistency(data: dict, site: str, date: str) -> np.ndarray:
     """Applies spectral consistency coefficients for given frequency index,
     writes 2S02 product and returns indices to be flagged"""
 
@@ -193,7 +198,7 @@ def spectral_consistency(data: dict, site: str) -> np.ndarray:
     abs_diff = ma.masked_all(data["tb"].shape, dtype=np.float32)
     rpg_dat = {}
     rpg_dat["tb_spectrum"] = np.ones(data["tb"].shape) * np.nan
-    global_attributes, _ = read_yaml_config(site)
+    global_attributes, params = read_yaml_config(site)
 
     c_list = get_coeff_list(site, "spc")
     if len(c_list) > 0:
@@ -373,4 +378,55 @@ def spectral_consistency(data: dict, site: str) -> np.ndarray:
             )
         ] = 1
 
+    rpg_dat["tb"] = data["tb"]
+    fields = [
+        "frequency",
+        "receiver_nb",
+        "receiver",
+        "time",
+        "time_bnds",
+        "latitude",
+        "longitude",
+        "azimuth_angle",
+        "elevation_angle",
+    ]
+    for name in fields:
+        rpg_dat[name] = data[name][:]
+
+    _del_lev1_att(global_attributes)
+    hatpro = rpg_mwr.Rpg(rpg_dat)
+    hatpro.data = get_data_attributes(hatpro.data, "2S02")
+    data_out_l2 = (
+        params["data_out"]
+        + "level2/"
+        + date.split("-")[0]
+        + "/"
+        + date.split("-")[1]
+        + "/"
+        + date.split("-")[2]
+        + "/"
+    )
+    if not os.path.isdir(data_out_l2):
+        os.makedirs(data_out_l2)
+    output_file = (
+        data_out_l2
+        + "MWR_2S02_"
+        + global_attributes["wigos_station_id"]
+        + "_"
+        + date.split("-")[0]
+        + date.split("-")[1]
+        + date.split("-")[2]
+        + ".nc"
+    )
+    rpg_mwr.save_rpg(hatpro, output_file, global_attributes, "2S02")
+
     return flag_ind
+
+
+def _del_lev1_att(global_attributes: dict) -> None:
+    """Remove lev1 only attributes"""
+    att_del = ["ir_instrument", "met_instrument", "_accuracy"]
+    att_names = global_attributes.keys()
+    for name in list(att_names):
+        if any(x in name for x in att_del):
+            del global_attributes[name]

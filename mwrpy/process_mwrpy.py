@@ -19,7 +19,6 @@ PRODUCT_NAME = {
     "2P07": "potential_temperature",
     "2P08": "equivalent_potential_temperature",
     "2S02": "tb_spectrum",
-    "stats": "",
 }
 
 
@@ -33,7 +32,7 @@ def main(args):
             if product not in PRODUCT_NAME:
                 logging.error(f"Product {product} not recognised")
                 continue
-            if args.command != "plot":
+            if (args.command != "plot") & (product != "2S02"):
                 logging.info(f"Processing {product} product, {args.site} {date}")
                 process_product(product, date, args.site)
             logging.info(f"Plotting {product} product, {args.site} {date}")
@@ -81,6 +80,9 @@ def plot_product(prod: str, date, site: str):
         keymap = {
             "tb": ["tb"],
             "sen": ["elevation_angle", "azimuth_angle"],
+            "irt": ["irt"],
+            "met": ["air_temperature", "relative_humidity", "rainfall_rate"],
+            "met2": ["air_pressure", "wind_direction", "wind_speed"],
             "quality_flag": ["quality_flag"],
             "met_quality_flag": ["met_quality_flag"],
             "hkd": ["t_amb", "t_rec", "t_sta"],

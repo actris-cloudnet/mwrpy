@@ -49,7 +49,7 @@ def lev1_to_nc(
         update_lev1_attributes(global_attributes, data_type)
     rpg_bin = prepare_data(path_to_files, data_type, params, site)
     if data_type in ("1B01", "1C01"):
-        apply_qc(site, rpg_bin.data, params)
+        apply_qc(site, rpg_bin, params)
     if data_type in ("1B21", "1C01"):
         apply_met_qc(rpg_bin.data, params)
     hatpro = rpg_mwr.Rpg(rpg_bin.data)
