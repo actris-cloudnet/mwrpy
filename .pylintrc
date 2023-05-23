@@ -17,7 +17,8 @@ disable =
   duplicate-code,
   too-many-function-args,
   too-many-branches,
-
+  logging-not-lazy,
+  too-many-lines,
 
 [format]
 max-line-length = 88

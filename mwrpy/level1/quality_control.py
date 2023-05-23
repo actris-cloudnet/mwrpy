@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 from numpy import ma
 
-from mwrpy.level1.rpg_bin import RpgBin
 from mwrpy.level2.get_ret_coeff import get_mvr_coeff
 from mwrpy.level2.write_lev2_nc import retrieval_input
 from mwrpy.utils import get_coeff_list, read_yaml_config, setbit
@@ -197,6 +196,7 @@ def spectral_consistency(data: dict, site: str) -> np.ndarray:
 
     c_list = get_coeff_list(site, "spc")
     if len(c_list) > 0:
+        # pylint: disable=unbalanced-tuple-unpacking
         (
             coeff,
             input_scale,

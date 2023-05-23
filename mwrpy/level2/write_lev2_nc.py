@@ -115,6 +115,7 @@ def get_products(
                 site, product, lev1["frequency"][:]
             )
         else:
+            # pylint: disable-next=unbalanced-tuple-unpacking
             (
                 coeff,
                 input_scale,
@@ -211,6 +212,7 @@ def get_products(
         if coeff[0]["RT"] < 2:
             coeff, offset, lin, quad = get_mvr_coeff(site, ret, lev1["frequency"][:])
         else:
+            # pylint: disable-next=unbalanced-tuple-unpacking
             (
                 coeff,
                 input_scale,
@@ -296,6 +298,7 @@ def get_products(
         if coeff[0]["RT"] < 2:
             coeff, offset, lin, quad = get_mvr_coeff(site, "tpb", lev1["frequency"][:])
         else:
+            # pylint: disable-next=unbalanced-tuple-unpacking
             coeff, _, _, _, _, _, _, _ = get_mvr_coeff(
                 site, "tpb", lev1["frequency"][:]
             )

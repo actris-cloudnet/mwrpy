@@ -167,8 +167,7 @@ def interpol_2d(
             result[:, ind] = np.interp(x_new, x_in, values)
     result[~np.isfinite(result)] = 0
     masked = ma.make_mask(result)
-
-    return ma.array(result, mask=~masked)
+    return ma.array(result, mask=np.invert(masked))
 
 
 def add_interpol1d(
