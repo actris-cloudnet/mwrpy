@@ -88,7 +88,14 @@ def plot_product(prod: str, date, site: str):
             "hkd": ["t_amb", "t_rec", "t_sta"],
         }
         for key, variables in keymap.items():
-            ele_range = [89.0, 91.0] if key == "tb" else [0, 91]
+            ele_range = (
+                (
+                    89.0,
+                    91.0,
+                )
+                if key == "tb"
+                else (0.0, 91.0)
+            )
             generate_figure(
                 filename,
                 variables,
@@ -98,7 +105,17 @@ def plot_product(prod: str, date, site: str):
             )
 
     elif os.path.isfile(filename) and (prod[0] == "2"):
-        elevation = [89.0, 91.0] if prod in ("2I01", "2I02") else [0, 91.0]
+        elevation = (
+            (
+                89.0,
+                91.0,
+            )
+            if prod in ("2I01", "2I02")
+            else (
+                0,
+                91.0,
+            )
+        )
         var = PRODUCT_NAME[prod]
         generate_figure(
             filename,

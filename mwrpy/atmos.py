@@ -171,7 +171,7 @@ def find_lwcl_free(lev1: dict) -> tuple[np.ndarray, np.ndarray]:
         tb_mx = tb_std.rolling("20min", center=True, min_periods=100).max()
 
         if "irt" in lev1:
-            tb_thres = 0.1
+            tb_thres = 0.15
             irt = lev1["irt"][:, :]
             irt[irt == -999.0] = np.nan
             irt = np.nanmean(irt, axis=1)

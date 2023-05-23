@@ -75,7 +75,10 @@ def generate_figure(
     show: bool = False,
     save_path: str = None,
     max_y: int = 5,
-    ele_range: list = [0.0, 91.0],
+    ele_range: tuple[float, float] = (
+        0.0,
+        91.0,
+    ),
     pointing: int = 0,
     dpi: int = 120,
     image_name: str | None = None,
@@ -1377,8 +1380,9 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
 
         yl = ax.get_ylim()
         yl2 = ax2.get_ylim()
-        f = lambda x: yl2[0] + (x - yl[0]) / (yl[1] - yl[0]) * (yl2[1] - yl2[0])
-        ticks = f(ax.get_yticks())
+
+        ticks = _calculate_ticks(ax.get_yticks(), yl, yl2)
+
         ax2.yaxis.set_major_locator(FixedLocator(ticks))
         ax2.yaxis.set_major_formatter(FormatStrFormatter("%.4f"))
         ax3 = ax.twinx()
@@ -1424,8 +1428,9 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
             ax.yaxis.set_major_locator(minorLocator)
         yl = ax.get_ylim()
         yl2 = ax2.get_ylim()
-        f = lambda x: yl2[0] + (x - yl[0]) / (yl[1] - yl[0]) * (yl2[1] - yl2[0])
-        ticks = f(ax.get_yticks())
+
+        ticks = _calculate_ticks(ax.get_yticks(), yl, yl2)
+
         ax2.yaxis.set_major_locator(FixedLocator(ticks))
         ax2.yaxis.set_major_formatter(FormatStrFormatter("%.3f"))
         _set_ax(ax, vmax, "rainfall rate (" + ylabel + ")", min_y=vmin)
@@ -1438,6 +1443,10 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
         ax3.set_yticklabels([])
         ax3.set_yticks([])
         ax3.set_frame_on(False)
+
+
+def _calculate_ticks(x, yl, yl2):
+    return yl2[0] + (x - yl[0]) / (yl[1] - yl[0]) * (yl2[1] - yl2[0])
 
 
 def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):

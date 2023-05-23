@@ -202,6 +202,7 @@ def spectral_consistency(data: dict, site: str, date: str) -> np.ndarray:
 
     c_list = get_coeff_list(site, "spc")
     if len(c_list) > 0:
+        # pylint: disable=unbalanced-tuple-unpacking
         (
             coeff,
             input_scale,

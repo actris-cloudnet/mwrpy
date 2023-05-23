@@ -3,102 +3,101 @@
 type: hatpro
 
 params:
-    altitude: 108.
-    longitude: 6.407
-    latitude: 50.906
+  altitude: 108.
+  longitude: 6.407
+  latitude: 50.906
 
-    # path to level1 data and path for processed files
-    data_in: /data/obs/site/jue/tophat/l1/
-    data_out: /data/obs/site/jue/tophat/actris/
+  # path to level1 data and path for processed files
+  data_in: /data/obs/site/jue/tophat/l1/
+  data_out: /data/obs/site/jue/tophat/actris/
 
-    # path to ABSCAL.HIS file
-    path_to_cal: /data/obs/site/jue/tophat/calibration/LOG_TRANSFER/CALIB/
+  # path to ABSCAL.HIS file
+  path_to_cal: /data/obs/site/jue/tophat/calibration/LOG_TRANSFER/CALIB/
 
-    # integration time for BL scans in seconds
-    scan_time: 50.
+  # integration time for BL scans in seconds
+  scan_time: 50.
 
-    # integration time of measurements in seconds
-    int_time: 1
+  # integration time of measurements in seconds
+  int_time: 1
 
-    # Azimuth angle is transformed to geographical coordinates (E=90 and W=270), currently only for RPG scanners.
-    # If you do not want to transform the coordinates set azi_cor to -999.
-    azi_cor: -999.
-    # Azimuth correction:
-    # Set az_cor to the angle that RPG software gives when instrument is pointing to the North.
-    const_azi: -999.
+  # Azimuth angle is transformed to geographical coordinates (E=90 and W=270), currently only for RPG scanners.
+  # If you do not want to transform the coordinates set azi_cor to -999.
+  azi_cor: -999.
+  # Azimuth correction:
+  # Set az_cor to the angle that RPG software gives when instrument is pointing to the North.
+  const_azi: -999.
 
-    # quality flag status for level 1 data; 0: flag active
-    # Bit 1: missing_tb
-    # Bit 2: tb_below_threshold
-    # Bit 3: tb_above_threshold
-    # Bit 4: spectral_consistency_above_threshold
-    # Bit 5: receiver_sanity_failed
-    # Bit 6: rain_detected
-    # Bit 7: sun_moon_in_beam
-    # Bit 8: tb_offset_above_threshold
-    flag_status: [0, 0, 0, 0, 0, 0, 0, 1]
+  # quality flag status for level 1 data; 0: flag active
+  # Bit 1: missing_tb
+  # Bit 2: tb_below_threshold
+  # Bit 3: tb_above_threshold
+  # Bit 4: spectral_consistency_above_threshold
+  # Bit 5: receiver_sanity_failed
+  # Bit 6: rain_detected
+  # Bit 7: sun_moon_in_beam
+  # Bit 8: tb_offset_above_threshold
+  flag_status: [0, 0, 0, 0, 0, 0, 0, 1]
 
-    # availability of IR
-    ir_flag: True
-
+  # availability of IR
+  ir_flag: True
 
 global_specs:
-    # A succinct description of what is in the dataset, composed of instrument type and site name
-    title: HATPRO G5 MWR at Juelich, Germany
+  # A succinct description of what is in the dataset, composed of instrument type and site name
+  title: HATPRO G5 MWR at Juelich, Germany
 
-    # Versioning of the datasets (containing date and software version)
-    history:
+  # Versioning of the datasets (containing date and software version)
+  history:
 
-    # Where the original data was produced
-    institution: University of Cologne
+  # Where the original data was produced
+  institution: University of Cologne
 
-    # Miscellaneous Information about the dataset or methods used to produce it
-    comment:
+  # Miscellaneous Information about the dataset or methods used to produce it
+  comment:
 
-    # References that describe the data or methods used to produce it
-    references:
+  # References that describe the data or methods used to produce it
+  references:
 
-    # Name of measurement station
-    site_location: juelich
+  # Name of measurement station
+  site_location: juelich
 
-    # E-PROFILE instrument identifier. “A” if there is only one instrument on the station. Additional instruments are identified with the letters B, C, etc.
-    instrument_id:
+  # E-PROFILE instrument identifier. “A” if there is only one instrument on the station. Additional instruments are identified with the letters B, C, etc.
+  instrument_id:
 
-    # WIGOS Station identifier acording to WIGOS convention
-    wigos_station_id: 0-276-0-10508
+  # WIGOS Station identifier acording to WIGOS convention
+  wigos_station_id: 0-276-0-10508
 
-    # Department responsible for the instrument
-    principal_investigator: Institute for Geophysics and Meteorology (IGMK)
+  # Department responsible for the instrument
+  principal_investigator: Institute for Geophysics and Meteorology (IGMK)
 
-    # Instrument generation
-    instrument_generation: G5
+  # Instrument generation
+  instrument_generation: G5
 
-    # Specific to mainboard
-    instrument_hw_id:
+  # Specific to mainboard
+  instrument_hw_id:
 
-    # Name of network(s) that instrument may be part of
-    network_name: ACTRIS
+  # Name of network(s) that instrument may be part of
+  network_name: ACTRIS
 
-    # Name of campaign instrument may collect data for
-    campaign_name:
+  # Name of campaign instrument may collect data for
+  campaign_name:
 
-    # List of files the data set is depending on
-    dependencies:
+  # List of files the data set is depending on
+  dependencies:
 
-    # Data license
-    license:
+  # Data license
+  license:
 
-    # Logbook repair/replacement work performed
-    instrument_history:
+  # Logbook repair/replacement work performed
+  instrument_history:
 
-    # Fabrication year of the infrared radiometer
-    ir_instrument_fabrication_year:
+  # Fabrication year of the infrared radiometer
+  ir_instrument_fabrication_year:
 
-    # Logbook repair/replacement work performed
-    ir_instrument_history:
+  # Logbook repair/replacement work performed
+  ir_instrument_history:
 
-    # Fabrication year of the weather station
-    met_instrument_fabrication_year:
+  # Fabrication year of the weather station
+  met_instrument_fabrication_year:
 
-    # Logbook repair/replacement work performed
-    met_instrument_history:
+  # Logbook repair/replacement work performed
+  met_instrument_history:
