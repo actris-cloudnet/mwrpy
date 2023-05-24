@@ -259,7 +259,7 @@ def _find_valid_fields(nc_file: str, names: list) -> tuple[list, list]:
 def _is_height_dimension(full_path: str) -> bool:
     """Checks for height dimension in netCDF file."""
     with netCDF4.Dataset(full_path) as nc:
-        is_height = "altitude" in nc.variables
+        is_height = "height" in nc.variables
     return is_height
 
 
