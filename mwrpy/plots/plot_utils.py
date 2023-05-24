@@ -21,9 +21,9 @@ def _get_ret_flag(nc_file: str, time: ndarray) -> ndarray:
     """Returns quality flag for frequencies used in retrieval."""
     flag = np.zeros(len(time), np.int32)
     lev1_file = _get_lev1(nc_file)
-    quality_flag, t_lev1, f_lev1 = read_nc_fields(
-        lev1_file, ["quality_flag", "time", "frequency"]
-    )
+    quality_flag = read_nc_fields(lev1_file, "quality_flag")
+    t_lev1 = read_nc_fields(lev1_file, "time")
+    f_lev1 = read_nc_fields(lev1_file, "frequency")
     freq = get_ret_freq(nc_file)
     _, freq_ind, _ = np.intersect1d(
         f_lev1, freq, assume_unique=False, return_indices=True
