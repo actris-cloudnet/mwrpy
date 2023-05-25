@@ -7,6 +7,7 @@ import netCDF4
 import numpy as np
 from matplotlib import rcParams
 from matplotlib.colors import BoundaryNorm, ListedColormap
+from matplotlib.patches import Patch
 from matplotlib.ticker import (
     FixedLocator,
     FormatStrFormatter,
@@ -77,7 +78,7 @@ def generate_figure(
     nc_file: str,
     field_names: list,
     show: bool = False,
-    save_path: str = None,
+    save_path: str | None = None,
     max_y: int = 5,
     ele_range: tuple[float, float] = (
         0.0,
@@ -88,7 +89,7 @@ def generate_figure(
     image_name: str | None = None,
     sub_title: bool = True,
     title: bool = True,
-) -> tuple[Dimensions, str]:
+) -> tuple[Dimensions, str] | None:
     """Generates a mwrpy figure.
     Args:
         nc_file (str): Input file.
@@ -114,25 +115,33 @@ def generate_figure(
     """
 
     valid_fields, valid_names = _find_valid_fields(nc_file, field_names)
-    file_name = []
     if len(valid_fields) > 0:
         is_height = _is_height_dimension(nc_file)
         fig, axes = _initialize_figure(len(valid_fields), dpi)
 
         for ax, field, name in zip(axes, valid_fields, valid_names):
             time = _read_time_vector(nc_file)
-            if ATTRIBUTES[name].ele is not None:
-                ele_range = ATTRIBUTES[name].ele
+            elevation_range = ATTRIBUTES[name].ele
+            if elevation_range is None:
+                elevation_range = ele_range
             ax.set_facecolor(_COLORS["lightgray"])
             if name not in ("elevation_angle", "azimuth_angle"):
-                time = _elevation_filter(nc_file, time, ele_range)
-                field = _elevation_filter(nc_file, field, ele_range)
+                time = _elevation_filter(nc_file, time, elevation_range)
+                field = _elevation_filter(nc_file, field, elevation_range)
             if title:
                 _set_title(ax, name, nc_file, "")
             if not is_height:
                 source = ATTRIBUTES[name].source
                 _plot_instrument_data(
-                    ax, field, name, source, time, fig, nc_file, ele_range, pointing
+                    ax,
+                    field,
+                    name,
+                    source,
+                    time,
+                    fig,
+                    nc_file,
+                    elevation_range,
+                    pointing,
                 )
             else:
                 ax_value = _read_ax_values(nc_file)
@@ -148,7 +157,8 @@ def generate_figure(
         file_name = handle_saving(
             nc_file, image_name, save_path, show, case_date, valid_names
         )
-    return Dimensions(fig, axes), file_name
+        return Dimensions(fig, axes), file_name
+    return None
 
 
 def _mark_gaps(
@@ -341,7 +351,7 @@ def _screen_high_altitudes(data_field: ndarray, ax_values: tuple, max_y: int) ->
     return data_field, (ax_values[0], alt)
 
 
-def _set_ax(ax, max_y: float, ylabel: str = None, min_y: float = 0.0):
+def _set_ax(ax, max_y: float, ylabel: str | None = None, min_y: float = 0.0):
     """Sets ticks and tick labels for plt.imshow()."""
     ticks_x_labels = _get_standard_time_ticks()
     ax.set_ylim(min_y, max_y)
@@ -420,6 +430,7 @@ def _plot_segment_data(ax, data: ma.MaskedArray, name: str, axes: tuple, nc_file
         pl = ax.pcolor(*axes, data.T, cmap=cmap, shading="nearest", vmin=-0.5, vmax=1.5)
     else:
         variables = ATTRIBUTES[name]
+        assert variables.clabel is not None
         clabel = [x[0] for x in variables.clabel]
         cbar = [x[1] for x in variables.clabel]
         cmap = ListedColormap(cbar)
@@ -439,9 +450,7 @@ def _plot_segment_data(ax, data: ma.MaskedArray, name: str, axes: tuple, nc_file
         colorbar.ax.set_yticklabels(clabel, fontsize=13)
 
 
-def _plot_colormesh_data(
-    ax, data_in: ma.MaskedArray, name: str, axes: tuple, nc_file: str
-):
+def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_file: str):
     """Plots continuous 2D variable.
     Creates only one plot, so can be used both one plot and subplot type of figs.
     Args:
@@ -451,7 +460,7 @@ def _plot_colormesh_data(
         axes (tuple): Time and height 1D arrays.
         nc_file (str): Input file.
     """
-    data = data_in
+    data = data_in.copy()
     variables = ATTRIBUTES[name]
     nbin = 7
     nlev1 = 31
@@ -474,6 +483,7 @@ def _plot_colormesh_data(
         nbin = 6
 
     if name == "relative_humidity":
+        assert isinstance(data_in, ma.MaskedArray)
         data[data_in.mask] = np.nan
         data[data > 1.0] = 1.0
         data[data < 0.0] = 0.0
@@ -519,7 +529,7 @@ def _plot_colormesh_data(
             0,
         )
 
-    pl = ax.contourf(
+    ax.contourf(
         time,
         axes[1],
         data.T,
@@ -529,7 +539,6 @@ def _plot_colormesh_data(
         alpha=0.5,
     )
 
-    data = np.copy(data_in)
     flag = _get_ret_flag(nc_file, axes[0])
 
     if np.ma.median(np.diff(axes[0][:])) < 5 / 60:
@@ -578,7 +587,7 @@ def _plot_colormesh_data(
         if float(l.get_text()) in ta:
             l.set_visible(False)
         ta = np.append(ta, [float(l.get_text())])
-    cp = ax.contour(
+    ax.contour(
         time,
         axes[1],
         data.T,
@@ -743,6 +752,7 @@ def _plot_sen(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
     pointing_flag = read_nc_fields(nc_file, "pointing_flag")
     quality_flag = read_nc_fields(nc_file, "quality_flag")
     qf = _get_freq_flag(quality_flag, [6])
+    assert variables.plot_range is not None
     vmin, vmax = variables.plot_range
     time = _nan_time_gaps(time, 15.0 / 60.0)
     time1 = time[(pointing_flag == 1)]
@@ -791,10 +801,11 @@ def _plot_sen(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
     _set_ax(ax, vmax, variables.ylabel, vmin)
 
 
-def _plot_irt(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
+def _plot_irt(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
     """Plot for infrared temperatures."""
 
     variables = ATTRIBUTES[name]
+    assert variables.plot_range is not None
     vmin, vmax = variables.plot_range
     ir_wavelength = read_nc_fields(nc_file, "ir_wavelength")
     if not data_in[:, 0].mask.all():
@@ -805,7 +816,7 @@ def _plot_irt(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
             markersize=0.75,
             fillstyle="full",
             color="sienna",
-            label=str(ir_wavelength[0]) + " m",
+            label=str(ir_wavelength[0] / 1e-6) + " µm",
         )
     if data_in.shape[1] > 1:
         if not data_in[:, 1].mask.all():
@@ -816,7 +827,7 @@ def _plot_irt(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
                 markersize=0.75,
                 fillstyle="full",
                 color=_COLORS["shockred"],
-                label=str(ir_wavelength[1]) + " m",
+                label=str(ir_wavelength[1] / 1e-6) + " µm",
             )
     ax.set_ylim((vmin, vmax))
     ax.legend(loc="upper right", markerscale=6)
@@ -1058,7 +1069,8 @@ def _plot_tb(
         )
 
     trans = ScaledTranslation(10 / 72, -5 / 72, fig.dpi_scale_trans)
-    tb_m, tb_s = [], []
+    tb_m: list[np.ndarray] = []
+    tb_s: list[np.ndarray] = []
 
     for i, axi in enumerate(axs.T.flatten()):
         no_flag = np.where(quality_flag[:, i] == 0)[0]
@@ -1252,20 +1264,20 @@ def _plot_tb(
             axa[irec].set_xlabel("Time (UTC)", fontsize=12)
             axa[irec].set_ylim([0, np.nanmax(tb_m[no_flag, irec]) + 0.5])
 
-            # if len(np.where(isbit(qf[:, 0], 5))[0]) > 0:
-            #     data_g = np.zeros((len(time), 10), np.float32)
-            #     data_g[isbit(qf[:, 0], 5), :] = 1.0
-            #     _plot_segment_data(
-            #         axa[irec],
-            #         data_g,
-            #         "tb_missing",
-            #         (time, np.linspace(0, np.nanmax(tb_m[no_flag, irec]) + 0.5, 10)),
-            #         nc_file,
-            #     )
-            #     handles, labels = axa[irec].get_legend_handles_labels()
-            #     handles.append(Patch(facecolor=_COLORS["gray"]))
-            #     labels.append("rain_detected")
-            #     axa[irec].legend(handles, labels, loc="upper right")
+            if len(np.where(isbit(qf[:, 0], 5))[0]) > 0:
+                data_g = np.zeros((len(time), 10), np.float32)
+                data_g[isbit(qf[:, 0], 5), :] = 1.0
+                _plot_segment_data(
+                    axa[irec],
+                    data_g,
+                    "tb_missing",
+                    (time, np.linspace(0, np.nanmax(tb_m[no_flag, irec]) + 0.5, 10)),
+                    nc_file,
+                )
+                handles, labels = axa[irec].get_legend_handles_labels()
+                handles.append(Patch(facecolor=_COLORS["gray"]))
+                labels.append("rain_detected")
+                axa[irec].legend(handles, labels, loc="upper right")
 
 
 def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
@@ -1297,7 +1309,9 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
         ax.plot(
             time, rolling_mean, "o", fillstyle="full", color="darkblue", markersize=3
         )
-    vmin, vmax = ATTRIBUTES[name].plot_range
+    plot_range = ATTRIBUTES[name].plot_range
+    assert plot_range is not None
+    vmin, vmax = plot_range
     if name == "air_pressure":
         vmin, vmax = np.nanmin(data) - 1.0, np.nanmax(data) + 1.0
     if name in ("wind_speed", "rainfall_rate"):
@@ -1442,6 +1456,7 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
 
         ax2.yaxis.set_major_locator(FixedLocator(ticks))
         ax2.yaxis.set_major_formatter(FormatStrFormatter("%.3f"))
+        assert ylabel is not None
         _set_ax(ax, vmax, "rainfall rate (" + ylabel + ")", min_y=vmin)
         ax3 = ax.twinx()
         ax3.plot(time, data, ".", alpha=0.8, color=_COLORS["darksky"], markersize=1)
@@ -1465,7 +1480,9 @@ def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
     data0, time0 = data_in[flag == 0], time[flag == 0]
     if len(data0) == 0:
         data0, time0 = data_in, time
-    vmin, vmax = ATTRIBUTES[name].plot_range
+    plot_range = ATTRIBUTES[name].plot_range
+    assert plot_range is not None
+    vmin, vmax = plot_range
     if name == "iwv":
         vmin, vmax = np.nanmin(data0) - 1.0, np.nanmax(data0) + 1.0
     else:

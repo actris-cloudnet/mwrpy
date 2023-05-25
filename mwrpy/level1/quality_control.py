@@ -121,7 +121,7 @@ def apply_qc(site: str, data_in: RpgBin, params: dict) -> None:
         # else:
 
 
-def orbpos(data: dict, params: dict) -> np.ndarray:
+def orbpos(data: dict, params: dict) -> tuple:
     """Calculates sun & moon elevation/azimuth angles
     and returns index for observations in the direction of the sun"""
 

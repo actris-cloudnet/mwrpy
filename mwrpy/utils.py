@@ -366,19 +366,17 @@ def read_nc_field_name(nc_file: str, name: str) -> str:
     return long_name
 
 
-def read_nc_fields(nc_file: str, names: str | list) -> ma.MaskedArray | list:
+def read_nc_fields(nc_file: str, name: str) -> np.ndarray:
     """Reads selected variables from a netCDF file.
     Args:
         nc_file: netCDF file name.
-        names: Variables to be read, e.g. 'temperature' or ['ldr', 'lwp'].
+        name: Variable to be read, e.g. 'lwp'.
     Returns:
-        ndarray/list: Array in case of one variable passed as a string.
-        List of arrays otherwise.
+        np.ndarray
     """
-    names = [names] if isinstance(names, str) else names
+    assert os.path.isfile(nc_file), f"File {nc_file} does not exist."
     with netCDF4.Dataset(nc_file) as nc:
-        data = [nc.variables[name][:] for name in names]
-    return data[0] if len(data) == 1 else data
+        return nc.variables[name][:]
 
 
 def append_data(data_in: dict, key: str, array: ma.MaskedArray) -> dict:
