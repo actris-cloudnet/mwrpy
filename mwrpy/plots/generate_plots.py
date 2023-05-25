@@ -7,8 +7,12 @@ import netCDF4
 import numpy as np
 from matplotlib import rcParams
 from matplotlib.colors import BoundaryNorm, ListedColormap
-from matplotlib.patches import Patch
-from matplotlib.ticker import FixedLocator, FormatStrFormatter, MultipleLocator
+from matplotlib.ticker import (
+    FixedLocator,
+    FormatStrFormatter,
+    MultipleLocator,
+    NullLocator,
+)
 from matplotlib.transforms import Affine2D, Bbox, ScaledTranslation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from numpy import ma, ndarray
@@ -630,26 +634,32 @@ def _plot_hkd(ax, data_in: ndarray, name: str, time: ndarray):
 
     time = _nan_time_gaps(time)
     if name == "t_amb":
-        ax.plot(
-            time,
-            np.abs(data_in[:, 0] - data_in[:, 1]),
-            color=_COLORS["darkgray"],
-            label="Difference",
-            linewidth=0.8,
-        )
-        _set_ax(
-            ax,
-            np.nanmax(np.abs(data_in[:, 0] - data_in[:, 1])) + 0.025,
-            "Sensor absolute difference (K)",
-            0.0,
-        )
-        ax.yaxis.set_label_position("right")
+        data_in[data_in == -999.0] = np.nan
+        if np.nanmax(data_in[:, 0] - data_in[:, 1]) > 0.0:
+            ax.plot(
+                time,
+                np.abs(data_in[:, 0] - data_in[:, 1]),
+                color=_COLORS["darkgray"],
+                label="Difference",
+                linewidth=0.8,
+            )
+            _set_ax(
+                ax,
+                np.nanmax(np.abs(data_in[:, 0] - data_in[:, 1])) + 0.025,
+                "Sensor absolute difference (K)",
+                0.0,
+            )
+            ax.yaxis.set_label_position("right")
+            ax.yaxis.tick_right()
+            ax.legend(loc="upper right")
+        else:
+            ax.yaxis.set_major_locator(NullLocator())
+
         ax2 = ax.twinx()
         vmin, vmax = np.nanmin(data_in) - 1.0, np.nanmax(data_in) + 1.0
         ax2.plot(time, np.mean(data_in, axis=1), color="darkblue", label="Mean")
         ax2.yaxis.tick_left()
         ax2.yaxis.set_label_position("left")
-        ax.legend(loc="upper right")
         _set_ax(ax2, vmax, "Sensor mean (K)", vmin)
         if np.nanmax(np.abs(data_in[:, 0] - data_in[:, 1])) > 0.3:
             ax.plot(
@@ -662,7 +672,6 @@ def _plot_hkd(ax, data_in: ndarray, name: str, time: ndarray):
         lines, labels = ax.get_legend_handles_labels()
         lines2, labels2 = ax2.get_legend_handles_labels()
         leg = ax2.legend(lines + lines2, labels + labels2, loc="upper right")
-        ax.yaxis.tick_right()
 
     if name == "t_rec":
         vmin, vmax = np.nanmin(data_in[:, 0]) - 0.01, np.nanmax(data_in[:, 0]) + 0.01

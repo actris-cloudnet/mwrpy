@@ -174,7 +174,10 @@ def find_lwcl_free(lev1: dict) -> tuple[np.ndarray, np.ndarray]:
             tb_thres = 0.15
             irt = lev1["irt"][:, :]
             irt[irt == -999.0] = np.nan
-            irt = np.nanmean(irt, axis=1)
+            if irt.shape[1] > 1:
+                irt = np.nanmean(irt, axis=1)
+            else:
+                irt = np.squeeze(irt)
             irt[(lev1["pointing_flag"][:] == 1) | (elevation_angle[:] < 89.0)] = np.nan
             irt_df = pd.DataFrame({"Irt": irt[:]}, index=ind)
             irt_mx = irt_df.rolling("20min", center=True, min_periods=100).max()

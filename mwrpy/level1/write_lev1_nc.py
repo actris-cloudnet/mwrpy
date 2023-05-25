@@ -291,6 +291,7 @@ def _append_hkd(
         )
 
     if data_type in ("1B01", "1C01"):
+        hkd.data["temp"][hkd.data["temp"] >= 350.0] = Fill_Value_Float
         add_interpol1d(
             rpg_bin.data, hkd.data["temp"][:, 0:2], hkd.data["time"], "t_amb"
         )

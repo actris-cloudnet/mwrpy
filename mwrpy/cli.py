@@ -48,6 +48,7 @@ def _parse_args(args):
             "2P04",
             "2P07",
             "2P08",
+            "2S02",
         ],
     )
     group.add_argument(
