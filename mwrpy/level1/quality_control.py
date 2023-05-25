@@ -1,6 +1,5 @@
 """Quality control for level1 data."""
 import datetime
-import os
 
 import ephem
 import netCDF4 as nc
@@ -13,13 +12,7 @@ from mwrpy.level1.lev1_meta_nc import get_data_attributes
 from mwrpy.level1.rpg_bin import RpgBin
 from mwrpy.level2.get_ret_coeff import get_mvr_coeff
 from mwrpy.level2.write_lev2_nc import retrieval_input
-from mwrpy.utils import (
-    _get_filename,
-    get_coeff_list,
-    isodate2date,
-    read_yaml_config,
-    setbit,
-)
+from mwrpy.utils import get_coeff_list, read_yaml_config, setbit
 
 Fill_Value_Float = -999.0
 Fill_Value_Int = -99
@@ -33,6 +26,7 @@ def apply_qc(
         site: Name of site.
         data_in: Level 1 data.
         params: Site specific parameters.
+        spec_file: Output file name of spectral product.
 
     Returns:
         None
@@ -51,7 +45,7 @@ def apply_qc(
     data["quality_flag_status"] = np.zeros(data["tb"].shape, dtype=np.int32)
 
     if params["flag_status"][3] == 0:
-        ind_bit4 = spectral_consistency(data, site, data_in.date, spec_file)
+        ind_bit4 = spectral_consistency(data, site, spec_file)
     ind_bit6 = np.where(data["rain"] == 1)
     ind_bit7 = orbpos(data, params)
 
@@ -199,7 +193,7 @@ def orbpos(data: dict, params: dict) -> tuple:
 
 
 def spectral_consistency(
-    data: dict, site: str, date: str, spec_file: str | None = None
+    data: dict, site: str, spec_file: str | None = None
 ) -> np.ndarray:
     """Applies spectral consistency coefficients for given frequency index,
     writes 2S02 product and returns indices to be flagged"""
