@@ -408,7 +408,8 @@ def spectral_consistency(data: dict, site: str, date: str) -> np.ndarray:
     output_dir = os.path.dirname(output_file)
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
-    rpg_mwr.save_rpg(hatpro, output_file, global_attributes, "2S02")
+    if output_file is not None:
+        rpg_mwr.save_rpg(hatpro, output_file, global_attributes, "2S02")
 
     return flag_ind
 
