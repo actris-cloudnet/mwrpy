@@ -48,11 +48,11 @@ class TestBrtFileReading:
             ),
         }
         for key, value in data.items():
-            assert type(self.header[key]) == type(value)
+            assert isinstance(self.header[key], type(value))
             if isinstance(value, int):
                 assert self.header[key] == value
             else:
-                assert_array_almost_equal(self.header[key], value, decimal=2)
+                assert_array_almost_equal(self.header[key], np.array(value), decimal=2)
 
     def test_data(self):
         assert isinstance(self.data, dict)
@@ -145,11 +145,11 @@ class TestBlbFileReading:
             "_ang": np.array([4.2, 4.8, 5.4, 6.6, 8.4, 11.4, 14.4, 19.2, 30.0, 90.0]),
         }
         for key, value in data.items():
-            assert type(self.header[key]) == type(value)
+            assert isinstance(self.header[key], type(value))
             if isinstance(value, int):
                 assert self.header[key] == value
             else:
-                assert_array_almost_equal(self.header[key], value, decimal=2)
+                assert_array_almost_equal(self.header[key], np.array(value), decimal=2)
 
     def test_data(self):
         assert isinstance(self.data, dict)
@@ -187,11 +187,11 @@ class TestIrtFileReading:
             "_f": np.array([10.5]),
         }
         for key, value in data.items():
-            assert type(self.header[key]) == type(value)
+            assert isinstance(self.header[key], type(value))
             if isinstance(value, int):
                 assert self.header[key] == value
             else:
-                assert_array_almost_equal(self.header[key], value, decimal=2)
+                assert_array_almost_equal(self.header[key], np.array(value), decimal=2)
 
     def test_data(self):
         assert isinstance(self.data, dict)
@@ -226,11 +226,11 @@ class TestHkdFileReading:
             "_sel": np.array([831]),
         }
         for key, value in data.items():
-            assert type(self.header[key]) == type(value)
+            assert isinstance(self.header[key], type(value))
             if isinstance(value, int):
                 assert self.header[key] == value
             else:
-                assert_array_almost_equal(self.header[key], value, decimal=2)
+                assert_array_almost_equal(self.header[key], np.array(value), decimal=2)
 
     def test_data(self):
         assert isinstance(self.data, dict)
@@ -286,7 +286,7 @@ class TestMetFileReading:
             if isinstance(value, int):
                 assert self.header[key] == value
             else:
-                assert_array_almost_equal(self.header[key], value, decimal=2)
+                assert_array_almost_equal(self.header[key], np.array(value), decimal=2)
 
     def test_data(self):
         assert isinstance(self.data, dict)

@@ -33,3 +33,18 @@ repos:
     rev: v0.23.0
     hooks:
       - id: toml-sort-fix
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: mypy
+        language: system
+        types: [python]
+        require_serial: true
+      - id: pylint
+        name: pylint
+        entry: pylint
+        language: system
+        types: [python]
+        require_serial: true
+        args: ["--jobs=4"]
