@@ -19,6 +19,7 @@ dependencies = [
   "metpy",
   "netCDF4",
   "pandas",
+  "pytz",
   "pyyaml",
   "scipy",
   "timezonefinder",
@@ -26,7 +27,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-test = ["mypy", "pylint", "pytest", "pytest-flakefinder"]
+test = ["mypy", "pylint", "pytest", "pytest-flakefinder", "types-PyYAML", "types-pytz"]
 
 [project.urls]
 homepage = "https://github.com/actris-cloudnet/mwrpy"
