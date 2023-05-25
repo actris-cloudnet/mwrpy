@@ -1,3 +1,9 @@
+## 0.3.0 – 2023-05-25
+
+- Use correct key when checking height dimension
+- Adjust lwp offset correction
+- Fix command line usage
+
 ## 0.2.0 – 2023-05-16
 
 - Read coefficients for all sites
