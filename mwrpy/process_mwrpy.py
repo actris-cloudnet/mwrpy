@@ -50,9 +50,13 @@ def main(args):
 
 def process_product(prod: str, date: datetime.date, site: str):
     output_file = _get_filename(prod, date, site)
+    spec_file = _get_filename("2S02", date, site)
     output_dir = os.path.dirname(output_file)
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
+    output_dir_spec = os.path.dirname(spec_file)
+    if not os.path.isdir(output_dir_spec):
+        os.makedirs(output_dir_spec)
 
     if prod[0] == "1":
         lev1_to_nc(
@@ -60,6 +64,7 @@ def process_product(prod: str, date: datetime.date, site: str):
             prod,
             _get_raw_file_path(date, site),
             output_file,
+            spec_file,
         )
     elif prod[0] == "2":
         if prod in ("2P04", "2P07", "2P08"):

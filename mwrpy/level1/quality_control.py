@@ -25,7 +25,9 @@ Fill_Value_Float = -999.0
 Fill_Value_Int = -99
 
 
-def apply_qc(site: str, data_in: RpgBin, params: dict) -> None:
+def apply_qc(
+    site: str, data_in: RpgBin, params: dict, spec_file: str | None = None
+) -> None:
     """This function performs the quality control of level 1 data.
     Args:
         site: Name of site.
@@ -49,7 +51,7 @@ def apply_qc(site: str, data_in: RpgBin, params: dict) -> None:
     data["quality_flag_status"] = np.zeros(data["tb"].shape, dtype=np.int32)
 
     if params["flag_status"][3] == 0:
-        ind_bit4 = spectral_consistency(data, site, data_in.date)
+        ind_bit4 = spectral_consistency(data, site, data_in.date, spec_file)
     ind_bit6 = np.where(data["rain"] == 1)
     ind_bit7 = orbpos(data, params)
 
@@ -196,7 +198,9 @@ def orbpos(data: dict, params: dict) -> tuple:
     return flag_ind
 
 
-def spectral_consistency(data: dict, site: str, date: str) -> np.ndarray:
+def spectral_consistency(
+    data: dict, site: str, date: str, spec_file: str | None = None
+) -> np.ndarray:
     """Applies spectral consistency coefficients for given frequency index,
     writes 2S02 product and returns indices to be flagged"""
 
@@ -404,12 +408,8 @@ def spectral_consistency(data: dict, site: str, date: str) -> np.ndarray:
     hatpro = rpg_mwr.Rpg(rpg_dat)
     hatpro.data = get_data_attributes(hatpro.data, "2S02")
 
-    output_file = _get_filename("2S02", isodate2date(date), site)
-    output_dir = os.path.dirname(output_file)
-    if not os.path.isdir(output_dir):
-        os.makedirs(output_dir)
-    if output_file is not None:
-        rpg_mwr.save_rpg(hatpro, output_file, global_attributes, "2S02")
+    if spec_file is not None:
+        rpg_mwr.save_rpg(hatpro, spec_file, global_attributes, "2S02")
 
     return flag_ind
 

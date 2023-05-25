@@ -32,6 +32,7 @@ def lev1_to_nc(
     data_type: str,
     path_to_files: str,
     output_file: str | None = None,
+    spec_file: str | None = None,
 ) -> rpg_mwr.Rpg:
     """This function reads one day of RPG MWR binary files,
     adds attributes and writes it into netCDF file.
@@ -41,6 +42,7 @@ def lev1_to_nc(
         data_type: Data type of the netCDF file.
         path_to_files: Folder containing one day of RPG MWR binary files.
         output_file: Output file name.
+        spec_file: Output file name of spectral product.
 
     """
 
@@ -49,7 +51,7 @@ def lev1_to_nc(
         update_lev1_attributes(global_attributes, data_type)
     rpg_bin = prepare_data(path_to_files, data_type, params, site)
     if data_type in ("1B01", "1C01"):
-        apply_qc(site, rpg_bin, params)
+        apply_qc(site, rpg_bin, params, spec_file)
     if data_type in ("1B21", "1C01"):
         apply_met_qc(rpg_bin.data, params)
     hatpro = rpg_mwr.Rpg(rpg_bin.data)

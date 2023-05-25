@@ -46,8 +46,11 @@ def test_output_nc_file():
                 58,
             ],
         )
-    if os.path.exists(temp_file):
-        try:
-            os.remove(temp_file)
-        except PermissionError:
-            pass
+    spec_file = "spec_file.nc"
+    lev1_to_nc("hyytiala", "1C01", DATA_DIR, temp_file, spec_file)
+    for file in (temp_file, spec_file):
+        if os.path.exists(file):
+            try:
+                os.remove(file)
+            except PermissionError:
+                pass
