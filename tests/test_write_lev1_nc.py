@@ -46,4 +46,8 @@ def test_output_nc_file():
                 58,
             ],
         )
-    os.remove(temp_file)
+    if os.path.exists(temp_file):
+        try:
+            os.remove(temp_file)
+        except PermissionError:
+            pass

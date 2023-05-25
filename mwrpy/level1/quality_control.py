@@ -204,7 +204,7 @@ def spectral_consistency(data: dict, site: str, date: str) -> np.ndarray:
     abs_diff = ma.masked_all(data["tb"].shape, dtype=np.float32)
     rpg_dat = {}
     rpg_dat["tb_spectrum"] = np.ones(data["tb"].shape) * np.nan
-    global_attributes, params = read_yaml_config(site)
+    global_attributes, _ = read_yaml_config(site)
 
     c_list = get_coeff_list(site, "spc")
     if len(c_list) > 0:
