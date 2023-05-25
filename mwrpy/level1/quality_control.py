@@ -13,7 +13,13 @@ from mwrpy.level1.lev1_meta_nc import get_data_attributes
 from mwrpy.level1.rpg_bin import RpgBin
 from mwrpy.level2.get_ret_coeff import get_mvr_coeff
 from mwrpy.level2.write_lev2_nc import retrieval_input
-from mwrpy.utils import get_coeff_list, read_yaml_config, setbit
+from mwrpy.utils import (
+    _get_filename,
+    get_coeff_list,
+    isodate2date,
+    read_yaml_config,
+    setbit,
+)
 
 Fill_Value_Float = -999.0
 Fill_Value_Int = -99
@@ -397,28 +403,11 @@ def spectral_consistency(data: dict, site: str, date: str) -> np.ndarray:
     _del_lev1_att(global_attributes)
     hatpro = rpg_mwr.Rpg(rpg_dat)
     hatpro.data = get_data_attributes(hatpro.data, "2S02")
-    data_out_l2 = (
-        params["data_out"]
-        + "level2/"
-        + date.split("-")[0]
-        + "/"
-        + date.split("-")[1]
-        + "/"
-        + date.split("-")[2]
-        + "/"
-    )
-    if not os.path.isdir(data_out_l2):
-        os.makedirs(data_out_l2)
-    output_file = (
-        data_out_l2
-        + "MWR_2S02_"
-        + global_attributes["wigos_station_id"]
-        + "_"
-        + date.split("-")[0]
-        + date.split("-")[1]
-        + date.split("-")[2]
-        + ".nc"
-    )
+
+    output_file = _get_filename("2S02", isodate2date(date), site)
+    output_dir = os.path.dirname(output_file)
+    if not os.path.isdir(output_dir):
+        os.makedirs(output_dir)
     rpg_mwr.save_rpg(hatpro, output_file, global_attributes, "2S02")
 
     return flag_ind

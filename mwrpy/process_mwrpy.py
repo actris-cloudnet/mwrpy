@@ -6,7 +6,13 @@ import os
 from mwrpy.level1.write_lev1_nc import lev1_to_nc
 from mwrpy.level2.write_lev2_nc import lev2_to_nc
 from mwrpy.plots.generate_plots import generate_figure
-from mwrpy.utils import date_range, get_processing_dates, isodate2date, read_yaml_config
+from mwrpy.utils import (
+    _get_filename,
+    date_range,
+    get_processing_dates,
+    isodate2date,
+    read_yaml_config,
+)
 
 PRODUCT_NAME = {
     "1C01": "",
@@ -124,16 +130,6 @@ def plot_product(prod: str, date, site: str):
             save_path=output_dir,
             image_name=var,
         )
-
-
-def _get_filename(prod: str, date_in: datetime.date, site: str) -> str:
-    global_attributes, params = read_yaml_config(site)
-    data_out_dir = os.path.join(
-        params["data_out"], f"level{prod[0]}", date_in.strftime("%Y/%m/%d")
-    )
-    wigos_id = global_attributes["wigos_station_id"]
-    filename = f"MWR_{prod}_{wigos_id}_{date_in.strftime('%Y%m%d')}.nc"
-    return os.path.join(data_out_dir, filename)
 
 
 def _get_raw_file_path(date_in: datetime.date, site: str) -> str:

@@ -8,8 +8,8 @@ params:
   latitude: 52.208
 
   # path to level1 data and path for processed files
-  data_in: /data/obs/site/lin/linhat/l1/
-  data_out: /data/obs/site/lin/linhat/actris/
+  data_in: /tmp/data/
+  data_out: /tmp/data/
 
   # path to ABSCAL.HIS file
   path_to_cal: /data/obs/site/lin/linhat/

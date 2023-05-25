@@ -8,8 +8,8 @@ params:
   latitude: 50.906
 
   # path to level1 data and path for processed files
-  data_in: /data/obs/site/jue/tophat/l1/
-  data_out: /data/obs/site/jue/tophat/actris/
+  data_in: /tmp/data/
+  data_out: /tmp/data/
 
   # path to ABSCAL.HIS file
   path_to_cal: /data/obs/site/jue/tophat/calibration/LOG_TRANSFER/CALIB/

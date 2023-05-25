@@ -472,6 +472,16 @@ def get_processing_dates(args) -> tuple[str, str]:
     return start_date, stop_date
 
 
+def _get_filename(prod: str, date_in: datetime.date, site: str) -> str:
+    global_attributes, params = read_yaml_config(site)
+    data_out_dir = os.path.join(
+        params["data_out"], f"level{prod[0]}", date_in.strftime("%Y/%m/%d")
+    )
+    wigos_id = global_attributes["wigos_station_id"]
+    filename = f"MWR_{prod}_{wigos_id}_{date_in.strftime('%Y%m%d')}.nc"
+    return os.path.join(data_out_dir, filename)
+
+
 def isodate2date(date_str: str) -> datetime.date:
     return datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
 
