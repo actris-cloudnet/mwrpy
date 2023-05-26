@@ -1069,8 +1069,8 @@ def _plot_tb(
         )
 
     trans = ScaledTranslation(10 / 72, -5 / 72, fig.dpi_scale_trans)
-    tb_m: np.ndarray = np.ndarray([])
-    tb_s: np.ndarray = np.ndarray([])
+    tb_m: np.ndarray = np.array([])
+    tb_s: np.ndarray = np.array([])
 
     for i, axi in enumerate(axs.T.flatten()):
         no_flag = np.where(quality_flag[:, i] == 0)[0]
