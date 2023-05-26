@@ -30,9 +30,9 @@ dynamic = ["version"]
 test = ["mypy", "pylint", "pytest", "pytest-flakefinder", "types-PyYAML", "types-pytz"]
 
 [project.urls]
-homepage = "https://github.com/actris-cloudnet/mwrpy"
-repository = "https://github.com/actris-cloudnet/mwrpy"
-changelog = "https://github.com/actris-cloudnet/mwrpy/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/actris-cloudnet/mwrpy"
+Repository = "https://github.com/actris-cloudnet/mwrpy"
+Changelog = "https://github.com/actris-cloudnet/mwrpy/blob/main/CHANGELOG.md"
 
 [tool.mypy]
 check_untyped_defs = true
