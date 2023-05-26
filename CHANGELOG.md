@@ -1,3 +1,7 @@
+## 0.3.1 – 2023-05-26
+
+- Raise error if missing config files
+
 ## 0.3.0 – 2023-05-25
 
 - Use correct key when checking height dimension
