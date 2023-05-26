@@ -516,7 +516,7 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict, site: str) -> 
         ind = np.argsort(brt.data["time"])
         brt.data["time"] = brt.data["time"][ind]
 
-        names_add: dict[str, FuncType | np.ndarray] = {
+        names_add: dict[str, np.ndarray] = {
             "time_bnds": time_bnds_add,
             "elevation_angle": elevation_angle_add,
             "azimuth_angle": azimuth_angle_add,
