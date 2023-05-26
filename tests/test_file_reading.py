@@ -9,7 +9,7 @@ dir_name = os.path.dirname(os.path.realpath(__file__))
 
 
 class TestBrtFileReading:
-    header, data = rpg_bin.read_brt(f"{dir_name}/data/230406.BRT")
+    header, data = rpg_bin.read_brt(f"{dir_name}/data/hyytiala/230406.BRT")
 
     def test_header(self):
         assert isinstance(self.header, dict)
@@ -78,7 +78,7 @@ class TestBrtFileReading:
 
 
 class TestBlbFileReading:
-    header, data = rpg_bin.read_blb(f"{dir_name}/data/230406.BLB")
+    header, data = rpg_bin.read_blb(f"{dir_name}/data/hyytiala/230406.BLB")
 
     def test_header(self):
         assert isinstance(self.header, dict)
@@ -173,7 +173,7 @@ class TestBlbFileReading:
 
 
 class TestIrtFileReading:
-    header, data = rpg_bin.read_irt(f"{dir_name}/data/230406.IRT")
+    header, data = rpg_bin.read_irt(f"{dir_name}/data/hyytiala/230406.IRT")
 
     def test_header(self):
         assert isinstance(self.header, dict)
@@ -215,7 +215,7 @@ class TestIrtFileReading:
 
 
 class TestHkdFileReading:
-    header, data = rpg_bin.read_hkd(f"{dir_name}/data/230406.HKD")
+    header, data = rpg_bin.read_hkd(f"{dir_name}/data/hyytiala/230406.HKD")
 
     def test_header(self):
         assert isinstance(self.header, dict)
@@ -261,7 +261,7 @@ class TestHkdFileReading:
 
 
 class TestMetFileReading:
-    header, data = rpg_bin.read_met(f"{dir_name}/data/230406.MET")
+    header, data = rpg_bin.read_met(f"{dir_name}/data/hyytiala/230406.MET")
 
     def test_header(self):
         assert isinstance(self.header, dict)
