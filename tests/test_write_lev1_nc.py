@@ -7,7 +7,7 @@ import numpy as np
 from mwrpy import lev1_to_nc
 
 PACKAGE_DIR = os.path.abspath(os.path.dirname(__file__))
-DATA_DIR = f"{PACKAGE_DIR}/data"
+DATA_DIR = f"{PACKAGE_DIR}/data/hyytiala"
 COEFFICIENTS_DIR = f"{PACKAGE_DIR}/../mwrpy/site_config/"
 DATE = "2023-04-06"
 
