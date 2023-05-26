@@ -282,7 +282,7 @@ def read_yaml_config(site: str) -> tuple[dict, dict]:
     inst_file = os.path.join(dir_name, "site_config", f"{site_config['type']}.yaml")
     if not os.path.isfile(inst_file):
         raise NotImplementedError(
-            f"Error: instrument config file {site_file} not found"
+            f"Error: instrument config file {inst_file} not found"
         )
     with open(inst_file, "r", encoding="utf8") as f:
         inst_config = yaml.load(f, Loader=SafeLoader)
