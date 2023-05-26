@@ -275,9 +275,15 @@ def read_yaml_config(site: str) -> tuple[dict, dict]:
     """Reads config yaml files."""
     dir_name = os.path.dirname(os.path.realpath(__file__))
     site_file = os.path.join(dir_name, "site_config", site, "config.yaml")
+    if not os.path.isfile(site_file):
+        raise NotImplementedError(f"Error: site config file {site_file} not found")
     with open(site_file, "r", encoding="utf8") as f:
         site_config = yaml.load(f, Loader=SafeLoader)
     inst_file = os.path.join(dir_name, "site_config", f"{site_config['type']}.yaml")
+    if not os.path.isfile(inst_file):
+        raise NotImplementedError(
+            f"Error: instrument config file {site_file} not found"
+        )
     with open(inst_file, "r", encoding="utf8") as f:
         inst_config = yaml.load(f, Loader=SafeLoader)
     inst_config["global_specs"].update(site_config["global_specs"])
