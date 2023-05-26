@@ -36,6 +36,9 @@ changelog = "https://github.com/actris-cloudnet/mwrpy/blob/main/CHANGELOG.md"
 
 [tool.mypy]
 check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = ["ephem.*", "matplotlib.*", "metpy.*", "mpl_toolkits.*", "netCDF4.*", "pandas.*", "scipy.*"]
 ignore_missing_imports = true
 
 [tool.pylint]
