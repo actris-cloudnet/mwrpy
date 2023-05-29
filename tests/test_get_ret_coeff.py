@@ -132,6 +132,12 @@ def test_coefficients():
 
     for key, item in test_data.items():
         data = get_mvr_coeff(SITE, key, FREQ)
+        if key == "lwp":
+            expected = np.array(
+                [-107.37779, -30.645275, -76.23844, 0.9421638, -27.80052],
+                dtype=np.float32,
+            )
+            assert_array_almost_equal(data[0]["W1"].flatten()[:5], expected)
         for name, value in data[0].items():
             shape: tuple
             if isinstance(value, str):
@@ -142,6 +148,7 @@ def test_coefficients():
             else:
                 first, last, mean = item[name][0]
                 shape = item[name][1]
+            # print(key, name, first, last, mean, shape)
             _check(value, float(first), float(last), float(mean), shape=shape)
 
 
@@ -159,6 +166,8 @@ def _check(
         first_value = data[0, 0, 0]
         last_value = data[-1, -1, -1]
 
+    if isinstance(first_value, str):
+        return
     assert_array_almost_equal(first_value, first, decimal=4)
     assert_array_almost_equal(last_value, last, decimal=4)
     assert_array_almost_equal(np.mean(data), mean_value, decimal=4)
