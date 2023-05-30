@@ -24,306 +24,142 @@ FREQ = np.array(
 SITE = "hyytiala"
 
 
-class TestLWP:
-    coeff: dict
+def test_coefficients():
+    test_data = {
+        "lwp": {
+            "DY": ((1, 1, 1), (1,)),
+            "PS": ((1, 1, 1), (1,)),
+            "DB": ((1, 1, 1), (1,)),
+            "RT": ((2, 2, 2), (1,)),
+            "VN": ((110, 110, 110), (1,)),
+            "ND": ((9, 4, 6.5), (2,)),
+            "FR": ((23.04, 58, 41.699997), (13,)),
+            "AG": ((90, 4.2, 27.473684), (19,)),
+            "NP": ((0.025999999, 0.025999999, 0.025999999), (19, 1)),
+            "input_offset": ((61.404, -5.174205e-05, 6337.0576), (19, 16)),
+            "input_scale": ((0.01880088, 1.0000551, 0.14415415), (19, 16)),
+            "output_offset": ((1.25075, 17.077847, 5.906157), (19, 1)),
+            "output_scale": ((1.6676667, 22.770462, 7.8748765), (19, 1)),
+            "W1": ((-107.37779, -2.3326364, -0.7625811), (17, 9, 19)),
+            "W2": ((-10.072118, -9.450926, -2.7468667), (19, 10)),
+            "RM": ((0.00434408, 0.19351903, 0.041093733), (19, 1)),
+            "FR_BL": ((23.04, 58.0, 41.699997), (13,)),
+        },
+        "iwv": {
+            "DY": ((1, 1, 1), (1,)),
+            "PS": ((1, 1, 1), (1,)),
+            "DB": ((1, 1, 1), (1,)),
+            "RP": ((1, 1, 1), (1,)),
+            "RT": ((2, 2, 2), (1,)),
+            "VN": ((110, 110, 110), (1,)),
+            "ND": ((9, 4, 6.5), (2,)),
+            "FR": ((23.04, 58, 41.699997), (13,)),
+            "AG": ((90, 4.2, 27.473684), (19,)),
+            "NP": ((0.025999999, 0.025999999, 0.025999999), (19, 1)),
+            "input_offset": ((61.404, -5.174205e-05, 6337.0576), (19, 16)),
+            "input_scale": ((0.01880088, 1.0000551, 0.14415415), (19, 16)),
+            "output_offset": ((24.4429, 333.74542, 115.42163), (19, 1)),
+            "output_scale": ((31.616266, 431.6912, 149.29494), (19, 1)),
+            "W1": ((-4.5245423, -0.9779363, -0.6337075), (17, 9, 19)),
+            "W2": ((-8.668256, 10.204778, -3.7813265), (19, 10)),
+            "RM": ((0.088511630, 3.4751670360, 0.7352865), (19, 1)),
+            "FR_BL": ((23.04, 58.0, 41.699997), (13,)),
+        },
+        "tpt": {
+            "DY": ((1, 1, 1), (1,)),
+            "PS": ((1, 1, 1), (1,)),
+            "DB": ((1, 1, 1), (1,)),
+            "RP": ((4, 4, 4), (1,)),
+            "RT": ((2, 2, 2), (1,)),
+            "VN": ((110, 110, 110), (1,)),
+            "ND": ((12, 4, 8), (2,)),
+            "FR": ((23.04, 58, 41.699997), (13,)),
+            "AG": ((90, 90, 90), (1,)),
+            "AL": ((0.0, 10000.0, 2875.806396484375), (93,)),
+            "NP": ((0.025999999, 0.025999999, 0.025999999), (1,)),
+            "input_offset": ((61.4039993286, -5.1742048e-05, 6304.670410), (1, 16)),
+            "input_scale": ((0.01880088, 1.00005507, 0.146652624), (1, 16)),
+            "output_offset": ((271.200012, 219.82550, 259.26358), (1, 93)),
+            "output_scale": ((44.4666671, 24.967332, 32.562801), (1, 93)),
+            "W1": ((-60.5274200, 6.1980004, -2.25016403), (17, 12, 1)),
+            "W2": ((6.22275257, 1.43107211, -1.814291954), (93, 13, 1)),
+            "RM": ((2.035391330, 3.3711481, 1.282065437), (93, 1)),
+            "FR_BL": ((23.04, 58.0, 41.699997), (13,)),
+        },
+        "tpb": {
+            "DY": ((1, 1, 1), (1,)),
+            "PS": ((1, 1, 1), (1,)),
+            "DB": ((1, 1, 1), (1,)),
+            "RP": ((5, 5, 5), (1,)),
+            "RT": ((2, 2, 2), (1,)),
+            "VN": ((110, 110, 110), (1,)),
+            "ND": ((15, 4, 9.5), (2,)),
+            "FR": ((23.04, 58, 41.699997), (13,)),
+            "AG": ((90.0, 4.199999809265137, 19.440000534057617), (10,)),
+            "AL": ((0.0, 10000.0, 2875.806396484375), (93,)),
+            "NP": ((0.025999999, 0.025999999, 0.025999999), (1,)),
+            "input_offset": ((61.40399932, -5.1742048e-05, 945.881530), (133,)),
+            "input_scale": ((0.01880088, 1.00005507, 0.0258186), (133,)),
+            "output_offset": ((271.200012, 219.8255, 259.26358), (93,)),
+            "output_scale": ((44.4666671, 24.96733, 32.56280), (93,)),
+            "W1": ((-149.7417449, 0.19153261, -0.0740887), (134, 15)),
+            "W2": ((4.33258, -0.72129, -1.55458), (93, 16)),
+            "RM": ((0.8922356963, 3.0863358, 1.051631445), (93, 1)),
+            "FR_BL": ((23.04, 58.0, 41.699997), (13,)),
+        },
+        "hpt": {
+            "DY": ((1, 1, 1), (1,)),
+            "PS": ((1, 1, 1), (1,)),
+            "DB": ((1, 1, 1), (1,)),
+            "RP": ((3, 3, 3), (1,)),
+            "RT": ((2, 2, 2), (1,)),
+            "VN": ((110, 110, 110), (1,)),
+            "ND": ((9, 4, 6.5), (2,)),
+            "FR": ((23.04, 58, 41.699997), (13,)),
+            "AG": ((90.0, 90, 90), (1,)),
+            "AL": ((0.0, 10000.0, 2875.806396484375), (93,)),
+            "NP": ((0.025999999, 0.025999999, 0.025999999), (1,)),
+            "input_offset": ((61.403999328, -5.17420485e-05, 6304.67041), (1, 16)),
+            "input_scale": ((0.018800880, 1.00005507, 0.14665262), (1, 16)),
+            "output_offset": ((9.317116737, 0.0755304, 4.9657354), (1, 93)),
+            "output_scale": ((12.17451095, 0.1005687192082, 6.555077552), (1, 93)),
+            "W1": ((-22.01639366149, -2.077390670776, -4.22366380691), (17, 9, 1)),
+            "W2": ((-6.617764472961, -5.96833944320, -4.42309951782), (93, 10, 1)),
+            "RM": ((0.783515751, 0.00679313, 0.440780830021), (93, 1)),
+            "FR_BL": ((23.04, 58.0, 41.699997), (13,)),
+        },
+    }
 
-    def test_lwp_coefficients(self):
-        data = get_mvr_coeff(SITE, "lwp", FREQ)
-        self.coeff = data[0]
-        for key, item in self.coeff.items():
-            if isinstance(item, str):
+    for key, item in test_data.items():
+        data = get_mvr_coeff(SITE, key, FREQ)
+        for name, value in data[0].items():
+            shape: tuple
+            if isinstance(value, str):
                 continue
-            match key:
-                case (
-                    "RP"
-                    | "RB"
-                    | "CC"
-                    | "TS"
-                    | "HS"
-                    | "ZS"
-                    | "IR"
-                    | "I1"
-                    | "I2"
-                    | "SU"
-                    | "AL"
-                ):
-                    data = (0, 0, 0)
-                case "DY" | "PS" | "DB" | "RB":
-                    data = (1, 1, 1)
-                case "RT":
-                    data = (2, 2, 2)
-                case "VN":
-                    data = (110, 110, 110)
-                case "ND":
-                    data = (9, 4, 6.5)
-                case "FR":
-                    data = (23.04, 58, 41.699997)
-                case "AG":
-                    data = (90, 4.2, 27.473684)
-                case "NP":
-                    data = (0.025999999, 0.025999999, 0.025999999)
-                case "input_offset":
-                    data = (61.404, -5.174205e-05, 6337.0576)
-                case "output_offset":
-                    data = ([1.25075], [17.077847], 5.906157)
-                case "output_scale":
-                    data = ([1.6676667], [22.770462], 7.8748765)
-                case "RM":
-                    data = ([0.00434408], [0.19351903], 0.041093733)
-                case "FR_BL":
-                    data = (23.04, 58.0, 41.699997)
-                case "input_scale":
-                    data = (0.01880088, 1.0000551, 0.14415415)
-                case "W2":
-                    data = (-10.072118, -9.450926, -2.7468667)
-                case "W1":
-                    data = (-107.37779, -2.3326364, -0.7625811)
-                case _:
-                    self._print_test_data(key)
-                    raise ValueError(f"Unknown key: {key}")
+            if name not in item:
+                first, last, mean = 0.0, 0.0, 0.0
+                shape = (1,)
+            else:
+                first, last, mean = item[name][0]
+                shape = item[name][1]
+            _check(value, float(first), float(last), float(mean), shape=shape)
 
-            self._check(key, *data)
 
-    def test_iwv_coeffecients(self):
-        data = get_mvr_coeff(SITE, "iwv", FREQ)
-        self.coeff = data[0]
-        for key, item in self.coeff.items():
-            if isinstance(item, str):
-                continue
-            match key:
-                case (
-                    "RB" | "CC" | "TS" | "HS" | "ZS" | "IR" | "I1" | "I2" | "SU" | "AL"
-                ):
-                    data = (0, 0, 0)
-                case "RP" | "DB" | "PS" | "DY":
-                    data = (1, 1, 1)
-                case "RT":
-                    data = (2, 2, 2)
-                case "VN":
-                    data = (110, 110, 110)
-                case "ND":
-                    data = (9, 4, 6.5)
-                case "FR":
-                    data = (23.04, 58, 41.699997)
-                case "AG":
-                    data = (90, 4.2, 27.473684)
-                case "NP":
-                    data = (0.025999999, 0.025999999, 0.025999999)
-                case "input_offset":
-                    data = (61.404, -5.174205e-05, 6337.0576)
-                case "input_scale":
-                    data = (0.01880088, 1.0000551, 0.14415415)
-                case "output_offset":
-                    data = (24.4429, 333.74542, 115.42163)
-                case "output_scale":
-                    data = (31.616266, 431.6912, 149.29494)
-                case "W1":
-                    data = (-4.5245423, -0.9779363, -0.6337075)
-                case "W2":
-                    data = (-8.668256, 10.204778, -3.7813265)
-                case "RM":
-                    data = (0.0885116308927536, 3.4751670360565186, 0.73528653383255)
-                case "FR_BL":
-                    data = (23.04, 58.0, 41.699997)
-                case _:
-                    self._print_test_data(key)
-                    raise ValueError(f"Unknown key: {key}")
+def _check(
+    data: np.ndarray, first: float, last: float, mean_value: float, shape: tuple
+):
+    assert data.ndim in (1, 2, 3)
+    if data.ndim == 1:
+        first_value = data[0]
+        last_value = data[-1]
+    elif data.ndim == 2:
+        first_value = data[0, 0]
+        last_value = data[-1, -1]
+    else:
+        first_value = data[0, 0, 0]
+        last_value = data[-1, -1, -1]
 
-            self._check(key, *data)
-
-    def test_tpt_coefficients(self):
-        data = get_mvr_coeff(SITE, "tpt", FREQ)
-        self.coeff = data[0]
-        for key, item in self.coeff.items():
-            if isinstance(item, str):
-                continue
-            match key:
-                case ("RB" | "CC" | "TS" | "HS" | "ZS" | "IR" | "I1" | "I2" | "SU"):
-                    data = (0, 0, 0)
-                case "AL":
-                    data = (0.0, 10000.0, 2875.806396484375)
-                case "DB" | "PS" | "DY":
-                    data = (1, 1, 1)
-                case "RP":
-                    data = (4, 4, 4)
-                case "RT":
-                    data = (2, 2, 2)
-                case "VN":
-                    data = (110, 110, 110)
-                case "ND":
-                    data = (12, 4, 8)
-                case "FR":
-                    data = (23.04, 58, 41.699997)
-                case "AG":
-                    data = (90, 90, 90)
-                case "NP":
-                    data = (0.025999999, 0.025999999, 0.025999999)
-                case "input_offset":
-                    data = (61.40399932861328, -5.174204852664843e-05, 6304.67041015625)
-                case "input_scale":
-                    data = (
-                        0.018800880759954453,
-                        1.0000550746917725,
-                        0.14665262401103973,
-                    )
-                case "output_offset":
-                    data = (271.20001220703125, 219.82550048828125, 259.2635803222656)
-                case "output_scale":
-                    data = (44.46666717529297, 24.96733283996582, 32.562801361083984)
-                case "W1":
-                    data = (-60.52742004394531, 6.198000431060791, -2.250164031982422)
-                case "W2":
-                    data = (6.222752571105957, 1.4310721158981323, -1.8142919540405273)
-                case "RM":
-                    data = (2.035391330718994, 3.3711481, 1.2820654379647203)
-                case "FR_BL":
-                    data = (23.04, 58.0, 41.699997)
-                case _:
-                    self._print_test_data(key)
-                    raise ValueError(f"Unknown key: {key}")
-
-            self._check(key, *data)
-
-    def test_tpb_coefficients(self):
-        data = get_mvr_coeff(SITE, "tpb", FREQ)
-        self.coeff = data[0]
-        for key, item in self.coeff.items():
-            if isinstance(item, str):
-                continue
-            match key:
-                case ("RB" | "CC" | "TS" | "HS" | "ZS" | "IR" | "I1" | "I2" | "SU"):
-                    data = (0, 0, 0)
-                case "AL":
-                    data = (0.0, 10000.0, 2875.806396484375)
-                case "DB" | "PS" | "DY":
-                    data = (1, 1, 1)
-                case "RP":
-                    data = (5, 5, 5)
-                case "RT":
-                    data = (2, 2, 2)
-                case "VN":
-                    data = (110, 110, 110)
-                case "ND":
-                    data = (15, 4, 9.5)
-                case "FR":
-                    data = (23.04, 58, 41.699997)
-                case "AG":
-                    data = (90.0, 4.199999809265137, 19.440000534057617)
-                case "NP":
-                    data = (0.025999999, 0.025999999, 0.025999999)
-                case "input_offset":
-                    data = (
-                        61.40399932861328,
-                        -5.174204852664843e-05,
-                        945.8815307617188,
-                    )
-                case "input_scale":
-                    data = (
-                        0.018800880759954453,
-                        1.0000550746917725,
-                        0.02581867016851902,
-                    )
-                case "output_offset":
-                    data = (271.20001220703125, 219.82550048828125, 259.2635803222656)
-                case "output_scale":
-                    data = (44.46666717529297, 24.96733283996582, 32.562801361083984)
-                case "W1":
-                    data = (
-                        -149.7417449951172,
-                        0.19153261184692383,
-                        -0.07408872246742249,
-                    )
-                case "W2":
-                    data = (4.332581996917725, -0.7212945818901062, -1.5545871257781982)
-                case "RM":
-                    data = (0.8922356963157654, 3.0863358, 1.051631445229202)
-                case "FR_BL":
-                    data = (23.04, 58.0, 41.699997)
-                case _:
-                    self._print_test_data(key)
-                    raise ValueError(f"Unknown key: {key}")
-
-            self._check(key, *data)
-
-    def test_hpt_coefficients(self):
-        data = get_mvr_coeff(SITE, "hpt", FREQ)
-        self.coeff = data[0]
-        for key, item in self.coeff.items():
-            if isinstance(item, str):
-                continue
-            match key:
-                case ("RB" | "CC" | "TS" | "HS" | "ZS" | "IR" | "I1" | "I2" | "SU"):
-                    data = (0, 0, 0)
-                case "AL":
-                    data = (0.0, 10000.0, 2875.806396484375)
-                case "DB" | "PS" | "DY":
-                    data = (1, 1, 1)
-                case "RP":
-                    data = (3, 3, 3)
-                case "RT":
-                    data = (2, 2, 2)
-                case "VN":
-                    data = (110, 110, 110)
-                case "ND":
-                    data = (9, 4, 6.5)
-                case "FR":
-                    data = (23.04, 58, 41.699997)
-                case "AG":
-                    data = (90.0, 90, 90)
-                case "NP":
-                    data = (0.025999999, 0.025999999, 0.025999999)
-                case "input_offset":
-                    data = (61.40399932861328, -5.174204852664843e-05, 6304.67041015625)
-                case "input_scale":
-                    data = (
-                        0.018800880759954453,
-                        1.0000550746917725,
-                        0.14665262401103973,
-                    )
-                case "output_offset":
-                    data = (9.317116737365723, 0.07553045451641083, 4.96573543548584)
-                case "output_scale":
-                    data = (12.174510955810547, 0.10056871920824051, 6.55507755279541)
-                case "W1":
-                    data = (-22.016393661499023, -2.077390670776367, -4.223663806915283)
-                case "W2":
-                    data = (-6.617764472961426, -5.968339443206787, -4.423099517822266)
-                case "RM":
-                    data = (0.7835157513618469, 0.0067931315, 0.44078083002109514)
-                case "FR_BL":
-                    data = (23.04, 58.0, 41.699997)
-                case _:
-                    self._print_test_data(key)
-                    raise ValueError(f"Unknown key: {key}")
-
-            self._check(key, *data)
-
-    def _check(
-        self, key: str, first: float = 0, last: float = 0, mean_value: float = 0
-    ):
-        item = self.coeff[key]
-        assert item.ndim in (1, 2, 3)
-        if item.ndim == 1:
-            first_value = item[0]
-            last_value = item[-1]
-        elif item.ndim == 2:
-            first_value = item[0, 0]
-            last_value = item[-1, -1]
-        else:
-            first_value = item[0, 0, 0]
-            last_value = item[-1, -1, -1]
-
-        # print(key, f"{first_value}, {last_value}, {np.mean(item)}")
-
-        assert_array_almost_equal(first_value, first, decimal=4)
-        assert_array_almost_equal(last_value, last, decimal=4)
-        assert_array_almost_equal(np.mean(item), mean_value, decimal=4)
-
-    def _print_test_data(self, key: str):
-        item = self.coeff[key]
-        if item.ndim == 1:
-            print(key, f"{item[0]}, {item[-1]}, {np.mean(item)}")
-        elif item.ndim == 2:
-            print(key, f"{item[0, 0]}, {item[-1, -1]}, {np.mean(item)}")
-        else:
-            print(key, f"{item[0, 0, 0]}, {item[-1, -1, -1]}, {np.mean(item)}")
+    assert_array_almost_equal(first_value, first, decimal=4)
+    assert_array_almost_equal(last_value, last, decimal=4)
+    assert_array_almost_equal(np.mean(data), mean_value, decimal=4)
+    assert data.shape == shape
