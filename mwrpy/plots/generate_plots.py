@@ -321,8 +321,8 @@ def _initialize_figure(n_subplots: int, dpi) -> tuple:
 
 def _read_ax_values(full_path: str) -> tuple[ndarray, ndarray]:
     """Returns time and height arrays."""
-    fields = ["time", "height"]
-    time, height = read_nc_fields(full_path, fields)
+    time = read_nc_fields(full_path, "time")
+    height = read_nc_fields(full_path, "height")
     height_km = height / 1000
     return time, height_km
 
@@ -519,11 +519,11 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
 
     if np.ma.median(np.diff(axes[0][:])) < 5 / 60:
         data, _ = _calculate_rolling_mean(axes[0], data, win=15 / 60)
-        time, data = _mark_gaps(axes[0][:], data, 35, 10)
+        time, data = _mark_gaps(axes[0][:], ma.MaskedArray(data), 35, 10)
     else:
         time, data = _mark_gaps(
             axes[0][:],
-            data_in,
+            ma.MaskedArray(data_in),
             np.ma.median(np.diff(axes[0][:])) * 60.0
             + np.ma.median(np.diff(axes[0][:])) * 10.0,
             0,
@@ -548,12 +548,12 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
         )
         data_in[(flag > 0) | (hum_flag > 0), :] = np.nan
         data, _ = _calculate_rolling_mean(axes[0], data_in, win=15 / 60)
-        time, data = _mark_gaps(axes[0][:], data, 35, 10)
+        time, data = _mark_gaps(axes[0][:], ma.MaskedArray(data), 35, 10)
     else:
         data_in[(flag > 0) | (hum_flag > 0), :] = np.nan
         time, data = _mark_gaps(
             axes[0][:],
-            data_in,
+            ma.MaskedArray(data_in),
             np.ma.median(np.diff(axes[0][:])) * 60.0
             + np.ma.median(np.diff(axes[0][:])) * 10.0,
             0,
@@ -571,6 +571,7 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
         extend=variables.cbar_ext,
     )
     ds = int(np.round(len(time) * 0.05))
+    assert isinstance(nlev, int)
     cp = ax.contour(
         time[ds : len(time) - ds],
         axes[1],
@@ -580,7 +581,7 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
         linewidths=0.0001,
     )
     cbl = plt.clabel(cp, fontsize=8)
-    ta = []
+    ta = np.array([])
     for l in cbl:
         l.set_va("bottom")
         l.set_weight("bold")
@@ -751,7 +752,7 @@ def _plot_sen(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
     variables = ATTRIBUTES[name]
     pointing_flag = read_nc_fields(nc_file, "pointing_flag")
     quality_flag = read_nc_fields(nc_file, "quality_flag")
-    qf = _get_freq_flag(quality_flag, [6])
+    qf = _get_freq_flag(quality_flag, np.array([6]))
     assert variables.plot_range is not None
     vmin, vmax = variables.plot_range
     time = _nan_time_gaps(time, 15.0 / 60.0)
@@ -839,7 +840,11 @@ def _plot_mqf(ax, data_in: ndarray, time: ndarray, nc_file: str):
 
     qf = _get_bit_flag(data_in, np.arange(6))
     _plot_segment_data(
-        ax, qf, "met_quality_flag", (time, np.linspace(0.5, 5.5, 6)), nc_file
+        ax,
+        ma.MaskedArray(qf),
+        "met_quality_flag",
+        (time, np.linspace(0.5, 5.5, 6)),
+        nc_file,
     )
     ax.set_yticks(np.arange(6))
     ax.yaxis.set_ticklabels([])
@@ -864,9 +869,13 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
     )
     frequency = read_nc_fields(nc_file, "frequency")
 
-    qf = _get_bit_flag(data_in[:, 0], [5, 6])
+    qf = _get_bit_flag(data_in[:, 0], np.array([5, 6]))
     _plot_segment_data(
-        axs[0], qf, "quality_flag_0", (time, np.linspace(0.5, 1.5, 2)), nc_file
+        axs[0],
+        ma.MaskedArray(qf),
+        "quality_flag_0",
+        (time, np.linspace(0.5, 1.5, 2)),
+        nc_file,
     )
     axs[0].set_yticks(np.arange(2))
     axs[0].yaxis.set_ticklabels([])
@@ -877,12 +886,12 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
     case_date = _read_date(nc_file)
     gtim = _gap_array(time, case_date)
 
-    qf1 = _get_freq_flag(data_in[:, np.array(params["receiver"]) == 1], [4])
-    qf2 = _get_freq_flag(data_in[:, np.array(params["receiver"]) == 2], [4])
+    qf1 = _get_freq_flag(data_in[:, np.array(params["receiver"]) == 1], np.array([4]))
+    qf2 = _get_freq_flag(data_in[:, np.array(params["receiver"]) == 2], np.array([4]))
     qf = np.column_stack((qf1 - 1, qf2 + 1))
     _plot_segment_data(
         axs[1],
-        qf,
+        ma.MaskedArray(qf),
         "quality_flag_1",
         (time, np.linspace(0.5, len(frequency) - 0.5, len(frequency))),
         nc_file,
@@ -890,7 +899,7 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
     axs[1].set_title(ATTRIBUTES["quality_flag_1"].name)
 
     if params["flag_status"][3] == 0:
-        qf = _get_freq_flag(data_in, [3])
+        qf = _get_freq_flag(data_in, np.array([3]))
         if len(gtim) > 0:
             time_i, data_g = np.linspace(time[0], time[-1], len(time)), np.zeros(
                 (len(time), 20), np.float32
@@ -900,21 +909,21 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
                 data_g[xind, :] = 1.0
             _plot_segment_data(
                 axs[2],
-                data_g,
+                ma.MaskedArray(data_g),
                 "tb_qf",
                 (time_i, np.linspace(0.5, 20.0 - 0.5, 20)),
                 nc_file,
             )
         _plot_segment_data(
             axs[2],
-            qf,
+            ma.MaskedArray(qf),
             "quality_flag_2",
             (time, np.linspace(0.5, len(frequency) - 0.5, len(frequency))),
             nc_file,
         )
         axs[2].set_title(ATTRIBUTES["quality_flag_2"].name)
 
-    qf = _get_freq_flag(data_in, [1, 2])
+    qf = _get_freq_flag(data_in, np.array([1, 2]))
     if len(gtim) > 0:
         time_i, data_g = np.linspace(time[0], time[-1], len(time)), np.zeros(
             (len(time), 20), np.float32
@@ -924,14 +933,14 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
             data_g[xind, :] = 1.0
         _plot_segment_data(
             axs[nsub - 1],
-            data_g,
+            ma.MaskedArray(data_g),
             "tb_qf",
             (time_i, np.linspace(0.5, 20.0 - 0.5, 20)),
             nc_file,
         )
     _plot_segment_data(
         axs[nsub - 1],
-        qf,
+        ma.MaskedArray(qf),
         "quality_flag_3",
         (time, np.linspace(0.5, len(frequency) - 0.5, len(frequency))),
         nc_file,
@@ -948,8 +957,9 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
         for label in axs[i].yaxis.get_majorticklabels():
             label.set_transform(label.get_transform() + offset)
         _set_ax(axs[i], len(frequency), "Frequency [GHz]")
+        ind1, ind2 = axs[i].get_xlim()
         axs[i].plot(
-            np.linspace(*axs[i].get_xlim(), len(time)),
+            np.linspace(ind1, ind2, len(time)),
             np.ones(len(time)) * np.sum(np.array(params["receiver"]) == 1),
             "k-",
             linewidth=1,
@@ -986,10 +996,10 @@ def _plot_tb(
         lev1_file = _get_lev1(nc_file)
         quality_flag = read_nc_fields(lev1_file, "quality_flag")
         quality_flag = _elevation_filter(
-            lev1_file, quality_flag, [ang[-1] - 0.5, ang[-1] + 0.5]
+            lev1_file, quality_flag, (ang[-1] - 0.5, ang[-1] + 0.5)
         )
         quality_flag = _pointing_filter(
-            lev1_file, quality_flag, [ang[-1] - 0.5, ang[-1] + 0.5], 0
+            lev1_file, quality_flag, (ang[-1] - 0.5, ang[-1] + 0.5), 0
         )
         qf = np.copy(quality_flag)
         quality_flag[~isbit(quality_flag, 3)] = 0
@@ -1069,8 +1079,8 @@ def _plot_tb(
         )
 
     trans = ScaledTranslation(10 / 72, -5 / 72, fig.dpi_scale_trans)
-    tb_m: list[np.ndarray] = []
-    tb_s: list[np.ndarray] = []
+    tb_m: np.ndarray = np.array([])
+    tb_s: np.ndarray = np.array([])
 
     for i, axi in enumerate(axs.T.flatten()):
         no_flag = np.where(quality_flag[:, i] == 0)[0]
@@ -1269,7 +1279,7 @@ def _plot_tb(
                 data_g[isbit(qf[:, 0], 5), :] = 1.0
                 _plot_segment_data(
                     axa[irec],
-                    data_g,
+                    ma.MaskedArray(data_g),
                     "tb_missing",
                     (time, np.linspace(0, np.nanmax(tb_m[no_flag, irec]) + 0.5, 10)),
                     nc_file,
@@ -1292,7 +1302,7 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
         data_in *= 100.0
         ylabel = "relative humidity (%)"
         ax.set_title("Relative and absolute humidity", fontsize=14)
-    data, time = _get_unmasked_values(data_in, time)
+    data, time = _get_unmasked_values(ma.MaskedArray(data_in), time)
     if name == "wind_direction":
         spd = read_nc_fields(nc_file, "wind_speed")
         rolling_mean, width = dir_avg(time, spd, data)
@@ -1515,7 +1525,7 @@ def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
 
         _plot_segment_data(
             ax,
-            data_g,
+            ma.MaskedArray(data_g),
             "tb_missing",
             (time_i, np.linspace(vmin, vmax, 10)),
             nc_file,
