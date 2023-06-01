@@ -103,10 +103,10 @@ def isbit(array: np.ndarray, nth_bit: int) -> np.ndarray:
     Raises:
         ValueError: negative bit as input.
     Examples:
-        >>> isbit(4, 1)
-            False
-        >>> isbit(4, 2)
-            True
+        >>> isbit(np.array([4, 5]), 1)
+            array([False, False])
+        >>> isbit(np.array([4, 5]), 2)
+            array([ True,  True])
     See also:
         utils.setbit()
     """
@@ -126,10 +126,10 @@ def setbit(array: np.ndarray, nth_bit: int) -> np.ndarray:
     Raises:
         ValueError: negative bit as input.
     Examples:
-        >>> setbit(1, 1)
-            3
-        >>> setbit(0, 2)
-            4
+        >>> setbit(np.array([0, 1]), 1)
+            array([2, 3])
+        >>> setbit(np.array([0, 1]), 2)
+            array([4, 5])
     See also:
         utils.isbit()
     """

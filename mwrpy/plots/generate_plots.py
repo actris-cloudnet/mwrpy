@@ -455,7 +455,7 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
     Creates only one plot, so can be used both one plot and subplot type of figs.
     Args:
         ax (obj): Axes object of subplot (1,2,3,.. [1,1,],[1,2]... etc.)
-        data (ndarray): 2D data array.
+        data_in (ndarray): 2D data array.
         name (string): Name of plotted data.
         axes (tuple): Time and height 1D arrays.
         nc_file (str): Input file.
@@ -488,6 +488,7 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
         data[data > 1.0] = 1.0
         data[data < 0.0] = 0.0
         data *= 100.0
+        data_in *= 100.0
         nbin = 6
         hum_file = nc_file.replace("2P04", "2P03")
 
@@ -684,7 +685,6 @@ def _plot_hkd(ax, data_in: ndarray, name: str, time: ndarray):
         leg = ax2.legend(lines + lines2, labels + labels2, loc="upper right")
 
     if name == "t_rec":
-        vmin, vmax = np.nanmin(data_in[:, 0]) - 0.01, np.nanmax(data_in[:, 0]) + 0.01
         ax.plot(time, data_in[:, 0], color="sienna", linewidth=0.8, label="Receiver 1")
         ax.yaxis.set_major_formatter(FormatStrFormatter("%.2f"))
         ax2 = ax.twinx()
@@ -817,7 +817,7 @@ def _plot_irt(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
             markersize=0.75,
             fillstyle="full",
             color="sienna",
-            label=str(ir_wavelength[0] / 1e-6) + " µm",
+            label=str(np.round(ir_wavelength[0] / 1e-6, 1)) + " µm",
         )
     if data_in.shape[1] > 1:
         if not data_in[:, 1].mask.all():
@@ -828,7 +828,7 @@ def _plot_irt(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
                 markersize=0.75,
                 fillstyle="full",
                 color=_COLORS["shockred"],
-                label=str(ir_wavelength[1] / 1e-6) + " µm",
+                label=str(np.round(ir_wavelength[1] / 1e-6, 1)) + " µm",
             )
     ax.set_ylim((vmin, vmax))
     ax.legend(loc="upper right", markerscale=6)

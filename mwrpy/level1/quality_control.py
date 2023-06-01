@@ -123,16 +123,18 @@ def apply_qc(
         # else:
 
 
-def orbpos(data: dict, params: dict) -> tuple:
+def orbpos(data: dict, params: dict) -> np.ndarray:
     """Calculates sun & moon elevation/azimuth angles
     and returns index for observations in the direction of the sun"""
 
-    sun = {}
-    sun["azimuth_angle"] = np.zeros(data["time"].shape) * Fill_Value_Float
-    sun["elevation_angle"] = np.zeros(data["time"].shape) * Fill_Value_Float
-    moon = {}
-    moon["azimuth_angle"] = np.zeros(data["time"].shape) * Fill_Value_Float
-    moon["elevation_angle"] = np.zeros(data["time"].shape) * Fill_Value_Float
+    sun: dict = {
+        "azimuth_angle": np.zeros(data["time"].shape) * Fill_Value_Float,
+        "elevation_angle": np.zeros(data["time"].shape) * Fill_Value_Float,
+    }
+    moon: dict = {
+        "azimuth_angle": np.zeros(data["time"].shape) * Fill_Value_Float,
+        "elevation_angle": np.zeros(data["time"].shape) * Fill_Value_Float,
+    }
 
     sol = ephem.Sun()
     lun = ephem.Moon()
@@ -187,7 +189,7 @@ def orbpos(data: dict, params: dict) -> tuple:
             & (data["azimuth_angle"] >= moon["azimuth_angle"] - params["saf"])
             & (data["azimuth_angle"] <= moon["azimuth_angle"] + params["saf"])
         )
-    )
+    )[0]
 
     return flag_ind
 
@@ -200,8 +202,7 @@ def spectral_consistency(
 
     flag_ind = np.zeros(data["tb"].shape, dtype=np.int32)
     abs_diff = ma.masked_all(data["tb"].shape, dtype=np.float32)
-    rpg_dat = {}
-    rpg_dat["tb_spectrum"] = np.ones(data["tb"].shape) * np.nan
+    rpg_dat = {"tb_spectrum": np.ones(data["tb"].shape) * np.nan}
     global_attributes, _ = read_yaml_config(site)
 
     c_list = get_coeff_list(site, "spc")

@@ -231,7 +231,7 @@ def annotate_heatmap(
     if threshold is not None:
         threshold = im.norm(threshold)
     else:
-        threshold = im.norm(data.max()) / 2.0
+        threshold = im.norm(np.max(data)) / 2.0
 
     # Set default alignment to center, but allow it to be
     # overwritten by textkw.
