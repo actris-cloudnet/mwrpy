@@ -24,7 +24,6 @@ PRODUCT_NAME = {
     "2P04": "relative_humidity",
     "2P07": "potential_temperature",
     "2P08": "equivalent_potential_temperature",
-    "2S02": "tb_spectrum",
 }
 
 
@@ -38,7 +37,7 @@ def main(args):
             if product not in PRODUCT_NAME:
                 logging.error(f"Product {product} not recognised")
                 continue
-            if (args.command != "plot") & (product != "2S02"):
+            if args.command != "plot":
                 logging.info(f"Processing {product} product, {args.site} {date}")
                 process_product(product, date, args.site)
             logging.info(f"Plotting {product} product, {args.site} {date}")
@@ -50,13 +49,9 @@ def main(args):
 
 def process_product(prod: str, date: datetime.date, site: str):
     output_file = _get_filename(prod, date, site)
-    spec_file = _get_filename("2S02", date, site)
     output_dir = os.path.dirname(output_file)
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
-    output_dir_spec = os.path.dirname(spec_file)
-    if not os.path.isdir(output_dir_spec):
-        os.makedirs(output_dir_spec)
 
     if prod[0] == "1":
         lev1_to_nc(
@@ -64,7 +59,6 @@ def process_product(prod: str, date: datetime.date, site: str):
             prod,
             _get_raw_file_path(date, site),
             output_file,
-            spec_file,
         )
     elif prod[0] == "2":
         if prod in ("2P04", "2P07", "2P08"):
@@ -90,6 +84,7 @@ def plot_product(prod: str, date, site: str):
     if os.path.isfile(filename) and prod[0] == "1":
         keymap = {
             "tb": ["tb"],
+            "tb_spectrum": ["tb_spectrum"],
             "sen": ["elevation_angle", "azimuth_angle"],
             "irt": ["irt"],
             "met": ["air_temperature", "relative_humidity", "rainfall_rate"],
@@ -104,7 +99,7 @@ def plot_product(prod: str, date, site: str):
                     89.0,
                     91.0,
                 )
-                if key == "tb"
+                if key in ("tb", "tb_spectrum")
                 else (0.0, 91.0)
             )
             generate_figure(

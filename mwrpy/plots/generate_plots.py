@@ -25,14 +25,12 @@ from mwrpy.plots.plot_utils import (
     _gap_array,
     _get_bit_flag,
     _get_freq_flag,
-    _get_lev1,
     _get_ret_flag,
     _get_unmasked_values,
     _nan_time_gaps,
     _read_location,
 )
 from mwrpy.utils import (
-    get_ret_ang,
     isbit,
     read_nc_field_name,
     read_nc_fields,
@@ -980,30 +978,16 @@ def _plot_tb(
     site = _read_location(nc_file)
     _, params = read_yaml_config(site)
     frequency = read_nc_fields(nc_file, "frequency")
-    if name == "tb":
-        quality_flag = read_nc_fields(nc_file, "quality_flag")
-        data_in = _pointing_filter(nc_file, data_in, ele_range, pointing)
-        time = _pointing_filter(nc_file, time, ele_range, pointing)
-        quality_flag = _elevation_filter(nc_file, quality_flag, ele_range)
-        quality_flag = _pointing_filter(nc_file, quality_flag, ele_range, pointing)
-    else:
-        sc = {}
-        sc["tb"] = read_nc_fields(nc_file, "tb")
-        sc["receiver_nb"] = read_nc_fields(nc_file, "receiver_nb")
-        sc["receiver"] = read_nc_fields(nc_file, "receiver")
-        sc["time"] = read_nc_fields(nc_file, "time")
-        ang = get_ret_ang(nc_file)
-        lev1_file = _get_lev1(nc_file)
-        quality_flag = read_nc_fields(lev1_file, "quality_flag")
-        quality_flag = _elevation_filter(
-            lev1_file, quality_flag, (ang[-1] - 0.5, ang[-1] + 0.5)
-        )
-        quality_flag = _pointing_filter(
-            lev1_file, quality_flag, (ang[-1] - 0.5, ang[-1] + 0.5), 0
-        )
-        qf = np.copy(quality_flag)
+    quality_flag = read_nc_fields(nc_file, "quality_flag")
+    if name == "tb_spectrum":
+        tb = read_nc_fields(nc_file, "tb")
         quality_flag[~isbit(quality_flag, 3)] = 0
-        data_in = sc["tb"] - data_in
+        data_in = tb - data_in
+
+    data_in = _pointing_filter(nc_file, data_in, ele_range, pointing)
+    time = _pointing_filter(nc_file, time, ele_range, pointing)
+    quality_flag = _elevation_filter(nc_file, quality_flag, ele_range)
+    quality_flag = _pointing_filter(nc_file, quality_flag, ele_range, pointing)
 
     fig.clear()
     fig, axs = plt.subplots(
@@ -1240,19 +1224,21 @@ def _plot_tb(
         )
 
     else:
-        tb_m = np.ones((len(sc["time"]), len(sc["receiver_nb"]))) * np.nan
+        tb_m = np.ones((len(time), len(params["receiver_nb"]))) * np.nan
         axa = fig.subplots(1, 2)
         ticks_x_labels = _get_standard_time_ticks()
         axa[0].set_ylabel("Mean absolute difference [K]", fontsize=12)
 
-        for irec, rec in enumerate(sc["receiver_nb"]):
+        for irec, rec in enumerate(params["receiver_nb"]):
             axa[irec].set_position([0.125 + irec * 0.415, -0.05, 0.36, 0.125])
             no_flag = np.where(
-                np.sum(quality_flag[:, sc["receiver"] == rec], axis=1) == 0
+                np.sum(quality_flag[:, params["receiver"] == rec], axis=1) == 0
             )[0]
             if len(no_flag) == 0:
-                no_flag = np.arange(len(sc["time"]))
-            tb_m[:, irec] = ma.mean(np.abs(data_in[:, sc["receiver"] == rec]), axis=1)
+                no_flag = np.arange(len(params["time"]))
+            tb_m[:, irec] = ma.mean(
+                np.abs(data_in[:, params["receiver"] == rec]), axis=1
+            )
             axa[irec].plot(
                 time,
                 tb_m[:, irec],
@@ -1262,9 +1248,9 @@ def _plot_tb(
                 fillstyle="full",
             )
             axa[irec].set_facecolor(_COLORS["lightgray"])
-            flag = np.where(np.sum(quality_flag[:, sc["receiver"] == rec], axis=1) > 0)[
-                0
-            ]
+            flag = np.where(
+                np.sum(quality_flag[:, params["receiver"] == rec], axis=1) > 0
+            )[0]
             axa[irec].plot(
                 time[flag], tb_m[flag, irec], "ro", markersize=0.75, fillstyle="full"
             )
@@ -1274,9 +1260,9 @@ def _plot_tb(
             axa[irec].set_xlabel("Time (UTC)", fontsize=12)
             axa[irec].set_ylim([0, np.nanmax(tb_m[no_flag, irec]) + 0.5])
 
-            if len(np.where(isbit(qf[:, 0], 5))[0]) > 0:
+            if len(np.where(isbit(quality_flag[:, 0], 5))[0]) > 0:
                 data_g = np.zeros((len(time), 10), np.float32)
-                data_g[isbit(qf[:, 0], 5), :] = 1.0
+                data_g[isbit(quality_flag[:, 0], 5), :] = 1.0
                 _plot_segment_data(
                     axa[irec],
                     ma.MaskedArray(data_g),

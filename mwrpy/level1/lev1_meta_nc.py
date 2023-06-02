@@ -27,7 +27,6 @@ def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
         "1B11",
         "1B21",
         "1C01",
-        "2S02",
     ):
         raise RuntimeError(
             ["Data type " + data_type + " not supported for file writing."]
@@ -41,9 +40,6 @@ def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
         attributes = dict(
             ATTRIBUTES_COM, **ATTRIBUTES_1B01, **ATTRIBUTES_1B11, **ATTRIBUTES_1B21
         )
-
-    elif data_type == "2S02":
-        attributes = dict(ATTRIBUTES_COM, **ATTRIBUTES_2S02)
 
     for key in list(rpg_variables):
         if key in attributes:
@@ -240,6 +236,10 @@ ATTRIBUTES_1B01 = {
         units="degree",
         comment="90=horizon, 0=zenith",
     ),
+    "tb_spectrum": MetaData(
+        long_name="Brightness temperature spectrum",
+        units="K",
+    ),
     # 'tn': MetaData(
     #     long_name='Receiver noise temperature',
     #     units='K',
@@ -330,33 +330,9 @@ ATTRIBUTES_1B21 = {
 }
 
 
-ATTRIBUTES_2S02 = {
-    "frequency": MetaData(
-        long_name="Centre frequency of microwave channels",
-        standard_name="radiation_frequency",
-        units="GHz",
-        comment="For more accurate frequency values use frequency+freq_shift.",
-    ),
-    "receiver_nb": MetaData(long_name="Number of the microwave receiver", units="1"),
-    "receiver": MetaData(
-        long_name="Corresponding microwave receiver for each channel", units="1"
-    ),
-    "tb": MetaData(
-        long_name="Microwave brightness temperatures",
-        standard_name="microwave_brightness_temperature",
-        units="K",
-    ),
-    "tb_spectrum": MetaData(
-        long_name="Brightness temperature spectrum",
-        units="K",
-    ),
-}
-
-
 FuncType: TypeAlias = Callable[[str], dict]
 att_reader: dict[str, dict] = {
     "1B01": ATTRIBUTES_1B01,
     "1B11": ATTRIBUTES_1B11,
     "1B21": ATTRIBUTES_1B21,
-    "2S02": ATTRIBUTES_2S02,
 }

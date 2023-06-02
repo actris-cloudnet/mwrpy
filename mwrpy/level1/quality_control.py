@@ -7,8 +7,6 @@ import numpy as np
 import pandas as pd
 from numpy import ma
 
-from mwrpy import rpg_mwr
-from mwrpy.level1.lev1_meta_nc import get_data_attributes
 from mwrpy.level1.rpg_bin import RpgBin
 from mwrpy.level2.get_ret_coeff import get_mvr_coeff
 from mwrpy.level2.write_lev2_nc import retrieval_input
@@ -18,15 +16,12 @@ Fill_Value_Float = -999.0
 Fill_Value_Int = -99
 
 
-def apply_qc(
-    site: str, data_in: RpgBin, params: dict, spec_file: str | None = None
-) -> None:
+def apply_qc(site: str, data_in: RpgBin, params: dict) -> None:
     """This function performs the quality control of level 1 data.
     Args:
         site: Name of site.
         data_in: Level 1 data.
         params: Site specific parameters.
-        spec_file: Output file name of spectral product.
 
     Returns:
         None
@@ -45,7 +40,7 @@ def apply_qc(
     data["quality_flag_status"] = np.zeros(data["tb"].shape, dtype=np.int32)
 
     if params["flag_status"][3] == 0:
-        ind_bit4 = spectral_consistency(data, site, spec_file)
+        ind_bit4 = spectral_consistency(data, site)
     ind_bit6 = np.where(data["rain"] == 1)
     ind_bit7 = orbpos(data, params)
 
@@ -194,15 +189,13 @@ def orbpos(data: dict, params: dict) -> np.ndarray:
     return flag_ind
 
 
-def spectral_consistency(
-    data: dict, site: str, spec_file: str | None = None
-) -> np.ndarray:
+def spectral_consistency(data: dict, site: str) -> np.ndarray:
     """Applies spectral consistency coefficients for given frequency index,
     writes 2S02 product and returns indices to be flagged"""
 
     flag_ind = np.zeros(data["tb"].shape, dtype=np.int32)
     abs_diff = ma.masked_all(data["tb"].shape, dtype=np.float32)
-    rpg_dat = {"tb_spectrum": np.ones(data["tb"].shape) * np.nan}
+    data["tb_spectrum"] = np.ones(data["tb"].shape) * np.nan
     global_attributes, _ = read_yaml_config(site)
 
     c_list = get_coeff_list(site, "spc")
@@ -250,7 +243,7 @@ def spectral_consistency(
             fac[:].reshape((len(ele_ind), 1))
             * np.einsum("ijk,ij->ik", c_w1, ret_in[ele_ind, :])
         )
-        rpg_dat["tb_spectrum"][ele_ind, :] = (
+        data["tb_spectrum"][ele_ind, :] = (
             np.tanh(
                 fac[:].reshape((len(ele_ind), 1))
                 * np.einsum("ijk,ik->ij", c_w2[:, coeff_ind, :], hidden_layer)
@@ -267,7 +260,7 @@ def spectral_consistency(
 
         for ifreq, _ in enumerate(data["frequency"]):
             tb_df = pd.DataFrame(
-                {"Tb": (data["tb"][:, ifreq] - rpg_dat["tb_spectrum"][:, ifreq])},
+                {"Tb": (data["tb"][:, ifreq] - data["tb_spectrum"][:, ifreq])},
                 index=pd.to_datetime(data["time"][:], unit="s"),
             )
             tb_mean = tb_df.resample(
@@ -286,7 +279,7 @@ def spectral_consistency(
                 ifreq,
             ] = 1
             abs_diff[:, ifreq] = np.abs(
-                data["tb"][:, ifreq] - rpg_dat["tb_spectrum"][:, ifreq]
+                data["tb"][:, ifreq] - data["tb_spectrum"][:, ifreq]
             )
 
     else:
@@ -321,7 +314,7 @@ def spectral_consistency(
                 )[0]
 
                 if (ele_ind.size > 0) & (freq_ind.size > 0):
-                    rpg_dat["tb_spectrum"][ele_ind, ifreq] = (
+                    data["tb_spectrum"][ele_ind, ifreq] = (
                         cfile["offset_mvr"][:]
                         + np.sum(
                             cfile["coefficient_mvr"][coeff_ind].T
@@ -338,11 +331,7 @@ def spectral_consistency(
                     )
 
                     tb_df = pd.DataFrame(
-                        {
-                            "Tb": (
-                                data["tb"][:, ifreq] - rpg_dat["tb_spectrum"][:, ifreq]
-                            )
-                        },
+                        {"Tb": (data["tb"][:, ifreq] - data["tb_spectrum"][:, ifreq])},
                         index=pd.to_datetime(data["time"][:], unit="s"),
                     )
                     tb_mean = tb_df.resample(
@@ -371,7 +360,7 @@ def spectral_consistency(
                     ] = 1
 
             abs_diff[:, ifreq] = ma.masked_invalid(
-                np.abs(data["tb"][:, ifreq] - rpg_dat["tb_spectrum"][:, ifreq])
+                np.abs(data["tb"][:, ifreq] - data["tb_spectrum"][:, ifreq])
             )
 
     th_rec = [1.0, 2.0]  # threshold for receiver mean absolute difference
@@ -384,35 +373,4 @@ def spectral_consistency(
             )
         ] = 1
 
-    rpg_dat["tb"] = data["tb"]
-    fields = [
-        "frequency",
-        "receiver_nb",
-        "receiver",
-        "time",
-        "time_bnds",
-        "latitude",
-        "longitude",
-        "azimuth_angle",
-        "elevation_angle",
-    ]
-    for name in fields:
-        rpg_dat[name] = data[name][:]
-
-    _del_lev1_att(global_attributes)
-    hatpro = rpg_mwr.Rpg(rpg_dat)
-    hatpro.data = get_data_attributes(hatpro.data, "2S02")
-
-    if spec_file is not None:
-        rpg_mwr.save_rpg(hatpro, spec_file, global_attributes, "2S02")
-
     return flag_ind
-
-
-def _del_lev1_att(global_attributes: dict) -> None:
-    """Remove lev1 only attributes"""
-    att_del = ["ir_instrument", "met_instrument", "_accuracy"]
-    att_names = global_attributes.keys()
-    for name in list(att_names):
-        if any(x in name for x in att_del):
-            del global_attributes[name]
