@@ -128,14 +128,13 @@ class Rpg:
         if len(ind) < 1:
             raise RuntimeError(["Error: no valid data for date: " + self.date])
         n_time = len(self.data["time"].data)
-        for _, array in self.data.items():
-            data = array.data
-            if data.ndim > 0 and data.shape[0] == n_time:
-                if data.ndim == 1:
-                    screened_data = data[ind]
+        keys = self.data.keys()
+        for key in keys:
+            if self.data[key].data.ndim > 0 and self.data[key].data.shape[0] == n_time:
+                if self.data[key].data.ndim == 1:
+                    self.data[key].data = self.data[key].data[ind]
                 else:
-                    screened_data = data[ind, :]
-                data = screened_data
+                    self.data[key].data = self.data[key].data[ind, :]
 
 
 def save_rpg(rpg: Rpg, output_file: str, att: dict, data_type: str) -> None:

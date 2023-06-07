@@ -114,7 +114,6 @@ def generate_figure(
 
     valid_fields, valid_names = _find_valid_fields(nc_file, field_names)
     if len(valid_fields) > 0:
-        is_height = _is_height_dimension(nc_file)
         fig, axes = _initialize_figure(len(valid_fields), dpi)
 
         for ax, field, name in zip(axes, valid_fields, valid_names):
@@ -128,6 +127,7 @@ def generate_figure(
                 field = _elevation_filter(nc_file, field, elevation_range)
             if title:
                 _set_title(ax, name, nc_file, "")
+            is_height = _is_height_dimension(nc_file, name)
             if not is_height:
                 source = ATTRIBUTES[name].source
                 _plot_instrument_data(
@@ -268,10 +268,10 @@ def _find_valid_fields(nc_file: str, names: list) -> tuple[list, list]:
     return valid_data, valid_names
 
 
-def _is_height_dimension(full_path: str) -> bool:
+def _is_height_dimension(full_path: str, var_name: str) -> bool:
     """Checks for height dimension in netCDF file."""
     with netCDF4.Dataset(full_path) as nc:
-        is_height = "height" in nc.variables
+        is_height = "height" in nc.variables[var_name].dimensions
     return is_height
 
 
@@ -981,6 +981,7 @@ def _plot_tb(
     quality_flag = read_nc_fields(nc_file, "quality_flag")
     if name == "tb_spectrum":
         tb = read_nc_fields(nc_file, "tb")
+        tb = _elevation_filter(nc_file, tb, ele_range)
         quality_flag[~isbit(quality_flag, 3)] = 0
         data_in = tb - data_in
 
@@ -1237,7 +1238,7 @@ def _plot_tb(
             if len(no_flag) == 0:
                 no_flag = np.arange(len(params["time"]))
             tb_m[:, irec] = ma.mean(
-                np.abs(data_in[:, params["receiver"] == rec]), axis=1
+                np.abs(data_in[:, np.array(params["receiver"]) == rec]), axis=1
             )
             axa[irec].plot(
                 time,
@@ -1249,7 +1250,7 @@ def _plot_tb(
             )
             axa[irec].set_facecolor(_COLORS["lightgray"])
             flag = np.where(
-                np.sum(quality_flag[:, params["receiver"] == rec], axis=1) > 0
+                np.sum(quality_flag[:, np.array(params["receiver"]) == rec], axis=1) > 0
             )[0]
             axa[irec].plot(
                 time[flag], tb_m[flag, irec], "ro", markersize=0.75, fillstyle="full"

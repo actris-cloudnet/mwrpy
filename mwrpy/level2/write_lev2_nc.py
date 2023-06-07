@@ -18,6 +18,7 @@ from mwrpy.utils import (
     get_ret_ang,
     get_ret_freq,
     interpol_2d,
+    interpolate_2d,
     read_yaml_config,
 )
 
@@ -423,12 +424,20 @@ def get_products(
             "derived product from: " + temp_file + ", " + hum_file
         )
         coeff["dependencies"] = temp_file + ", " + hum_file
-
-        hum_int = interpol_2d(
-            hum_dat.variables["time"][:],
-            hum_dat.variables["absolute_humidity"][:, :],
-            tem_dat.variables["time"][:],
-        )
+        if len(hum_dat.variables["height"][:]) == len(tem_dat.variables["height"][:]):
+            hum_int = interpol_2d(
+                hum_dat.variables["time"][:],
+                hum_dat.variables["absolute_humidity"][:, :],
+                tem_dat.variables["time"][:],
+            )
+        else:
+            hum_int = interpolate_2d(
+                hum_dat.variables["time"][:],
+                hum_dat.variables["height"][:],
+                hum_dat.variables["absolute_humidity"][:, :],
+                tem_dat.variables["time"][:],
+                tem_dat.variables["height"][:],
+            )
 
         rpg_dat["height"] = tem_dat.variables["height"][:]
         pres = np.interp(

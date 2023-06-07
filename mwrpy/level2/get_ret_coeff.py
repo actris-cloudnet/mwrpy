@@ -150,15 +150,29 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
                             line_num += 1
                             _, tmp = lines[line_num].split(":")
                             tmp_splitted = tmp.split()
-                            value = np.array(
-                                [
-                                    float(tmp_splitted[idx])
-                                    for idx in range(len(coeff["FR"]))
-                                ],
-                                np.float32,
-                            )
+                            if prefix == "tpb":
+                                value = np.array(
+                                    [
+                                        float(tmp_splitted[idx])
+                                        for idx in range(len(coeff["AG"]))
+                                    ],
+                                    np.float32,
+                                )
+                            else:
+                                value = np.array(
+                                    [
+                                        float(tmp_splitted[idx])
+                                        for idx in range(len(coeff["FR"]))
+                                    ],
+                                    np.float32,
+                                )
                             tl_stack = np.vstack((tl_stack, value))
-                        coeff[name] = tl_stack
+                        if name in coeff:
+                            coeff[name] = np.concatenate(
+                                (coeff[name], tl_stack), axis=1
+                            )
+                        else:
+                            coeff[name] = tl_stack
                     elif name == "TQ":
                         tq_stack = value
                         for _ in range(len(coeff["AL"]) - 1):
@@ -340,10 +354,10 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
     elif (coeff["RT"] < 2) & (len(coeff["AL"]) > 1) & (prefix == "tpb"):
 
         def f_offset(_x):
-            return coeff["OS"]
+            return coeff["OS"][:, 0]
 
         def f_lin(_x):
-            return coeff["TL"]
+            return coeff["TL"].T
 
         def f_quad(_x):
             return np.empty(0)

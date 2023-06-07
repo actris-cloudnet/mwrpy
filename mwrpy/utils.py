@@ -14,6 +14,7 @@ import pandas as pd
 import yaml
 from numpy import ma
 from scipy import signal
+from scipy.interpolate import RectBivariateSpline
 from yaml.loader import SafeLoader
 
 SECONDS_PER_MINUTE = 60
@@ -168,6 +169,33 @@ def interpol_2d(
     result[~np.isfinite(result)] = 0
     masked = ma.make_mask(result)
     return ma.array(result, mask=np.invert(masked))
+
+
+def interpolate_2d(
+    x: np.ndarray,
+    y: np.ndarray,
+    z: ma.MaskedArray,
+    x_new: np.ndarray,
+    y_new: np.ndarray,
+) -> ma.MaskedArray:
+    """Linear interpolation of gridded 2d data.
+
+    Args:
+        x: 1-D array.
+        y: 1-D array.
+        z: 2-D array at points (x, y).
+        x_new: 1-D array.
+        y_new: 1-D array.
+
+    Returns:
+        Interpolated data.
+
+    Notes:
+        Does not work with nans. Ignores mask of masked data. Does not extrapolate.
+
+    """
+    fun = RectBivariateSpline(x, y, z, kx=1, ky=1)
+    return fun(x_new, y_new)
 
 
 def add_interpol1d(
@@ -479,8 +507,12 @@ def get_processing_dates(args) -> tuple[str, str]:
 
 def _get_filename(prod: str, date_in: datetime.date, site: str) -> str:
     global_attributes, params = read_yaml_config(site)
+    if np.char.isnumeric(prod[0]):
+        level = prod[0]
+    else:
+        level = "2"
     data_out_dir = os.path.join(
-        params["data_out"], f"level{prod[0]}", date_in.strftime("%Y/%m/%d")
+        params["data_out"], f"level{level}", date_in.strftime("%Y/%m/%d")
     )
     wigos_id = global_attributes["wigos_station_id"]
     filename = f"MWR_{prod}_{wigos_id}_{date_in.strftime('%Y%m%d')}.nc"
@@ -502,3 +534,51 @@ def date_range(
 def time_to_datetime_index(time_array: np.ndarray) -> pd.DatetimeIndex:
     time_units = "s" if max(time_array) > 25 else "h"
     return pd.to_datetime(time_array, unit=time_units)
+
+
+def copy_variables(
+    source: netCDF4.Dataset, target: netCDF4.Dataset, keys: tuple
+) -> None:
+    """Copies variables (and their attributes) from one file to another.
+
+    Args:
+        source: Source object.
+        target: Target object.
+        keys: Variable names to be copied.
+
+    """
+    for key in keys:
+        if key in source.variables:
+            fill_value = getattr(source.variables[key], "_FillValue", False)
+            variable = source.variables[key]
+            var_out = target.createVariable(
+                key,
+                variable.datatype,
+                variable.dimensions,
+                fill_value=fill_value,
+            )
+            var_out.setncatts(
+                {
+                    k: variable.getncattr(k)
+                    for k in variable.ncattrs()
+                    if k != "_FillValue"
+                }
+            )
+            var_out[:] = variable[:]
+
+
+def copy_global(
+    source: netCDF4.Dataset, target: netCDF4.Dataset, attributes: tuple
+) -> None:
+    """Copies global attributes from one file to another.
+
+    Args:
+        source: Source object.
+        target: Target object.
+        attributes: List of attributes to be copied.
+
+    """
+    source_attributes = source.ncattrs()
+    for attr in attributes:
+        if attr in source_attributes:
+            setattr(target, attr, source.getncattr(attr))

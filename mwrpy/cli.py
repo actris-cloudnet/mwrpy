@@ -35,19 +35,13 @@ def _parse_args(args):
     group.add_argument(
         "-p",
         "--products",
-        help="Products to be processed, e.g., 1C01, 2I02, 2P03.\
-                            Default is all regular products.",
+        help="Products to be processed, e.g., 1C01, 2I02, multi.\
+                            Default is all collocated products.",
         type=lambda s: s.split(","),
         default=[
             "1C01",
-            "2I01",
-            "2I02",
-            "2P01",
-            "2P02",
-            "2P03",
-            "2P04",
-            "2P07",
-            "2P08",
+            "single",
+            "multi",
         ],
     )
     group.add_argument(
