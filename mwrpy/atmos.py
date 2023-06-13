@@ -147,6 +147,8 @@ def winddir(spd: np.ndarray, drc: np.ndarray):
         Dv = vdir + 180.0
     elif vdir > 180.0:
         Dv = vdir - 180
+    else:
+        Dv = vdir
     return Dv
 
 
@@ -167,17 +169,26 @@ def find_lwcl_free(lev1: dict) -> tuple[np.ndarray, np.ndarray]:
         tb[(lev1["pointing_flag"][:] == 1) | (elevation_angle[:] < 89.0)] = np.nan
         ind = utils.time_to_datetime_index(lev1["time"][:])
         tb_df = pd.DataFrame({"Tb": tb}, index=ind)
-        tb_std = tb_df.rolling("2min", center=True, min_periods=10).std()
-        tb_mx = tb_std.rolling("20min", center=True, min_periods=100).max()
+        tb_std = tb_df.rolling(
+            pd.tseries.frequencies.to_offset("2min"), center=True, min_periods=10
+        ).std()
+        tb_mx = tb_std.rolling(
+            pd.tseries.frequencies.to_offset("20min"), center=True, min_periods=100
+        ).max()
 
         if "irt" in lev1:
             tb_thres = 0.15
             irt = lev1["irt"][:, :]
             irt[irt == -999.0] = np.nan
-            irt = np.nanmean(irt, axis=1)
+            if irt.shape[1] > 1:
+                irt = np.nanmean(irt, axis=1)
+            else:
+                irt = np.squeeze(irt)
             irt[(lev1["pointing_flag"][:] == 1) | (elevation_angle[:] < 89.0)] = np.nan
             irt_df = pd.DataFrame({"Irt": irt[:]}, index=ind)
-            irt_mx = irt_df.rolling("20min", center=True, min_periods=100).max()
+            irt_mx = irt_df.rolling(
+                pd.tseries.frequencies.to_offset("20min"), center=True, min_periods=100
+            ).max()
             index[(irt_mx["Irt"] > 263.15) & (tb_mx["Tb"] > tb_thres)] = 1.0
             status[:] = 0
 

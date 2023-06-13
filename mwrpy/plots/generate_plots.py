@@ -8,7 +8,12 @@ import numpy as np
 from matplotlib import rcParams
 from matplotlib.colors import BoundaryNorm, ListedColormap
 from matplotlib.patches import Patch
-from matplotlib.ticker import FixedLocator, FormatStrFormatter, MultipleLocator
+from matplotlib.ticker import (
+    FixedLocator,
+    FormatStrFormatter,
+    MultipleLocator,
+    NullLocator,
+)
 from matplotlib.transforms import Affine2D, Bbox, ScaledTranslation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from numpy import ma, ndarray
@@ -20,14 +25,12 @@ from mwrpy.plots.plot_utils import (
     _gap_array,
     _get_bit_flag,
     _get_freq_flag,
-    _get_lev1,
     _get_ret_flag,
     _get_unmasked_values,
     _nan_time_gaps,
     _read_location,
 )
 from mwrpy.utils import (
-    get_ret_ang,
     isbit,
     read_nc_field_name,
     read_nc_fields,
@@ -111,7 +114,6 @@ def generate_figure(
 
     valid_fields, valid_names = _find_valid_fields(nc_file, field_names)
     if len(valid_fields) > 0:
-        is_height = _is_height_dimension(nc_file)
         fig, axes = _initialize_figure(len(valid_fields), dpi)
 
         for ax, field, name in zip(axes, valid_fields, valid_names):
@@ -125,6 +127,7 @@ def generate_figure(
                 field = _elevation_filter(nc_file, field, elevation_range)
             if title:
                 _set_title(ax, name, nc_file, "")
+            is_height = _is_height_dimension(nc_file, name)
             if not is_height:
                 source = ATTRIBUTES[name].source
                 _plot_instrument_data(
@@ -265,10 +268,10 @@ def _find_valid_fields(nc_file: str, names: list) -> tuple[list, list]:
     return valid_data, valid_names
 
 
-def _is_height_dimension(full_path: str) -> bool:
+def _is_height_dimension(full_path: str, var_name: str) -> bool:
     """Checks for height dimension in netCDF file."""
     with netCDF4.Dataset(full_path) as nc:
-        is_height = "height" in nc.variables
+        is_height = "height" in nc.variables[var_name].dimensions
     return is_height
 
 
@@ -450,7 +453,7 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
     Creates only one plot, so can be used both one plot and subplot type of figs.
     Args:
         ax (obj): Axes object of subplot (1,2,3,.. [1,1,],[1,2]... etc.)
-        data (ndarray): 2D data array.
+        data_in (ndarray): 2D data array.
         name (string): Name of plotted data.
         axes (tuple): Time and height 1D arrays.
         nc_file (str): Input file.
@@ -483,6 +486,7 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
         data[data > 1.0] = 1.0
         data[data < 0.0] = 0.0
         data *= 100.0
+        data_in *= 100.0
         nbin = 6
         hum_file = nc_file.replace("2P04", "2P03")
 
@@ -639,26 +643,32 @@ def _plot_hkd(ax, data_in: ndarray, name: str, time: ndarray):
 
     time = _nan_time_gaps(time)
     if name == "t_amb":
-        ax.plot(
-            time,
-            np.abs(data_in[:, 0] - data_in[:, 1]),
-            color=_COLORS["darkgray"],
-            label="Difference",
-            linewidth=0.8,
-        )
-        _set_ax(
-            ax,
-            np.nanmax(np.abs(data_in[:, 0] - data_in[:, 1])) + 0.025,
-            "Sensor absolute difference (K)",
-            0.0,
-        )
-        ax.yaxis.set_label_position("right")
+        data_in[data_in == -999.0] = np.nan
+        if np.nanmax(data_in[:, 0] - data_in[:, 1]) > 0.0:
+            ax.plot(
+                time,
+                np.abs(data_in[:, 0] - data_in[:, 1]),
+                color=_COLORS["darkgray"],
+                label="Difference",
+                linewidth=0.8,
+            )
+            _set_ax(
+                ax,
+                np.nanmax(np.abs(data_in[:, 0] - data_in[:, 1])) + 0.025,
+                "Sensor absolute difference (K)",
+                0.0,
+            )
+            ax.yaxis.set_label_position("right")
+            ax.yaxis.tick_right()
+            ax.legend(loc="upper right")
+        else:
+            ax.yaxis.set_major_locator(NullLocator())
+
         ax2 = ax.twinx()
         vmin, vmax = np.nanmin(data_in) - 1.0, np.nanmax(data_in) + 1.0
         ax2.plot(time, np.mean(data_in, axis=1), color="darkblue", label="Mean")
         ax2.yaxis.tick_left()
         ax2.yaxis.set_label_position("left")
-        ax.legend(loc="upper right")
         _set_ax(ax2, vmax, "Sensor mean (K)", vmin)
         if np.nanmax(np.abs(data_in[:, 0] - data_in[:, 1])) > 0.3:
             ax.plot(
@@ -671,10 +681,8 @@ def _plot_hkd(ax, data_in: ndarray, name: str, time: ndarray):
         lines, labels = ax.get_legend_handles_labels()
         lines2, labels2 = ax2.get_legend_handles_labels()
         leg = ax2.legend(lines + lines2, labels + labels2, loc="upper right")
-        ax.yaxis.tick_right()
 
     if name == "t_rec":
-        vmin, vmax = np.nanmin(data_in[:, 0]) - 0.01, np.nanmax(data_in[:, 0]) + 0.01
         ax.plot(time, data_in[:, 0], color="sienna", linewidth=0.8, label="Receiver 1")
         ax.yaxis.set_major_formatter(FormatStrFormatter("%.2f"))
         ax2 = ax.twinx()
@@ -807,7 +815,7 @@ def _plot_irt(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
             markersize=0.75,
             fillstyle="full",
             color="sienna",
-            label=str(ir_wavelength[0]) + " µm",
+            label=str(np.round(ir_wavelength[0] / 1e-6, 1)) + " µm",
         )
     if data_in.shape[1] > 1:
         if not data_in[:, 1].mask.all():
@@ -818,7 +826,7 @@ def _plot_irt(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
                 markersize=0.75,
                 fillstyle="full",
                 color=_COLORS["shockred"],
-                label=str(ir_wavelength[1]) + " µm",
+                label=str(np.round(ir_wavelength[1] / 1e-6, 1)) + " µm",
             )
     ax.set_ylim((vmin, vmax))
     ax.legend(loc="upper right", markerscale=6)
@@ -970,30 +978,17 @@ def _plot_tb(
     site = _read_location(nc_file)
     _, params = read_yaml_config(site)
     frequency = read_nc_fields(nc_file, "frequency")
-    if name == "tb":
-        quality_flag = read_nc_fields(nc_file, "quality_flag")
-        data_in = _pointing_filter(nc_file, data_in, ele_range, pointing)
-        time = _pointing_filter(nc_file, time, ele_range, pointing)
-        quality_flag = _elevation_filter(nc_file, quality_flag, ele_range)
-        quality_flag = _pointing_filter(nc_file, quality_flag, ele_range, pointing)
-    else:
-        sc = {}
-        sc["tb"] = read_nc_fields(nc_file, "tb")
-        sc["receiver_nb"] = read_nc_fields(nc_file, "receiver_nb")
-        sc["receiver"] = read_nc_fields(nc_file, "receiver")
-        sc["time"] = read_nc_fields(nc_file, "time")
-        ang = get_ret_ang(nc_file)
-        lev1_file = _get_lev1(nc_file)
-        quality_flag = read_nc_fields(lev1_file, "quality_flag")
-        quality_flag = _elevation_filter(
-            lev1_file, quality_flag, (ang[-1] - 0.5, ang[-1] + 0.5)
-        )
-        quality_flag = _pointing_filter(
-            lev1_file, quality_flag, (ang[-1] - 0.5, ang[-1] + 0.5), 0
-        )
-        qf = np.copy(quality_flag)
+    quality_flag = read_nc_fields(nc_file, "quality_flag")
+    if name == "tb_spectrum":
+        tb = read_nc_fields(nc_file, "tb")
+        tb = _elevation_filter(nc_file, tb, ele_range)
         quality_flag[~isbit(quality_flag, 3)] = 0
-        data_in = sc["tb"] - data_in
+        data_in = tb - data_in
+
+    data_in = _pointing_filter(nc_file, data_in, ele_range, pointing)
+    time = _pointing_filter(nc_file, time, ele_range, pointing)
+    quality_flag = _elevation_filter(nc_file, quality_flag, ele_range)
+    quality_flag = _pointing_filter(nc_file, quality_flag, ele_range, pointing)
 
     fig.clear()
     fig, axs = plt.subplots(
@@ -1076,8 +1071,8 @@ def _plot_tb(
         no_flag = np.where(quality_flag[:, i] == 0)[0]
         if len(np.array(no_flag)) == 0:
             no_flag = np.arange(len(time))
-        tb_m = np.append(tb_m, [np.mean(data_in[no_flag, i])])  # TB mean
-        tb_s = np.append(tb_s, [np.std(data_in[no_flag, i])])  # TB std
+        tb_m = np.append(tb_m, [np.nanmean(data_in[no_flag, i])])  # TB mean
+        tb_s = np.append(tb_s, [np.nanstd(data_in[no_flag, i])])  # TB std
         axi.plot(
             time,
             np.ones(len(time)) * tb_m[i],
@@ -1089,12 +1084,12 @@ def _plot_tb(
         flag = np.where(quality_flag[:, i] > 0)[0]
         axi.plot(time[flag], data_in[flag, i], "ro", markersize=0.75, fillstyle="full")
         axi.set_facecolor(_COLORS["lightgray"])
-        dif = np.max(data_in[no_flag, i]) - np.min(data_in[no_flag, i])
+        dif = np.nanmax(data_in[no_flag, i]) - np.nanmin(data_in[no_flag, i])
         _set_ax(
             axi,
-            np.max(data_in[no_flag, i]) + 0.25 * dif,
+            np.nanmax(data_in[no_flag, i]) + 0.25 * dif,
             "",
-            np.min(data_in[no_flag, i]) - 0.25 * dif,
+            np.nanmin(data_in[no_flag, i]) - 0.25 * dif,
         )
         if i in (6, 13):
             _set_labels(fig, axi, nc_file)
@@ -1135,8 +1130,8 @@ def _plot_tb(
         axaK.set_xticklabels(axaK.get_xticks(), rotation=30)
         axaK.set_xlim(
             [
-                np.floor(np.min(frequency[np.array(params["receiver"]) == 1]) - 0.1),
-                np.ceil(np.max(frequency[np.array(params["receiver"]) == 1]) + 0.1),
+                np.floor(np.nanmin(frequency[np.array(params["receiver"]) == 1]) - 0.1),
+                np.ceil(np.nanmax(frequency[np.array(params["receiver"]) == 1]) + 0.1),
             ]
         )
         minv = np.nanmin(
@@ -1167,8 +1162,8 @@ def _plot_tb(
         axaV.set_xticklabels(axaV.get_xticks(), rotation=30)
         axaV.set_xlim(
             [
-                np.floor(np.min(frequency[np.array(params["receiver"]) == 2]) - 0.1),
-                np.ceil(np.max(frequency[np.array(params["receiver"]) == 2]) + 0.1),
+                np.floor(np.nanmin(frequency[np.array(params["receiver"]) == 2]) - 0.1),
+                np.ceil(np.nanmax(frequency[np.array(params["receiver"]) == 2]) + 0.1),
             ]
         )
         minv = np.nanmin(
@@ -1230,19 +1225,21 @@ def _plot_tb(
         )
 
     else:
-        tb_m = np.ones((len(sc["time"]), len(sc["receiver_nb"]))) * np.nan
+        tb_m = np.ones((len(time), len(params["receiver_nb"]))) * np.nan
         axa = fig.subplots(1, 2)
         ticks_x_labels = _get_standard_time_ticks()
         axa[0].set_ylabel("Mean absolute difference [K]", fontsize=12)
 
-        for irec, rec in enumerate(sc["receiver_nb"]):
+        for irec, rec in enumerate(params["receiver_nb"]):
             axa[irec].set_position([0.125 + irec * 0.415, -0.05, 0.36, 0.125])
             no_flag = np.where(
-                np.sum(quality_flag[:, sc["receiver"] == rec], axis=1) == 0
+                np.sum(quality_flag[:, params["receiver"] == rec], axis=1) == 0
             )[0]
             if len(no_flag) == 0:
-                no_flag = np.arange(len(sc["time"]))
-            tb_m[:, irec] = ma.mean(np.abs(data_in[:, sc["receiver"] == rec]), axis=1)
+                no_flag = np.arange(len(params["time"]))
+            tb_m[:, irec] = ma.mean(
+                np.abs(data_in[:, np.array(params["receiver"]) == rec]), axis=1
+            )
             axa[irec].plot(
                 time,
                 tb_m[:, irec],
@@ -1252,9 +1249,9 @@ def _plot_tb(
                 fillstyle="full",
             )
             axa[irec].set_facecolor(_COLORS["lightgray"])
-            flag = np.where(np.sum(quality_flag[:, sc["receiver"] == rec], axis=1) > 0)[
-                0
-            ]
+            flag = np.where(
+                np.sum(quality_flag[:, np.array(params["receiver"]) == rec], axis=1) > 0
+            )[0]
             axa[irec].plot(
                 time[flag], tb_m[flag, irec], "ro", markersize=0.75, fillstyle="full"
             )
@@ -1264,9 +1261,9 @@ def _plot_tb(
             axa[irec].set_xlabel("Time (UTC)", fontsize=12)
             axa[irec].set_ylim([0, np.nanmax(tb_m[no_flag, irec]) + 0.5])
 
-            if len(np.where(isbit(qf[:, 0], 5))[0]) > 0:
+            if len(np.where(isbit(quality_flag[:, 0], 5))[0]) > 0:
                 data_g = np.zeros((len(time), 10), np.float32)
-                data_g[isbit(qf[:, 0], 5), :] = 1.0
+                data_g[isbit(quality_flag[:, 0], 5), :] = 1.0
                 _plot_segment_data(
                     axa[irec],
                     ma.MaskedArray(data_g),
@@ -1284,6 +1281,10 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
     """Plot for meteorological sensors."""
 
     ylabel = ATTRIBUTES[name].ylabel
+    if name == "rainfall_rate":
+        data_in *= 1000.0 * 3600.0
+    if name == "air_pressure":
+        data_in /= 100.0
     if name == "relative_humidity":
         data_in *= 100.0
         ylabel = "relative humidity (%)"
@@ -1300,11 +1301,7 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
         time, time[int(width / 2 - 1) : int(-width / 2)], rolling_mean
     )
 
-    if (
-        (name != "rainfall_rate")
-        | (name != "air_temperature")
-        | (name != "relative_humidity")
-    ):
+    if name not in ("rainfall_rate", "air_temperature", "relative_humidity"):
         ax.plot(time, data, ".", alpha=0.8, color=_COLORS["darksky"], markersize=1)
         ax.plot(
             time, rolling_mean, "o", fillstyle="full", color="darkblue", markersize=3
@@ -1314,7 +1311,7 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
     vmin, vmax = plot_range
     if name == "air_pressure":
         vmin, vmax = np.nanmin(data) - 1.0, np.nanmax(data) + 1.0
-    if (name == "wind_speed") | (name == "rainfall_rate"):
+    if name in ("wind_speed", "rainfall_rate"):
         vmin, vmax = 0.0, np.nanmax([np.nanmax(data) + 1.0, 2.0])
 
     _set_ax(ax, vmax, ylabel, min_y=vmin)
@@ -1457,7 +1454,7 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
         ax2.yaxis.set_major_locator(FixedLocator(ticks))
         ax2.yaxis.set_major_formatter(FormatStrFormatter("%.3f"))
         assert ylabel is not None
-        _set_ax(ax, vmax, "rain rate (" + ylabel + ")", min_y=vmin)
+        _set_ax(ax, vmax, "rainfall rate (" + ylabel + ")", min_y=vmin)
         ax3 = ax.twinx()
         ax3.plot(time, data, ".", alpha=0.8, color=_COLORS["darksky"], markersize=1)
         ax3.plot(

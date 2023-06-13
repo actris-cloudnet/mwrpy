@@ -31,7 +31,6 @@ def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
         "2P08",
         "2I01",
         "2I02",
-        "2S02",
     ):
         raise RuntimeError(
             ["Data type " + data_type + " not supported for file writing."]
@@ -268,28 +267,6 @@ ATTRIBUTES_2I02 = {
 }
 
 
-ATTRIBUTES_2S02 = {
-    "frequency": MetaData(
-        long_name="Centre frequency of microwave channels",
-        standard_name="radiation_frequency",
-        units="GHz",
-        comment="For more accurate frequency values use frequency+freq_shift.",
-    ),
-    "receiver_nb": MetaData(long_name="Number of the microwave receiver", units="1"),
-    "receiver": MetaData(
-        long_name="Corresponding microwave receiver for each channel", units="1"
-    ),
-    "tb": MetaData(
-        long_name="Microwave brightness temperatures",
-        standard_name="microwave_brightness_temperature",
-        units="K",
-    ),
-    "tb_spectrum": MetaData(
-        long_name="Brightness temperature spectrum",
-        units="K",
-    ),
-}
-
 FuncType: TypeAlias = Callable[[str], dict]
 att_reader: dict[str, dict] = {
     "2P01": ATTRIBUTES_2P01,
@@ -300,5 +277,4 @@ att_reader: dict[str, dict] = {
     "2P08": ATTRIBUTES_2P08,
     "2I01": ATTRIBUTES_2I01,
     "2I02": ATTRIBUTES_2I02,
-    "2S02": ATTRIBUTES_2S02,
 }

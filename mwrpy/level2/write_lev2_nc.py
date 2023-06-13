@@ -4,6 +4,7 @@ from datetime import datetime
 import netCDF4 as nc
 import numpy as np
 import pytz
+from numpy import ma
 from timezonefinder import TimezoneFinder
 
 from mwrpy import rpg_mwr
@@ -17,6 +18,7 @@ from mwrpy.utils import (
     get_ret_ang,
     get_ret_freq,
     interpol_2d,
+    interpolate_2d,
     read_yaml_config,
 )
 
@@ -422,12 +424,20 @@ def get_products(
             "derived product from: " + temp_file + ", " + hum_file
         )
         coeff["dependencies"] = temp_file + ", " + hum_file
-
-        hum_int = interpol_2d(
-            hum_dat.variables["time"][:],
-            hum_dat.variables["absolute_humidity"][:, :],
-            tem_dat.variables["time"][:],
-        )
+        if len(hum_dat.variables["height"][:]) == len(tem_dat.variables["height"][:]):
+            hum_int = interpol_2d(
+                hum_dat.variables["time"][:],
+                hum_dat.variables["absolute_humidity"][:, :],
+                tem_dat.variables["time"][:],
+            )
+        else:
+            hum_int = interpolate_2d(
+                hum_dat.variables["time"][:],
+                hum_dat.variables["height"][:],
+                hum_dat.variables["absolute_humidity"][:, :],
+                tem_dat.variables["time"][:],
+                tem_dat.variables["height"][:],
+            )
 
         rpg_dat["height"] = tem_dat.variables["height"][:]
         pres = np.interp(
@@ -563,7 +573,7 @@ def ele_retrieval(ele_obs: np.ndarray, coeff: dict) -> np.ndarray:
 def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
     """Get retrieval input"""
 
-    time_median = np.nanmedian(lev1["time"][:])
+    time_median = ma.median(lev1["time"][:])
     if time_median < 24:
         assert isinstance(lev1, nc.Dataset)
         date = [lev1.year, lev1.month, lev1.day]
@@ -577,8 +587,8 @@ def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
     )
     bias = np.ones((len(lev1["time"][:]), 1), np.float32)
 
-    latitude = float(np.median(lev1["latitude"][:]))
-    longitude = float(np.median(lev1["longitude"][:]))
+    latitude = float(ma.median(lev1["latitude"][:]))
+    longitude = float(ma.median(lev1["longitude"][:]))
 
     if coeff["RT"] == Fill_Value_Int:
         ret_in = lev1["tb"][:, :]
@@ -682,6 +692,6 @@ def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
     return ret_in
 
 
-def decimal_hour2unix(date: list, time: np.ndarray) -> np.ndarray:
+def decimal_hour2unix(date: list, time: np.ndarray) -> np.ndarray | int:
     unix_timestamp = np.datetime64("-".join(date)).astype("datetime64[s]").astype("int")
     return (time * 60 * 60 + unix_timestamp).astype(int)

@@ -236,6 +236,10 @@ ATTRIBUTES_1B01 = {
         units="degree",
         comment="90=horizon, 0=zenith",
     ),
+    "tb_spectrum": MetaData(
+        long_name="Brightness temperature spectrum",
+        units="K",
+    ),
     # 'tn': MetaData(
     #     long_name='Receiver noise temperature',
     #     units='K',

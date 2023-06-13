@@ -36,7 +36,7 @@ params:
   # Bit 6: rain_detected
   # Bit 7: sun_moon_in_beam
   # Bit 8: tb_offset_above_threshold
-  flag_status: [0, 0, 0, 1, 0, 0, 0, 1]
+  flag_status: [0, 0, 0, 0, 0, 0, 0, 1]
 
   # availability of IR
   ir_flag: True

@@ -4,9 +4,16 @@ import logging
 import os
 
 from mwrpy.level1.write_lev1_nc import lev1_to_nc
+from mwrpy.level2.lev2_collocated import generate_lev2_multi, generate_lev2_single
 from mwrpy.level2.write_lev2_nc import lev2_to_nc
 from mwrpy.plots.generate_plots import generate_figure
-from mwrpy.utils import date_range, get_processing_dates, isodate2date, read_yaml_config
+from mwrpy.utils import (
+    _get_filename,
+    date_range,
+    get_processing_dates,
+    isodate2date,
+    read_yaml_config,
+)
 
 PRODUCT_NAME = {
     "1C01": "",
@@ -18,8 +25,13 @@ PRODUCT_NAME = {
     "2P04": "relative_humidity",
     "2P07": "potential_temperature",
     "2P08": "equivalent_potential_temperature",
-    "2S02": "tb_spectrum",
-    "stats": "",
+    "single": ["lwp", "iwv", "temperature", "absolute_humidity"],
+    "multi": [
+        "temperature",
+        "relative_humidity",
+        "potential_temperature",
+        "equivalent_potential_temperature",
+    ],
 }
 
 
@@ -71,6 +83,10 @@ def process_product(prod: str, date: datetime.date, site: str):
             temp_file=temp_file,
             hum_file=hum_file,
         )
+    elif prod == "single":
+        generate_lev2_single(site, _get_filename("1C01", date, site), output_file)
+    elif prod == "multi":
+        generate_lev2_multi(site, _get_filename("1C01", date, site), output_file)
 
 
 def plot_product(prod: str, date, site: str):
@@ -80,7 +96,11 @@ def plot_product(prod: str, date, site: str):
     if os.path.isfile(filename) and prod[0] == "1":
         keymap = {
             "tb": ["tb"],
+            "tb_spectrum": ["tb_spectrum"],
             "sen": ["elevation_angle", "azimuth_angle"],
+            "irt": ["irt"],
+            "met": ["air_temperature", "relative_humidity", "rainfall_rate"],
+            "met2": ["air_pressure", "wind_direction", "wind_speed"],
             "quality_flag": ["quality_flag"],
             "met_quality_flag": ["met_quality_flag"],
             "hkd": ["t_amb", "t_rec", "t_sta"],
@@ -91,7 +111,7 @@ def plot_product(prod: str, date, site: str):
                     89.0,
                     91.0,
                 )
-                if key == "tb"
+                if key in ("tb", "tb_spectrum")
                 else (0.0, 91.0)
             )
             generate_figure(
@@ -114,24 +134,35 @@ def plot_product(prod: str, date, site: str):
                 91.0,
             )
         )
-        var = PRODUCT_NAME[prod]
-        generate_figure(
-            filename,
-            [var],
-            ele_range=elevation,
-            save_path=output_dir,
-            image_name=var,
-        )
+        for var_name in PRODUCT_NAME[prod]:
+            generate_figure(
+                filename,
+                [var_name],
+                ele_range=elevation,
+                save_path=output_dir,
+                image_name=var_name,
+            )
 
-
-def _get_filename(prod: str, date_in: datetime.date, site: str) -> str:
-    global_attributes, params = read_yaml_config(site)
-    data_out_dir = os.path.join(
-        params["data_out"], f"level{prod[0]}", date_in.strftime("%Y/%m/%d")
-    )
-    wigos_id = global_attributes["wigos_station_id"]
-    filename = f"MWR_{prod}_{wigos_id}_{date_in.strftime('%Y%m%d')}.nc"
-    return os.path.join(data_out_dir, filename)
+    elif os.path.isfile(filename) and (prod in ("single", "multi")):
+        for var_name in PRODUCT_NAME[prod]:
+            elevation = (
+                (
+                    89.0,
+                    91.0,
+                )
+                if var_name in ("lwp", "iwv")
+                else (
+                    0,
+                    91.0,
+                )
+            )
+            generate_figure(
+                filename,
+                [var_name],
+                ele_range=elevation,
+                save_path=output_dir,
+                image_name=var_name,
+            )
 
 
 def _get_raw_file_path(date_in: datetime.date, site: str) -> str:

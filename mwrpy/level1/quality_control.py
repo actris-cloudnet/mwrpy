@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from numpy import ma
 
+from mwrpy.level1.rpg_bin import RpgBin
 from mwrpy.level2.get_ret_coeff import get_mvr_coeff
 from mwrpy.level2.write_lev2_nc import retrieval_input
 from mwrpy.utils import get_coeff_list, read_yaml_config, setbit
@@ -15,11 +16,11 @@ Fill_Value_Float = -999.0
 Fill_Value_Int = -99
 
 
-def apply_qc(site: str, data: dict, params: dict) -> None:
+def apply_qc(site: str, data_in: RpgBin, params: dict) -> None:
     """This function performs the quality control of level 1 data.
     Args:
         site: Name of site.
-        data: Level 1 data.
+        data_in: Level 1 data.
         params: Site specific parameters.
 
     Returns:
@@ -33,6 +34,8 @@ def apply_qc(site: str, data: dict, params: dict) -> None:
         apply_qc('site', 'lev1_data', 'params')
 
     """
+    data = data_in.data
+
     data["quality_flag"] = np.zeros(data["tb"].shape, dtype=np.int32)
     data["quality_flag_status"] = np.zeros(data["tb"].shape, dtype=np.int32)
 
@@ -115,16 +118,18 @@ def apply_qc(site: str, data: dict, params: dict) -> None:
         # else:
 
 
-def orbpos(data: dict, params: dict) -> tuple:
+def orbpos(data: dict, params: dict) -> np.ndarray:
     """Calculates sun & moon elevation/azimuth angles
     and returns index for observations in the direction of the sun"""
 
-    sun = {}
-    sun["azimuth_angle"] = np.zeros(data["time"].shape) * Fill_Value_Float
-    sun["elevation_angle"] = np.zeros(data["time"].shape) * Fill_Value_Float
-    moon = {}
-    moon["azimuth_angle"] = np.zeros(data["time"].shape) * Fill_Value_Float
-    moon["elevation_angle"] = np.zeros(data["time"].shape) * Fill_Value_Float
+    sun: dict = {
+        "azimuth_angle": np.zeros(data["time"].shape) * Fill_Value_Float,
+        "elevation_angle": np.zeros(data["time"].shape) * Fill_Value_Float,
+    }
+    moon: dict = {
+        "azimuth_angle": np.zeros(data["time"].shape) * Fill_Value_Float,
+        "elevation_angle": np.zeros(data["time"].shape) * Fill_Value_Float,
+    }
 
     sol = ephem.Sun()
     lun = ephem.Moon()
@@ -179,7 +184,7 @@ def orbpos(data: dict, params: dict) -> tuple:
             & (data["azimuth_angle"] >= moon["azimuth_angle"] - params["saf"])
             & (data["azimuth_angle"] <= moon["azimuth_angle"] + params["saf"])
         )
-    )
+    )[0]
 
     return flag_ind
 
@@ -190,8 +195,7 @@ def spectral_consistency(data: dict, site: str) -> np.ndarray:
 
     flag_ind = np.zeros(data["tb"].shape, dtype=np.int32)
     abs_diff = ma.masked_all(data["tb"].shape, dtype=np.float32)
-    rpg_dat = {}
-    rpg_dat["tb_spectrum"] = np.ones(data["tb"].shape) * np.nan
+    data["tb_spectrum"] = np.ones(data["tb"].shape) * np.nan
     global_attributes, _ = read_yaml_config(site)
 
     c_list = get_coeff_list(site, "spc")
@@ -239,7 +243,7 @@ def spectral_consistency(data: dict, site: str) -> np.ndarray:
             fac[:].reshape((len(ele_ind), 1))
             * np.einsum("ijk,ij->ik", c_w1, ret_in[ele_ind, :])
         )
-        rpg_dat["tb_spectrum"][ele_ind, :] = (
+        data["tb_spectrum"][ele_ind, :] = (
             np.tanh(
                 fac[:].reshape((len(ele_ind), 1))
                 * np.einsum("ijk,ik->ij", c_w2[:, coeff_ind, :], hidden_layer)
@@ -256,7 +260,7 @@ def spectral_consistency(data: dict, site: str) -> np.ndarray:
 
         for ifreq, _ in enumerate(data["frequency"]):
             tb_df = pd.DataFrame(
-                {"Tb": (data["tb"][:, ifreq] - rpg_dat["tb_spectrum"][:, ifreq])},
+                {"Tb": (data["tb"][:, ifreq] - data["tb_spectrum"][:, ifreq])},
                 index=pd.to_datetime(data["time"][:], unit="s"),
             )
             tb_mean = tb_df.resample(
@@ -275,7 +279,7 @@ def spectral_consistency(data: dict, site: str) -> np.ndarray:
                 ifreq,
             ] = 1
             abs_diff[:, ifreq] = np.abs(
-                data["tb"][:, ifreq] - rpg_dat["tb_spectrum"][:, ifreq]
+                data["tb"][:, ifreq] - data["tb_spectrum"][:, ifreq]
             )
 
     else:
@@ -310,7 +314,7 @@ def spectral_consistency(data: dict, site: str) -> np.ndarray:
                 )[0]
 
                 if (ele_ind.size > 0) & (freq_ind.size > 0):
-                    rpg_dat["tb_spectrum"][ele_ind, ifreq] = (
+                    data["tb_spectrum"][ele_ind, ifreq] = (
                         cfile["offset_mvr"][:]
                         + np.sum(
                             cfile["coefficient_mvr"][coeff_ind].T
@@ -327,11 +331,7 @@ def spectral_consistency(data: dict, site: str) -> np.ndarray:
                     )
 
                     tb_df = pd.DataFrame(
-                        {
-                            "Tb": (
-                                data["tb"][:, ifreq] - rpg_dat["tb_spectrum"][:, ifreq]
-                            )
-                        },
+                        {"Tb": (data["tb"][:, ifreq] - data["tb_spectrum"][:, ifreq])},
                         index=pd.to_datetime(data["time"][:], unit="s"),
                     )
                     tb_mean = tb_df.resample(
@@ -360,7 +360,7 @@ def spectral_consistency(data: dict, site: str) -> np.ndarray:
                     ] = 1
 
             abs_diff[:, ifreq] = ma.masked_invalid(
-                np.abs(data["tb"][:, ifreq] - rpg_dat["tb_spectrum"][:, ifreq])
+                np.abs(data["tb"][:, ifreq] - data["tb_spectrum"][:, ifreq])
             )
 
     th_rec = [1.0, 2.0]  # threshold for receiver mean absolute difference
