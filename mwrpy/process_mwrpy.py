@@ -25,7 +25,15 @@ PRODUCT_NAME = {
     "2P04": "relative_humidity",
     "2P07": "potential_temperature",
     "2P08": "equivalent_potential_temperature",
-    "single": ["lwp", "iwv", "temperature", "absolute_humidity"],
+    "single": [
+        "lwp",
+        "iwv",
+        "temperature",
+        "absolute_humidity",
+        "relative_humidity",
+        "potential_temperature",
+        "equivalent_potential_temperature",
+    ],
     "multi": [
         "temperature",
         "relative_humidity",
@@ -128,20 +136,19 @@ def plot_product(prod: str, date, site: str):
                 89.0,
                 91.0,
             )
-            if prod in ("2I01", "2I02")
+            if prod not in ("2P02", "2P04", "2P07", "2P08")
             else (
                 0,
                 91.0,
             )
         )
-        for var_name in PRODUCT_NAME[prod]:
-            generate_figure(
-                filename,
-                [var_name],
-                ele_range=elevation,
-                save_path=output_dir,
-                image_name=var_name,
-            )
+        generate_figure(
+            filename,
+            [PRODUCT_NAME[prod]],
+            ele_range=elevation,
+            save_path=output_dir,
+            image_name=str(PRODUCT_NAME[prod]),
+        )
 
     elif os.path.isfile(filename) and (prod in ("single", "multi")):
         for var_name in PRODUCT_NAME[prod]:
@@ -150,7 +157,7 @@ def plot_product(prod: str, date, site: str):
                     89.0,
                     91.0,
                 )
-                if var_name in ("lwp", "iwv")
+                if prod == "single"
                 else (
                     0,
                     91.0,

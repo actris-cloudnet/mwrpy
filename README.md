@@ -65,8 +65,8 @@ Commands:
 
 #### Level 1
 
-- 1B01: MWR brightnesss temperatures from .BRT and .BLB/.BLS files
-- 1B11: IR brightnesss temperatures from .IRT files
+- 1B01: MWR brightness temperatures from .BRT and .BLB/.BLS files + retrieved spectrum
+- 1B11: IR brightness temperatures from .IRT files
 - 1B21: Weather station data from .MET files
 - 1C01: Combined data type with time corresponding to 1B01
 
@@ -80,7 +80,8 @@ Commands:
 - 2P04: Relative humidity profiles (derived from 2P01/2P02 + 2P03)
 - 2P07: Potential temperature (derived from 2P01/2P02 + 2P03)
 - 2P08: Equivalent potential temperature (derived from 2P01/2P02 + 2P03)
-- 2S02: Brightness temperature spectrum
+- single: Single pointing data product (including 2I01, 2I02, 2P01, 2P03)
+- multi: Multiple pointing data product (including 2P02, 2P04, 2P07, 2P08)
 
 ## Licence
 
