@@ -26,6 +26,8 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
 
     if (str(c_list[0][-3:]).lower() == "ret") and (len(c_list) == 1):
         coeff = read_coeff_ascii(c_list[0])
+        if "AL" not in coeff:
+            coeff["AL"] = [0]
         if prefix == "tpb":
             for key in ("W1", "W2"):
                 coeff[key] = coeff[key].squeeze(axis=2)
@@ -190,7 +192,7 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
     elif (coeff["RT"] < 2) & (len(coeff["AL"]) > 1) & (prefix == "tpb"):
 
         def f_offset(_x):
-            return coeff["OS"][:, 0]
+            return coeff["OS"][:]
 
         def f_lin(_x):
             return coeff["TL"].T
@@ -328,10 +330,10 @@ def _parse_lines(prefix: str, lines: list) -> np.ndarray:
                     data.append(_split_line(next_line))
                 else:
                     break
-    return _reshape_array(data, n_rows)
+    return _reshape_array(data, n_rows, prefix)
 
 
-def _reshape_array(data: list, n_rows: int) -> np.ndarray:
+def _reshape_array(data: list, n_rows: int, prefix: str) -> np.ndarray:
     data_squeezed: list[str] | list[list[str]]
     if len(data) == 1 and isinstance(data[0], list) and len(data[0]) == 1:
         data_squeezed = data[0]
@@ -341,7 +343,7 @@ def _reshape_array(data: list, n_rows: int) -> np.ndarray:
         array = np.array(data_squeezed).astype(np.float32)
     except ValueError:
         array = np.array(data_squeezed).astype(str)
-    if len(array) > n_rows:
+    if len(array) > n_rows and prefix not in ("TL=", "TQ="):
         array = np.reshape(array, (n_rows, -1, array.shape[1]))
         array = np.transpose(array, (1, 2, 0))
     if array.ndim == 2 and array.shape[0] == 1:
