@@ -21,7 +21,11 @@ def stack_files(file_list: list[str]) -> tuple[dict, dict]:
 
     def _stack_data(source: dict, target: dict, fun: Callable):
         for name, value in source.items():
-            target[name] = fun((target[name], value)) if name in target else value
+            if value.ndim > 0 and name in target:
+                if target[name].ndim == value.ndim:
+                    target[name] = fun((target[name], value))
+            elif value.ndim > 0 and name not in target:
+                target[name] = value
 
     def _stack_header(source: dict, target: dict, fun: Callable):
         for name, value in source.items():

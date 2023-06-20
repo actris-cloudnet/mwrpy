@@ -125,8 +125,6 @@ def generate_lev2_single(
 
             copy_global(nc_lwp, nc_output, nc_lwp.ncattrs())
 
-        return nc_output
-
 
 def generate_lev2_multi(site: str, mwr_l1c_file: str, output_file: str):
     with netCDF4.Dataset(mwr_l1c_file) as lev1:
@@ -210,5 +208,3 @@ def generate_lev2_multi(site: str, mwr_l1c_file: str, output_file: str):
                 copy_variables(source, nc_output, variables)
 
             copy_global(nc_temp, nc_output, nc_temp.ncattrs())
-
-        return nc_output

@@ -179,46 +179,47 @@ def prepare_data(
                 file_list_met = get_file_list(path_to_files, "MET")
             except RuntimeError as err:
                 logging.error(err)
-            rpg_met = RpgBin(file_list_met)
-            add_interpol1d(
-                rpg_bin.data,
-                rpg_met.data["air_temperature"],
-                rpg_met.data["time"],
-                "air_temperature",
-            )
-            add_interpol1d(
-                rpg_bin.data,
-                rpg_met.data["relative_humidity"],
-                rpg_met.data["time"],
-                "relative_humidity",
-            )
-            add_interpol1d(
-                rpg_bin.data,
-                rpg_met.data["air_pressure"] * 100,
-                rpg_met.data["time"],
-                "air_pressure",
-            )
-            if "wind_speed" in rpg_met.data:
+            if len(file_list_met) > 0:
+                rpg_met = RpgBin(file_list_met)
                 add_interpol1d(
                     rpg_bin.data,
-                    rpg_met.data["wind_speed"] / 3.6,
+                    rpg_met.data["air_temperature"],
                     rpg_met.data["time"],
-                    "wind_speed",
+                    "air_temperature",
                 )
-            if "wind_direction" in rpg_met.data:
                 add_interpol1d(
                     rpg_bin.data,
-                    rpg_met.data["wind_direction"],
+                    rpg_met.data["relative_humidity"],
                     rpg_met.data["time"],
-                    "wind_direction",
+                    "relative_humidity",
                 )
-            if "rainfall_rate" in rpg_met.data:
                 add_interpol1d(
                     rpg_bin.data,
-                    rpg_met.data["rainfall_rate"] / 1000 / 3600,
+                    rpg_met.data["air_pressure"] * 100,
                     rpg_met.data["time"],
-                    "rainfall_rate",
+                    "air_pressure",
                 )
+                if "wind_speed" in rpg_met.data:
+                    add_interpol1d(
+                        rpg_bin.data,
+                        rpg_met.data["wind_speed"] / 3.6,
+                        rpg_met.data["time"],
+                        "wind_speed",
+                    )
+                if "wind_direction" in rpg_met.data:
+                    add_interpol1d(
+                        rpg_bin.data,
+                        rpg_met.data["wind_direction"],
+                        rpg_met.data["time"],
+                        "wind_direction",
+                    )
+                if "rainfall_rate" in rpg_met.data:
+                    add_interpol1d(
+                        rpg_bin.data,
+                        rpg_met.data["rainfall_rate"] / 1000 / 3600,
+                        rpg_met.data["time"],
+                        "rainfall_rate",
+                    )
 
     elif data_type == "1B11":
         file_list_irt = get_file_list(path_to_files, "IRT")

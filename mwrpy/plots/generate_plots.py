@@ -260,7 +260,10 @@ def _find_valid_fields(nc_file: str, names: list) -> tuple[list, list]:
     with netCDF4.Dataset(nc_file) as nc:
         for name in names:
             if name in nc.variables:
-                valid_data.append(nc.variables[name][:])
+                if not nc.variables[name][:].mask.all():
+                    valid_data.append(nc.variables[name][:])
+                else:
+                    valid_names.remove(name)
             else:
                 valid_names.remove(name)
     # if not valid_names:
@@ -833,7 +836,7 @@ def _plot_irt(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
     _set_ax(ax, vmax, variables.ylabel, vmin)
 
 
-def _plot_mqf(ax, data_in: ndarray, time: ndarray, nc_file: str):
+def _plot_mqf(ax, data_in: ma.MaskedArray, time: ndarray, nc_file: str):
     """Plot for quality flags of meteorological sensors."""
 
     qf = _get_bit_flag(data_in, np.arange(6))
@@ -1329,6 +1332,7 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
             label="Temperature",
         )
         rh = read_nc_fields(nc_file, "relative_humidity")
+        rh = _elevation_filter(nc_file, rh, ele_range=(0.0, 91.0))
         t_d = t_dew_rh(data, rh)
         rolling_mean, width = _calculate_rolling_mean(time, t_d)
         rolling_mean = np.interp(
@@ -1358,6 +1362,7 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
 
     if name == "relative_humidity":
         T = read_nc_fields(nc_file, "air_temperature")
+        T = _elevation_filter(nc_file, T, ele_range=(0.0, 91.0))
         q = abs_hum(T, data / 100.0)
         rolling_mean2, width2 = _calculate_rolling_mean(time, q)
         rolling_mean2 = np.interp(
