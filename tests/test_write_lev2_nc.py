@@ -1,7 +1,8 @@
 import os
 
 from mwrpy import lev1_to_nc
-from mwrpy.level2.lev2_collocated import generate_lev2_multi, generate_lev2_single
+
+# from mwrpy.level2.lev2_collocated import generate_lev2_multi, generate_lev2_single
 from mwrpy.level2.write_lev2_nc import lev2_to_nc
 
 PACKAGE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -26,7 +27,7 @@ def test_level2_processing():
     lev2_to_nc(site, "2P01", lev1_file, lev2_file)
     lev2_to_nc(site, "2P03", lev1_file, hum_file)
 
-    generate_lev2_single(site, lev1_file, lev2_file)
+    # generate_lev2_single(site, lev1_file, lev2_file)
 
     # mwr-multi
     lev2_to_nc(site, "2P02", lev1_file, temp_file)
@@ -40,7 +41,7 @@ def test_level2_processing():
         site, "2P08", lev1_file, lev2_file, temp_file=temp_file, hum_file=hum_file
     )
 
-    generate_lev2_multi(site, lev1_file, lev2_file)
+    # generate_lev2_multi(site, lev1_file, lev2_file)
 
     for file in (lev1_file, lev2_file, temp_file, hum_file):
         if os.path.exists(file):

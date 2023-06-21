@@ -29,7 +29,7 @@ def correct_lwp_offset(
     lwp = np.copy(lwp_org)
     lwp[
         (lwcl_i != 0)
-        | (lwp > 0.04)
+        | (lwp > 0.06)
         | (lev1["elevation_angle"][index] < 89.0)
         | (lwp_max["Lwp"][:] > 0.003)
     ] = np.nan

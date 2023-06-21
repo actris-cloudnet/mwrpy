@@ -526,8 +526,7 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
         time, data = _mark_gaps(
             axes[0][:],
             ma.MaskedArray(data_in),
-            np.ma.median(np.diff(axes[0][:])) * 60.0
-            + np.ma.median(np.diff(axes[0][:])) * 10.0,
+            np.ma.median(np.diff(axes[0][:])) * 60.0 * 2,
             0,
         )
 
@@ -556,8 +555,7 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
         time, data = _mark_gaps(
             axes[0][:],
             ma.MaskedArray(data_in),
-            np.ma.median(np.diff(axes[0][:])) * 60.0
-            + np.ma.median(np.diff(axes[0][:])) * 10.0,
+            np.ma.median(np.diff(axes[0][:])) * 60.0 * 2,
             0,
         )
 

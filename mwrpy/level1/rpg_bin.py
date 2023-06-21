@@ -1,6 +1,7 @@
 """This module contains all functions to read in RPG MWR binary files"""
 import datetime
 import logging
+import os
 from collections.abc import Callable
 from io import SEEK_END
 from typing import BinaryIO, Literal, TypeAlias
@@ -23,7 +24,17 @@ def stack_files(file_list: list[str]) -> tuple[dict, dict]:
         for name, value in source.items():
             if value.ndim > 0 and name in target:
                 if target[name].ndim == value.ndim:
-                    target[name] = fun((target[name], value))
+                    if (
+                        value.ndim > 1
+                        and value.shape[1] != target[name].shape[1]
+                        and name == "irt"
+                    ):
+                        value = np.hstack(
+                            (value, np.ones((len(value), 1)) * Fill_Value_Float)
+                        )
+                        target[name] = fun((target[name], value))
+                    else:
+                        target[name] = fun((target[name], value))
             elif value.ndim > 0 and name not in target:
                 target[name] = value
 
@@ -51,13 +62,14 @@ def stack_files(file_list: list[str]) -> tuple[dict, dict]:
     header: dict = {}
 
     for file in file_list:
-        try:
-            header_tmp, data_tmp = read_type(file)
-        except (TypeError, ValueError) as err:
-            logging.warning(err)
-            continue
-        _stack_header(header_tmp, header, np.add)
-        _stack_data(data_tmp, data, np.concatenate)
+        if os.stat(file).st_size > 1000:
+            try:
+                header_tmp, data_tmp = read_type(file)
+            except (TypeError, ValueError) as err:
+                logging.warning(err)
+                continue
+            _stack_header(header_tmp, header, np.add)
+            _stack_data(data_tmp, data, np.concatenate)
 
     return header, data
 
