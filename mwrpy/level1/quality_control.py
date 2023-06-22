@@ -10,18 +10,21 @@ from numpy import ma
 from mwrpy.level1.rpg_bin import RpgBin
 from mwrpy.level2.get_ret_coeff import get_mvr_coeff
 from mwrpy.level2.write_lev2_nc import retrieval_input
-from mwrpy.utils import get_coeff_list, read_yaml_config, setbit
+from mwrpy.utils import get_coeff_list, setbit
 
 Fill_Value_Float = -999.0
 Fill_Value_Int = -99
 
 
-def apply_qc(site: str, data_in: RpgBin, params: dict) -> None:
+def apply_qc(
+    site: str | None, data_in: RpgBin, params: dict, coeff_files: list | None
+) -> None:
     """This function performs the quality control of level 1 data.
     Args:
         site: Name of site.
         data_in: Level 1 data.
         params: Site specific parameters.
+        coeff_files: Retrieval coefficients.
 
     Returns:
         None
@@ -40,7 +43,7 @@ def apply_qc(site: str, data_in: RpgBin, params: dict) -> None:
     data["quality_flag_status"] = np.zeros(data["tb"].shape, dtype=np.int32)
 
     if params["flag_status"][3] == 0:
-        ind_bit4 = spectral_consistency(data, site)
+        ind_bit4 = spectral_consistency(data, site, coeff_files)
     ind_bit6 = np.where(data["rain"] == 1)
     ind_bit7 = orbpos(data, params)
 
@@ -189,16 +192,18 @@ def orbpos(data: dict, params: dict) -> np.ndarray:
     return flag_ind
 
 
-def spectral_consistency(data: dict, site: str) -> np.ndarray:
+def spectral_consistency(
+    data: dict, site: str | None, coeff_files: list | None
+) -> np.ndarray:
     """Applies spectral consistency coefficients for given frequency index,
     writes 2S02 product and returns indices to be flagged"""
 
     flag_ind = np.zeros(data["tb"].shape, dtype=np.int32)
     abs_diff = ma.masked_all(data["tb"].shape, dtype=np.float32)
     data["tb_spectrum"] = np.ones(data["tb"].shape) * np.nan
-    global_attributes, _ = read_yaml_config(site)
 
-    c_list = get_coeff_list(site, "spc")
+    c_list = get_coeff_list(site, "spc", coeff_files)
+
     if len(c_list) > 0:
         # pylint: disable=unbalanced-tuple-unpacking
         (
@@ -210,7 +215,7 @@ def spectral_consistency(data: dict, site: str) -> np.ndarray:
             weights1,
             weights2,
             factor,
-        ) = get_mvr_coeff(site, "spc", data["frequency"][:])
+        ) = get_mvr_coeff(site, "spc", data["frequency"][:], coeff_files)
         ret_in = retrieval_input(data, coeff)
         ele_ang = 90.0
         ele_coeff = np.where(coeff["AG"] == ele_ang)[0]
@@ -252,12 +257,6 @@ def spectral_consistency(data: dict, site: str) -> np.ndarray:
             + op_os[:, coeff_ind]
         )
 
-        global_attributes["retrieval_elevation_angles"] = str(ele_ang)
-        global_attributes["retrieval_type"] = "neural network"
-        global_attributes["retrieval_frequencies"] = str(data["frequency"])
-        global_attributes["retrieval_description"] = "Neural Network"
-        global_attributes["retrieval_auxiliary_input"] = "surface"
-
         for ifreq, _ in enumerate(data["frequency"]):
             tb_df = pd.DataFrame(
                 {"Tb": (data["tb"][:, ifreq] - data["tb_spectrum"][:, ifreq])},
@@ -283,15 +282,7 @@ def spectral_consistency(data: dict, site: str) -> np.ndarray:
             )
 
     else:
-        c_list = get_coeff_list(site, "tbx")
-        c_file = nc.Dataset(c_list[0])
-        global_attributes["retrieval_elevation_angles"] = str(
-            c_file["elevation_predictor"][:]
-        )
-        global_attributes["retrieval_type"] = c_file.regression_type
-        global_attributes["retrieval_frequencies"] = str(c_file["freq"][:])
-        global_attributes["retrieval_description"] = c_file.retrieval_version
-        global_attributes["retrieval_auxiliary_input"] = c_file.surface_mode
+        c_list = get_coeff_list(site, "tbx", coeff_files)
 
         for ifreq, _ in enumerate(data["frequency"]):
             with nc.Dataset(c_list[ifreq]) as cfile:

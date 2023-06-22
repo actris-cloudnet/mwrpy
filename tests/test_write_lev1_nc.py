@@ -14,7 +14,7 @@ DATE = "2023-04-06"
 
 def test_lev1_to_nc():
     for site in next(os.walk(COEFFICIENTS_DIR))[1]:
-        hatpro = lev1_to_nc(site, "1C01", DATA_DIR)
+        hatpro = lev1_to_nc("1C01", DATA_DIR, site)
         assert hatpro.date == DATE
         for t in hatpro.data["time"][:]:
             date = str(datetime.datetime.utcfromtimestamp(t).date())
@@ -23,7 +23,7 @@ def test_lev1_to_nc():
 
 def test_output_nc_file():
     temp_file = "temp_file.nc"
-    lev1_to_nc("hyytiala", "1C01", DATA_DIR, temp_file)
+    lev1_to_nc("1C01", DATA_DIR, "hyytiala", output_file=temp_file)
     with netCDF4.Dataset(temp_file) as nc:
         # Write tests for the created netCDF file here:
         assert nc.date == DATE

@@ -131,7 +131,8 @@ def test_coefficients():
     }
 
     for key, item in test_data.items():
-        data = get_mvr_coeff(SITE, key, FREQ)
+        data = get_mvr_coeff(SITE, key, FREQ, None)
+        data = get_mvr_coeff(SITE, key, FREQ, None)
         if key == "lwp":
             expected = np.array(
                 [-107.37779, -30.645275, -76.23844, 0.9421638, -27.80052],

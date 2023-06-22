@@ -6,7 +6,7 @@ import logging
 import os
 import re
 import time
-from typing import Any, Iterator, NamedTuple
+from typing import Any, Iterator, Literal, NamedTuple
 
 import netCDF4
 import numpy as np
@@ -256,9 +256,18 @@ def add_time_bounds(time_arr: np.ndarray, int_time: int) -> np.ndarray:
     return time_bounds
 
 
-def get_coeff_list(site: str, prefix: str):
+def get_coeff_list(site: str | None, prefix: str, coeff_files: list | None) -> list:
     """Returns list of .nc coefficient file(s)"""
 
+    if coeff_files is not None:
+        c_list = []
+        for file in coeff_files:
+            if f"_{prefix.lower()}_" in file.lower():
+                logging.info("Using coefficient file: " + file)
+                c_list.append(file)
+        return sorted(c_list)
+
+    assert isinstance(site, str)
     dir_path = os.path.dirname(os.path.realpath(__file__))
     s_list = [
         glob.glob(
@@ -298,26 +307,27 @@ def get_file_list(path_to_files: str, extension: str):
     return f_list
 
 
-def read_yaml_config(site: str) -> tuple[dict, dict]:
-    """Reads config yaml files."""
+def read_config(site: str | None, key: Literal["global_specs", "params"]) -> dict:
+    data = _read_hatpro_config_yaml()[key]
+    if site is not None:
+        data.update(_read_site_config_yaml(site)[key])
+    return data
+
+
+def _read_hatpro_config_yaml() -> dict:
+    dir_name = os.path.dirname(os.path.realpath(__file__))
+    inst_file = os.path.join(dir_name, "site_config", "hatpro.yaml")
+    with open(inst_file, "r", encoding="utf8") as f:
+        return yaml.load(f, Loader=SafeLoader)
+
+
+def _read_site_config_yaml(site: str) -> dict:
     dir_name = os.path.dirname(os.path.realpath(__file__))
     site_file = os.path.join(dir_name, "site_config", site, "config.yaml")
     if not os.path.isfile(site_file):
         raise NotImplementedError(f"Error: site config file {site_file} not found")
     with open(site_file, "r", encoding="utf8") as f:
-        site_config = yaml.load(f, Loader=SafeLoader)
-    inst_file = os.path.join(dir_name, "site_config", f"{site_config['type']}.yaml")
-    if not os.path.isfile(inst_file):
-        raise NotImplementedError(
-            f"Error: instrument config file {inst_file} not found"
-        )
-    with open(inst_file, "r", encoding="utf8") as f:
-        inst_config = yaml.load(f, Loader=SafeLoader)
-    inst_config["global_specs"].update(site_config["global_specs"])
-    for name in inst_config["params"].keys():
-        site_config["params"][name] = inst_config["params"][name]
-
-    return inst_config["global_specs"], site_config["params"]
+        return yaml.load(f, Loader=SafeLoader)
 
 
 def update_lev1_attributes(attributes: dict, data_type: str) -> None:
@@ -582,3 +592,7 @@ def copy_global(
     for attr in attributes:
         if attr in source_attributes:
             setattr(target, attr, source.getncattr(attr))
+
+
+def read_yaml_config(site: str):
+    raise RuntimeError("This function is not implemented yet.")
