@@ -488,10 +488,15 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
         data[data_in.mask] = np.nan
         data[data > 1.0] = 1.0
         data[data < 0.0] = 0.0
+        data_in[data_in > 1.0] = 1.0
+        data_in[data_in < 0.0] = 0.0
         data *= 100.0
         data_in *= 100.0
         nbin = 6
         hum_file = nc_file.replace("2P04", "2P03")
+
+    if "multi" in nc_file:
+        hum_file = nc_file.replace("multi", "single")
 
     if name in (
         "relative_humidity",
