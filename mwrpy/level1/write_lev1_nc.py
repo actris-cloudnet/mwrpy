@@ -1,5 +1,4 @@
 """Module for writing Level 1 netCDF files"""
-import datetime
 import logging
 from collections.abc import Callable
 from itertools import groupby
@@ -8,7 +7,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy import ma
 
-from mwrpy import atmos, rpg_mwr
+from mwrpy import atmos, rpg_mwr, utils
 from mwrpy.level1.lev1_meta_nc import get_data_attributes
 from mwrpy.level1.met_quality_control import apply_met_qc
 from mwrpy.level1.quality_control import apply_qc
@@ -18,7 +17,6 @@ from mwrpy.utils import (
     add_time_bounds,
     get_file_list,
     isbit,
-    read_yaml_config,
     update_lev1_attributes,
 )
 
@@ -28,10 +26,12 @@ FuncType: TypeAlias = Callable[[str], np.ndarray]
 
 
 def lev1_to_nc(
-    site: str,
     data_type: str,
     path_to_files: str,
+    site: str | None = None,
     output_file: str | None = None,
+    coeff_files: list | None = None,
+    instrument_config: dict | None = None,
 ) -> rpg_mwr.Rpg:
     """This function reads one day of RPG MWR binary files,
     adds attributes and writes it into netCDF file.
@@ -41,16 +41,42 @@ def lev1_to_nc(
         data_type: Data type of the netCDF file.
         path_to_files: Folder containing one day of RPG MWR binary files.
         output_file: Output file name.
+        coeff_files: List of coefficient files.
+        instrument_config: Dictionary containing information about the instrument.
     """
 
-    global_attributes, params = read_yaml_config(site)
+    if site is None:
+        assert coeff_files is not None
+        assert instrument_config is not None
+
+    if coeff_files is None:
+        logging.info(
+            f"No coefficient files given, using files in repository for {site}."
+        )
+
+    if instrument_config is None:
+        logging.info(
+            f"No instrument config given, using config file in repository for {site}."
+        )
+
+    global_attributes = utils.read_config(site, "global_specs")
+    params = utils.read_config(site, "params")
+
+    if instrument_config is not None:
+        params_updated = {**params, **instrument_config}
+    else:
+        params_updated = params
+    assert isinstance(params_updated, dict)
+
     if data_type != "1C01":
         update_lev1_attributes(global_attributes, data_type)
-    rpg_bin = prepare_data(path_to_files, data_type, params, site)
+
+    rpg_bin = prepare_data(path_to_files, data_type, params_updated)
+
     if data_type in ("1B01", "1C01"):
-        apply_qc(site, rpg_bin, params)
+        apply_qc(site, rpg_bin, params_updated, coeff_files)
     if data_type in ("1B21", "1C01"):
-        apply_met_qc(rpg_bin.data, params)
+        apply_met_qc(rpg_bin.data, params_updated)
     hatpro = rpg_mwr.Rpg(rpg_bin.data)
     hatpro.find_valid_times()
     hatpro.data = get_data_attributes(hatpro.data, data_type)
@@ -63,7 +89,6 @@ def prepare_data(
     path_to_files: str,
     data_type: str,
     params: dict,
-    site: str,
 ) -> RpgBin:
     """Load and prepare data for netCDF writing"""
 
@@ -133,7 +158,7 @@ def prepare_data(
             else:
                 file_list_blb = get_file_list(path_to_files, "BLB")
                 rpg_blb = RpgBin(file_list_blb)
-                _add_blb(rpg_bin, rpg_blb, rpg_hkd, params, site)
+                _add_blb(rpg_bin, rpg_blb, rpg_hkd, params)
 
         if params["azi_cor"] != Fill_Value_Float:
             _azi_correction(rpg_bin.data, params)
@@ -372,7 +397,7 @@ def _add_bls(brt: RpgBin, bls: RpgBin, hkd: RpgBin, params: dict) -> None:
     brt.header["n"] = len(brt.data["time"])
 
 
-def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict, site: str) -> None:
+def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict) -> None:
     """Add BLB boundary-layer scans using a linear time axis"""
 
     time_bnds_add: np.ndarray = np.empty([0], dtype=np.int32)
@@ -395,15 +420,17 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict, site: str) -> 
     )
 
     for time_ind, time_blb in enumerate(blb.data["time"]):
-        if (
-            (site in ["juelich", "cologne"])
-            & (
-                datetime.datetime.utcfromtimestamp(hkd.data["time"][0])
-                >= datetime.datetime(2022, 12, 1)
-            )
-            & (time_blb + int(params["scan_time"]) < hkd.data["time"][-1])
-        ):
-            time_blb = time_blb + int(params["scan_time"])
+        # WHY IS THIS HERE?
+        # if (
+        #     (site in ["juelich", "cologne"])
+        #     & (
+        #         datetime.datetime.utcfromtimestamp(hkd.data["time"][0])
+        #         >= datetime.datetime(2022, 12, 1)
+        #     )
+        #     & (time_blb + int(params["scan_time"]) < hkd.data["time"][-1])
+        # ):
+        #     time_blb = time_blb + int(params["scan_time"])
+
         seqi = np.where(
             np.abs(hkd.data["time"][seqs[:, 1] + seqs[:, 2] - 1] - time_blb) < 60
         )[0]

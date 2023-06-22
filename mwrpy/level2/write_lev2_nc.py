@@ -7,7 +7,7 @@ import pytz
 from numpy import ma
 from timezonefinder import TimezoneFinder
 
-from mwrpy import rpg_mwr
+from mwrpy import rpg_mwr, utils
 from mwrpy.atmos import eq_pot_tem, pot_tem, rel_hum
 from mwrpy.level2.get_ret_coeff import get_mvr_coeff
 from mwrpy.level2.lev2_meta_nc import get_data_attributes
@@ -19,7 +19,6 @@ from mwrpy.utils import (
     get_ret_freq,
     interpol_2d,
     interpolate_2d,
-    read_yaml_config,
 )
 
 Fill_Value_Float = -999.0
@@ -27,12 +26,13 @@ Fill_Value_Int = -99
 
 
 def lev2_to_nc(
-    site: str,
     data_type: str,
     lev1_file: str,
     output_file: str,
+    site: str | None = None,
     temp_file: str | None = None,
     hum_file: str | None = None,
+    coeff_files: list | None = None,
 ):
     """This function reads Level 1 files,
     applies retrieval coefficients for Level 2 products
@@ -45,6 +45,7 @@ def lev2_to_nc(
         output_file: Name of output file.
         temp_file: Name of temperature product file.
         hum_file: Name of humidity product file.
+        coeff_files: List of coefficient files.
 
     """
 
@@ -60,21 +61,30 @@ def lev2_to_nc(
     ):
         raise ValueError(f"Data type {data_type} not recognised")
 
-    global_attributes, params = read_yaml_config(site)
+    global_attributes = utils.read_config(site, "global_specs")
+    params = utils.read_config(site, "params")
 
     with nc.Dataset(lev1_file) as lev1:
+        params["altitude"] = np.median(lev1.variables["altitude"][:])
+
         if data_type == "2P02":
-            bl_scan = _test_bl_scan(site, lev1)
+            bl_scan = _test_bl_scan(site, lev1, coeff_files)
             if not bl_scan:
                 data_type = "2P01"
         if data_type in ("2P04", "2P07", "2P08"):
-            bl_scan = _test_bl_scan(site, lev1)
+            bl_scan = _test_bl_scan(site, lev1, coeff_files)
             t_product = "2P02"
             if not bl_scan:
                 t_product = "2P01"
             for d_type in [t_product, "2P03"]:
                 rpg_dat, coeff, index = get_products(
-                    site, lev1, d_type, params, temp_file=temp_file, hum_file=hum_file
+                    site,
+                    lev1,
+                    d_type,
+                    params,
+                    coeff_files=coeff_files,
+                    temp_file=temp_file,
+                    hum_file=hum_file,
                 )
                 _combine_lev1(lev1, rpg_dat, index, d_type, params)
                 hatpro = rpg_mwr.Rpg(rpg_dat)
@@ -82,7 +92,13 @@ def lev2_to_nc(
                 rpg_mwr.save_rpg(hatpro, output_file, global_attributes, d_type)
 
         rpg_dat, coeff, index = get_products(
-            site, lev1, data_type, params, temp_file=temp_file, hum_file=hum_file
+            site,
+            lev1,
+            data_type,
+            params,
+            coeff_files=coeff_files,
+            temp_file=temp_file,
+            hum_file=hum_file,
         )
         _combine_lev1(lev1, rpg_dat, index, data_type, params)
         _add_att(global_attributes, coeff)
@@ -92,10 +108,11 @@ def lev2_to_nc(
 
 
 def get_products(
-    site: str,
+    site: str | None,
     lev1: nc.Dataset,
     data_type: str,
     params: dict,
+    coeff_files: list | None,
     temp_file: str | None = None,
     hum_file: str | None = None,
 ) -> tuple[dict, dict, np.ndarray]:
@@ -111,10 +128,10 @@ def get_products(
     if data_type in ("2I01", "2I02"):
         product = "lwp" if data_type == "2I01" else "iwv"
 
-        coeff = get_mvr_coeff(site, product, lev1["frequency"][:])
+        coeff = get_mvr_coeff(site, product, lev1["frequency"][:], coeff_files)
         if coeff[0]["RT"] < 2:
             coeff, offset, lin, quad = get_mvr_coeff(
-                site, product, lev1["frequency"][:]
+                site, product, lev1["frequency"][:], coeff_files
             )
         else:
             # pylint: disable-next=unbalanced-tuple-unpacking
@@ -127,7 +144,7 @@ def get_products(
                 weights1,
                 weights2,
                 factor,
-            ) = get_mvr_coeff(site, product, lev1["frequency"][:])
+            ) = get_mvr_coeff(site, product, lev1["frequency"][:], coeff_files)
         ret_in = retrieval_input(lev1, coeff)
 
         index = np.where(
@@ -212,9 +229,11 @@ def get_products(
         else:
             product, ret = "absolute_humidity", "hpt"
 
-        coeff = get_mvr_coeff(site, ret, lev1["frequency"][:])
+        coeff = get_mvr_coeff(site, ret, lev1["frequency"][:], coeff_files)
         if coeff[0]["RT"] < 2:
-            coeff, offset, lin, quad = get_mvr_coeff(site, ret, lev1["frequency"][:])
+            coeff, offset, lin, quad = get_mvr_coeff(
+                site, ret, lev1["frequency"][:], coeff_files
+            )
         else:
             # pylint: disable-next=unbalanced-tuple-unpacking
             (
@@ -226,7 +245,7 @@ def get_products(
                 weights1,
                 weights2,
                 factor,
-            ) = get_mvr_coeff(site, ret, lev1["frequency"][:])
+            ) = get_mvr_coeff(site, ret, lev1["frequency"][:], coeff_files)
 
         ret_in = retrieval_input(lev1, coeff)
 
@@ -300,13 +319,15 @@ def get_products(
                 rpg_dat[product] = rpg_dat[product] / 1000.0
 
     elif data_type == "2P02":
-        coeff = get_mvr_coeff(site, "tpb", lev1["frequency"][:])
+        coeff = get_mvr_coeff(site, "tpb", lev1["frequency"][:], coeff_files)
         if coeff[0]["RT"] < 2:
-            coeff, offset, lin, quad = get_mvr_coeff(site, "tpb", lev1["frequency"][:])
+            coeff, offset, lin, quad = get_mvr_coeff(
+                site, "tpb", lev1["frequency"][:], coeff_files
+            )
         else:
             # pylint: disable-next=unbalanced-tuple-unpacking
             coeff, _, _, _, _, _, _, _ = get_mvr_coeff(
-                site, "tpb", lev1["frequency"][:]
+                site, "tpb", lev1["frequency"][:], coeff_files
             )
 
         coeff["AG"] = np.sort(coeff["AG"])
@@ -538,7 +559,7 @@ def load_product(filename: str):
     return file, ret_freq, ret_ang
 
 
-def _test_bl_scan(site: str, lev1: nc.Dataset) -> bool:
+def _test_bl_scan(site: str | None, lev1: nc.Dataset, coeff_files: list | None) -> bool:
     """Check for existing BL scans in lev1 data"""
 
     if "elevation_angle" in lev1.variables:
@@ -547,9 +568,9 @@ def _test_bl_scan(site: str, lev1: nc.Dataset) -> bool:
         elevation_angle = 90 - lev1["zenith_angle"][:]
 
     bl_scan = True
-    coeff_file = get_coeff_list(site, "tpb")
+    coeff_file = get_coeff_list(site, "tpb", coeff_files)
     if len(coeff_file) > 0:
-        coeff = get_mvr_coeff(site, "tpb", lev1["frequency"][:])
+        coeff = get_mvr_coeff(site, "tpb", lev1["frequency"][:], coeff_files)
         bl_ind = np.where(
             (elevation_angle[:] > coeff[0]["AG"][0] - 0.5)
             & (elevation_angle[:] < coeff[0]["AG"][0] + 0.5)

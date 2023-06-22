@@ -8,10 +8,13 @@ Fill_Value_Float = -999.0
 Fill_Value_Int = -99
 
 
-def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
+def get_mvr_coeff(
+    site: str | None, prefix: str, freq: np.ndarray, coeff_files: list | None
+):
     """This function extracts retrieval coefficients for given files.
 
     Args:
+        coeff_files: List of coefficient files.
         site: Name of site.
         prefix: Identifier for type of product.
         freq: Frequencies of observations.
@@ -21,7 +24,8 @@ def get_mvr_coeff(site: str, prefix: str, freq: np.ndarray):
         >>> get_mvr_coeff('site_name', 'lwp', np.array([22, 31.4]))
     """
 
-    c_list = get_coeff_list(site, prefix)
+    c_list = get_coeff_list(site, prefix, coeff_files)
+
     coeff: dict = {}
 
     if (str(c_list[0][-3:]).lower() == "ret") and (len(c_list) == 1):
