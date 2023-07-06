@@ -131,9 +131,17 @@ def prepare_data(
                 rpg_bls = RpgBin(file_list_bls)
                 _add_bls(rpg_bin, rpg_bls, rpg_hkd, params)
             else:
-                file_list_blb = get_file_list(path_to_files, "BLB")
-                rpg_blb = RpgBin(file_list_blb)
-                _add_blb(rpg_bin, rpg_blb, rpg_hkd, params, site)
+                file_list_blb = []
+                try:
+                    file_list_blb = get_file_list(path_to_files, "BLB")
+                except RuntimeError:
+                    logging.error(
+                        "No binary files with extension blb found in directory "
+                        + path_to_files
+                    )
+                if len(file_list_blb) > 0:
+                    rpg_blb = RpgBin(file_list_blb)
+                    _add_blb(rpg_bin, rpg_blb, rpg_hkd, params, site)
 
         if params["azi_cor"] != Fill_Value_Float:
             _azi_correction(rpg_bin.data, params)

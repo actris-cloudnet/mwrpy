@@ -385,26 +385,6 @@ def read_met(file_name: str) -> tuple[dict, dict]:
             dt.append(("rainfall_rate", "<f"))
             hdt.append(("_rainfall_rate_min", "<f"))
             hdt.append(("_rainfall_rate_max", "<f"))
-        if header["_n_add"] & 0x8:
-            dt.append(("_adds4", "<f"))
-            hdt.append(("_adds4_min", "<f"))
-            hdt.append(("_adds4_max", "<f"))
-        if header["_n_add"] & 0x10:
-            dt.append(("_adds5", "<f"))
-            hdt.append(("_adds5_min", "<f"))
-            hdt.append(("_adds5_max", "<f"))
-        if header["_n_add"] & 0x20:
-            dt.append(("_adds6", "<f"))
-            hdt.append(("_adds6_min", "<f"))
-            hdt.append(("_adds6_max", "<f"))
-        if header["_n_add"] & 0x40:
-            dt.append(("_adds7", "<f"))
-            hdt.append(("_adds7_min", "<f"))
-            hdt.append(("_adds7_max", "<f"))
-        if header["_n_add"] & 0x80:
-            dt.append(("_adds8", "<f"))
-            hdt.append(("_adds8_min", "<f"))
-            hdt.append(("_adds8_max", "<f"))
         hdt.append(("_time_ref", "<i4"))
         header |= _read_from_file(file, hdt)
         data = _read_from_file(file, dt, header["n"])

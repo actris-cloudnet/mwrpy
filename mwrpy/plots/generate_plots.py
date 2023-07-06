@@ -79,7 +79,7 @@ def generate_figure(
     save_path: str | None = None,
     max_y: int = 5,
     ele_range: tuple[float, float] = (
-        0.0,
+        -1.0,
         91.0,
     ),
     pointing: int = 0,
@@ -650,32 +650,9 @@ def _plot_hkd(ax, data_in: ndarray, name: str, time: ndarray):
     time = _nan_time_gaps(time)
     if name == "t_amb":
         data_in[data_in == -999.0] = np.nan
-        if np.nanmax(data_in[:, 0] - data_in[:, 1]) > 0.0:
-            ax.plot(
-                time,
-                np.abs(data_in[:, 0] - data_in[:, 1]),
-                color=_COLORS["darkgray"],
-                label="Difference",
-                linewidth=0.8,
-            )
-            _set_ax(
-                ax,
-                np.nanmax(np.abs(data_in[:, 0] - data_in[:, 1])) + 0.025,
-                "Sensor absolute difference (K)",
-                0.0,
-            )
-            ax.yaxis.set_label_position("right")
-            ax.yaxis.tick_right()
-            ax.legend(loc="upper right")
-        else:
-            ax.yaxis.set_major_locator(NullLocator())
-
-        ax2 = ax.twinx()
         vmin, vmax = np.nanmin(data_in) - 1.0, np.nanmax(data_in) + 1.0
-        ax2.plot(time, np.mean(data_in, axis=1), color="darkblue", label="Mean")
-        ax2.yaxis.tick_left()
-        ax2.yaxis.set_label_position("left")
-        _set_ax(ax2, vmax, "Sensor mean (K)", vmin)
+        ax.plot(time, np.mean(data_in, axis=1), color="darkblue", label="Mean")
+        _set_ax(ax, vmax, "Sensor mean (K)", vmin)
         if np.nanmax(np.abs(data_in[:, 0] - data_in[:, 1])) > 0.3:
             ax.plot(
                 time,
@@ -684,6 +661,25 @@ def _plot_hkd(ax, data_in: ndarray, name: str, time: ndarray):
                 linewidth=0.8,
                 label="Threshold (Diff.)",
             )
+
+        ax2 = ax.twinx()
+        if (data_in[:, 0].all() is ma.masked) | (data_in[:, 1].all() is ma.masked):
+            ax2.yaxis.set_major_locator(NullLocator())
+        else:
+            ax2.plot(
+                time,
+                np.abs(data_in[:, 0] - data_in[:, 1]),
+                color=_COLORS["darkgray"],
+                label="Difference",
+                linewidth=0.8,
+            )
+            _set_ax(
+                ax2,
+                np.nanmax(np.abs(data_in[:, 0] - data_in[:, 1])) + 0.025,
+                "Sensor absolute difference (K)",
+                0.0,
+            )
+
         lines, labels = ax.get_legend_handles_labels()
         lines2, labels2 = ax2.get_legend_handles_labels()
         leg = ax2.legend(lines + lines2, labels + labels2, loc="upper right")
@@ -1090,13 +1086,22 @@ def _plot_tb(
         flag = np.where(quality_flag[:, i] > 0)[0]
         axi.plot(time[flag], data_in[flag, i], "ro", markersize=0.75, fillstyle="full")
         axi.set_facecolor(_COLORS["lightgray"])
-        dif = np.nanmax(data_in[no_flag, i]) - np.nanmin(data_in[no_flag, i])
-        _set_ax(
-            axi,
-            np.nanmax(data_in[no_flag, i]) + 0.25 * dif,
-            "",
-            np.nanmin(data_in[no_flag, i]) - 0.25 * dif,
-        )
+        if len(data_in) > 0:
+            dif = np.nanmax(data_in[no_flag, i]) - np.nanmin(data_in[no_flag, i])
+            _set_ax(
+                axi,
+                np.nanmax(data_in[no_flag, i]) + 0.25 * dif,
+                "",
+                np.nanmin(data_in[no_flag, i]) - 0.25 * dif,
+            )
+        else:
+            _set_ax(
+                axi,
+                100.0,
+                "",
+                0.0,
+            )
+
         if i in (6, 13):
             _set_labels(fig, axi, nc_file)
         axi.text(
@@ -1242,7 +1247,7 @@ def _plot_tb(
                 np.sum(quality_flag[:, params["receiver"] == rec], axis=1) == 0
             )[0]
             if len(no_flag) == 0:
-                no_flag = np.arange(len(params["time"]))
+                no_flag = np.arange(len(time))
             tb_m[:, irec] = ma.mean(
                 np.abs(data_in[:, np.array(params["receiver"]) == rec]), axis=1
             )
@@ -1265,7 +1270,7 @@ def _plot_tb(
             axa[irec].set_xticklabels(ticks_x_labels, fontsize=12)
             axa[irec].set_xlim(0, 24)
             axa[irec].set_xlabel("Time (UTC)", fontsize=12)
-            axa[irec].set_ylim([0, np.nanmax(tb_m[no_flag, irec]) + 0.5])
+            axa[irec].set_ylim([0, np.nanmax(tb_m[no_flag, irec], initial=0.0) + 0.5])
 
             if len(np.where(isbit(quality_flag[:, 0], 5))[0]) > 0:
                 data_g = np.zeros((len(time), 10), np.float32)
@@ -1274,7 +1279,12 @@ def _plot_tb(
                     axa[irec],
                     ma.MaskedArray(data_g),
                     "tb_missing",
-                    (time, np.linspace(0, np.nanmax(tb_m[no_flag, irec]) + 0.5, 10)),
+                    (
+                        time,
+                        np.linspace(
+                            0, np.nanmax(tb_m[no_flag, irec], initial=0.0) + 0.5, 10
+                        ),
+                    ),
                     nc_file,
                 )
                 handles, labels = axa[irec].get_legend_handles_labels()
@@ -1302,10 +1312,14 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
         ax.set_yticks(np.linspace(0, 360, 9))
     else:
         rolling_mean, width = _calculate_rolling_mean(time, data)
+
     time = _nan_time_gaps(time)
-    rolling_mean = np.interp(
-        time, time[int(width / 2 - 1) : int(-width / 2)], rolling_mean
-    )
+    if int(width / 2 - 1) < np.abs(int(-width / 2)):
+        rolling_mean = data
+    else:
+        rolling_mean = np.interp(
+            time, time[int(width / 2 - 1) : int(-width / 2)], rolling_mean
+        )
 
     if name not in ("rainfall_rate", "air_temperature", "relative_humidity"):
         ax.plot(time, data, ".", alpha=0.8, color=_COLORS["darksky"], markersize=1)
@@ -1335,7 +1349,7 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
             label="Temperature",
         )
         rh = read_nc_fields(nc_file, "relative_humidity")
-        rh = _elevation_filter(nc_file, rh, ele_range=(0.0, 91.0))
+        rh = _elevation_filter(nc_file, rh, ele_range=(-1.0, 91.0))
         t_d = t_dew_rh(data, rh)
         rolling_mean, width = _calculate_rolling_mean(time, t_d)
         rolling_mean = np.interp(
@@ -1365,11 +1379,11 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
 
     if name == "relative_humidity":
         T = read_nc_fields(nc_file, "air_temperature")
-        T = _elevation_filter(nc_file, T, ele_range=(0.0, 91.0))
+        T = _elevation_filter(nc_file, T, ele_range=(-1.0, 91.0))
         q = abs_hum(T, data / 100.0)
         rolling_mean2, width2 = _calculate_rolling_mean(time, q)
         rolling_mean2 = np.interp(
-            time, time[int(width2 / 2 - 1) : int(-width / 2)], rolling_mean2
+            time, time[int(width2 / 2 - 1) : int(-width2 / 2)], rolling_mean2
         )
         ax2 = ax.twinx()
         ax2.plot(

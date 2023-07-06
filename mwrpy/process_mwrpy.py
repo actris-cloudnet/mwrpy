@@ -120,7 +120,7 @@ def plot_product(prod: str, date, site: str):
                     91.0,
                 )
                 if key in ("tb", "tb_spectrum")
-                else (0.0, 91.0)
+                else (-1.0, 91.0)
             )
             generate_figure(
                 filename,
@@ -138,7 +138,7 @@ def plot_product(prod: str, date, site: str):
             )
             if prod not in ("2P02", "2P04", "2P07", "2P08")
             else (
-                0,
+                -1.0,
                 91.0,
             )
         )
@@ -159,7 +159,7 @@ def plot_product(prod: str, date, site: str):
                 )
                 if prod == "single"
                 else (
-                    0,
+                    -1.0,
                     91.0,
                 )
             )
