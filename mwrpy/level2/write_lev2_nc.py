@@ -194,8 +194,11 @@ def get_products(
         ret_product[index_ret] = tmp_product[index_ret]
 
         if product == "lwp":
-            freq_31 = np.where(np.round(lev1["frequency"][:], 1) == 31.4)[0]
-            if len(freq_31) != 1:
+            freq_win = np.where(
+                (np.round(lev1["frequency"][:], 1) == 31.4)
+                | (np.round(lev1["frequency"][:], 1) == 90.0)
+            )[0]
+            if len(freq_win) != 1:
                 rpg_dat["lwp"], rpg_dat["lwp_offset"] = (
                     ret_product,
                     np.ones(len(index)) * Fill_Value_Float,
@@ -578,10 +581,6 @@ def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
     """Get retrieval input"""
 
     time_median = ma.median(lev1["time"][:])
-    if time_median < 24:
-        assert isinstance(lev1, nc.Dataset)
-        date = [lev1.year, lev1.month, lev1.day]
-        time_median = decimal_hour2unix(date, time_median)
 
     _, freq_ind, _ = np.intersect1d(
         lev1["frequency"][:],

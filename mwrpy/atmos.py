@@ -158,9 +158,12 @@ def find_lwcl_free(lev1: dict) -> tuple[np.ndarray, np.ndarray]:
 
     index = np.ones(len(lev1["time"]), dtype=np.float32) * np.nan
     status = np.ones(len(lev1["time"]), dtype=np.int32)
-    freq_31 = np.where(np.round(lev1["frequency"][:], 1) == 31.4)[0]
-    if len(freq_31) == 1:
-        tb = np.squeeze(lev1["tb"][:, freq_31])
+    freq_win = np.where(
+        (np.round(lev1["frequency"][:], 1) == 31.4)
+        | (np.round(lev1["frequency"][:], 1) == 90.0)
+    )[0]
+    if len(freq_win) == 1:
+        tb = np.squeeze(lev1["tb"][:, freq_win])
         tb[
             (lev1["pointing_flag"][:] == 1) | (lev1["elevation_angle"][:] < 89.0)
         ] = np.nan

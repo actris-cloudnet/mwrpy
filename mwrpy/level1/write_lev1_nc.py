@@ -76,6 +76,8 @@ def prepare_data(
         rpg_bin.data["frequency"] = rpg_bin.header["_f"][
             np.argsort(params["bandwidth"])
         ]
+        if 89.0 in rpg_bin.data["frequency"]:
+            rpg_bin.data["frequency"][rpg_bin.data["frequency"] == 89.0] = 90.0
         fields = [
             "bandwidth",
             "n_sidebands",
