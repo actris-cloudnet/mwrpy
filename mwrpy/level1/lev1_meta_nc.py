@@ -231,11 +231,6 @@ ATTRIBUTES_1B01 = {
         long_name="Receiver temperature stability",
         units="K",
     ),
-    "ir_zenith_angle": MetaData(
-        long_name="Infrared sensor zenith angle",
-        units="degree",
-        comment="90=horizon, 0=zenith",
-    ),
     "tb_spectrum": MetaData(
         long_name="Brightness temperature spectrum",
         units="K",

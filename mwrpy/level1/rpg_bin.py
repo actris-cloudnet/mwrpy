@@ -1,6 +1,7 @@
 """This module contains all functions to read in RPG MWR binary files"""
 import datetime
 import logging
+import os
 from collections.abc import Callable
 from io import SEEK_END
 from typing import BinaryIO, Literal, TypeAlias
@@ -21,7 +22,21 @@ def stack_files(file_list: list[str]) -> tuple[dict, dict]:
 
     def _stack_data(source: dict, target: dict, fun: Callable):
         for name, value in source.items():
-            target[name] = fun((target[name], value)) if name in target else value
+            if value.ndim > 0 and name in target:
+                if target[name].ndim == value.ndim:
+                    if (
+                        value.ndim > 1
+                        and value.shape[1] != target[name].shape[1]
+                        and name == "irt"
+                    ):
+                        value = np.hstack(
+                            (value, np.ones((len(value), 1)) * Fill_Value_Float)
+                        )
+                        target[name] = fun((target[name], value))
+                    else:
+                        target[name] = fun((target[name], value))
+            elif value.ndim > 0 and name not in target:
+                target[name] = value
 
     def _stack_header(source: dict, target: dict, fun: Callable):
         for name, value in source.items():
@@ -47,13 +62,14 @@ def stack_files(file_list: list[str]) -> tuple[dict, dict]:
     header: dict = {}
 
     for file in file_list:
-        try:
-            header_tmp, data_tmp = read_type(file)
-        except (TypeError, ValueError) as err:
-            logging.warning(err)
-            continue
-        _stack_header(header_tmp, header, np.add)
-        _stack_data(data_tmp, data, np.concatenate)
+        if os.stat(file).st_size > 1000:
+            try:
+                header_tmp, data_tmp = read_type(file)
+            except (TypeError, ValueError) as err:
+                logging.warning(err)
+                continue
+            _stack_header(header_tmp, header, np.add)
+            _stack_data(data_tmp, data, np.concatenate)
 
     return header, data
 
@@ -369,26 +385,6 @@ def read_met(file_name: str) -> tuple[dict, dict]:
             dt.append(("rainfall_rate", "<f"))
             hdt.append(("_rainfall_rate_min", "<f"))
             hdt.append(("_rainfall_rate_max", "<f"))
-        if header["_n_add"] & 0x8:
-            dt.append(("_adds4", "<f"))
-            hdt.append(("_adds4_min", "<f"))
-            hdt.append(("_adds4_max", "<f"))
-        if header["_n_add"] & 0x10:
-            dt.append(("_adds5", "<f"))
-            hdt.append(("_adds5_min", "<f"))
-            hdt.append(("_adds5_max", "<f"))
-        if header["_n_add"] & 0x20:
-            dt.append(("_adds6", "<f"))
-            hdt.append(("_adds6_min", "<f"))
-            hdt.append(("_adds6_max", "<f"))
-        if header["_n_add"] & 0x40:
-            dt.append(("_adds7", "<f"))
-            hdt.append(("_adds7_min", "<f"))
-            hdt.append(("_adds7_max", "<f"))
-        if header["_n_add"] & 0x80:
-            dt.append(("_adds8", "<f"))
-            hdt.append(("_adds8_min", "<f"))
-            hdt.append(("_adds8_max", "<f"))
         hdt.append(("_time_ref", "<i4"))
         header |= _read_from_file(file, hdt)
         data = _read_from_file(file, dt, header["n"])

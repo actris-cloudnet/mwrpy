@@ -1,5 +1,7 @@
 """Module for meteorological sensor quality control"""
+import metpy.calc as mpcalc
 import numpy as np
+from metpy.units import masked_array
 
 from mwrpy.utils import setbit
 
@@ -22,7 +24,7 @@ def apply_met_qc(data: dict, params: dict) -> None:
 
     """
 
-    data["met_quality_flag"] = np.zeros(len(data["time"]), dtype=np.int32)
+    data["met_quality_flag"] = np.ones(len(data["time"]), dtype=np.int32) * -99
     var_name = [
         "air_temperature",
         "relative_humidity",
@@ -34,8 +36,25 @@ def apply_met_qc(data: dict, params: dict) -> None:
 
     for bit, name in enumerate(var_name):
         if name in data:
+            if name == "air_pressure":
+                threshold_low = (
+                    mpcalc.height_to_pressure_std(
+                        masked_array(params["altitude"], data_units="m")
+                    ).magnitude
+                    * 100.0
+                    - 10000.0
+                )
+                threshold_high = (
+                    mpcalc.height_to_pressure_std(
+                        masked_array(params["altitude"], data_units="m")
+                    ).magnitude
+                    * 100.0
+                    + 10000.0
+                )
+            else:
+                threshold_low = params["met_thresholds"][bit][0]
+                threshold_high = params["met_thresholds"][bit][1]
             ind = np.where(
-                (data[name][:] < params["met_thresholds"][bit][0])
-                | (data[name][:] > params["met_thresholds"][bit][1])
+                (data[name][:] < threshold_low) | (data[name][:] > threshold_high)
             )
             data["met_quality_flag"][ind] = setbit(data["met_quality_flag"][ind], bit)

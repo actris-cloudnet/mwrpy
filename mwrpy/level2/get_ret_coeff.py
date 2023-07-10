@@ -297,7 +297,7 @@ def read_coeff_ascii(coeff_file: str) -> dict:
     for line in lines:
         if "=" in line[:3]:
             key = line[:2]
-            if key != "NS":
+            if key not in ("NS", "SL", "SQ"):
                 coeff[key] = _parse_lines(f"{key}=", lines)
     return coeff
 

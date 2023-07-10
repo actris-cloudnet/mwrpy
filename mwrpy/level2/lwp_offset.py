@@ -17,11 +17,6 @@ def correct_lwp_offset(
         index: Index to use.
     """
 
-    if "elevation_angle" in lev1:
-        elevation_angle = lev1["elevation_angle"][:]
-    else:
-        elevation_angle = 90 - lev1["zenith_angle"][:]
-
     lwcl_i = lev1["liquid_cloud_flag"][index]
     ind = utils.time_to_datetime_index(lev1["time"][index])
     lwp_df = pd.DataFrame({"Lwp": lwp_org}, index=ind)
@@ -34,8 +29,8 @@ def correct_lwp_offset(
     lwp = np.copy(lwp_org)
     lwp[
         (lwcl_i != 0)
-        | (lwp > 0.04)
-        | (elevation_angle[index] < 89.0)
+        | (lwp > 0.06)
+        | (lev1["elevation_angle"][index] < 89.0)
         | (lwp_max["Lwp"][:] > 0.003)
     ] = np.nan
     lwp_df = pd.DataFrame({"Lwp": lwp}, index=ind)
@@ -45,7 +40,6 @@ def correct_lwp_offset(
 
     lwp_offset = lwp_offset.interpolate(method="linear")
     lwp_offset = lwp_offset.fillna(method="bfill")
-    lwp_offset["Lwp"][np.isnan(lwp_offset["Lwp"])] = 0.0
+    lwp_offset["Lwp"][(np.isnan(lwp_offset["Lwp"])) | (lwp_org == -999.0)] = 0.0
     lwp_org -= lwp_offset["Lwp"].values
-
     return lwp_org, lwp_offset["Lwp"].values

@@ -76,6 +76,8 @@ def prepare_data(
         rpg_bin.data["frequency"] = rpg_bin.header["_f"][
             np.argsort(params["bandwidth"])
         ]
+        if 89.0 in rpg_bin.data["frequency"]:
+            rpg_bin.data["frequency"][rpg_bin.data["frequency"] == 89.0] = 90.0
         fields = [
             "bandwidth",
             "n_sidebands",
@@ -131,9 +133,17 @@ def prepare_data(
                 rpg_bls = RpgBin(file_list_bls)
                 _add_bls(rpg_bin, rpg_bls, rpg_hkd, params)
             else:
-                file_list_blb = get_file_list(path_to_files, "BLB")
-                rpg_blb = RpgBin(file_list_blb)
-                _add_blb(rpg_bin, rpg_blb, rpg_hkd, params, site)
+                file_list_blb = []
+                try:
+                    file_list_blb = get_file_list(path_to_files, "BLB")
+                except RuntimeError:
+                    logging.error(
+                        "No binary files with extension blb found in directory "
+                        + path_to_files
+                    )
+                if len(file_list_blb) > 0:
+                    rpg_blb = RpgBin(file_list_blb)
+                    _add_blb(rpg_bin, rpg_blb, rpg_hkd, params, site)
 
         if params["azi_cor"] != Fill_Value_Float:
             _azi_correction(rpg_bin.data, params)
@@ -179,46 +189,47 @@ def prepare_data(
                 file_list_met = get_file_list(path_to_files, "MET")
             except RuntimeError as err:
                 logging.error(err)
-            rpg_met = RpgBin(file_list_met)
-            add_interpol1d(
-                rpg_bin.data,
-                rpg_met.data["air_temperature"],
-                rpg_met.data["time"],
-                "air_temperature",
-            )
-            add_interpol1d(
-                rpg_bin.data,
-                rpg_met.data["relative_humidity"],
-                rpg_met.data["time"],
-                "relative_humidity",
-            )
-            add_interpol1d(
-                rpg_bin.data,
-                rpg_met.data["air_pressure"] * 100,
-                rpg_met.data["time"],
-                "air_pressure",
-            )
-            if "wind_speed" in rpg_met.data:
+            if len(file_list_met) > 0:
+                rpg_met = RpgBin(file_list_met)
                 add_interpol1d(
                     rpg_bin.data,
-                    rpg_met.data["wind_speed"] / 3.6,
+                    rpg_met.data["air_temperature"],
                     rpg_met.data["time"],
-                    "wind_speed",
+                    "air_temperature",
                 )
-            if "wind_direction" in rpg_met.data:
                 add_interpol1d(
                     rpg_bin.data,
-                    rpg_met.data["wind_direction"],
+                    rpg_met.data["relative_humidity"],
                     rpg_met.data["time"],
-                    "wind_direction",
+                    "relative_humidity",
                 )
-            if "rainfall_rate" in rpg_met.data:
                 add_interpol1d(
                     rpg_bin.data,
-                    rpg_met.data["rainfall_rate"] / 1000 / 3600,
+                    rpg_met.data["air_pressure"] * 100,
                     rpg_met.data["time"],
-                    "rainfall_rate",
+                    "air_pressure",
                 )
+                if "wind_speed" in rpg_met.data:
+                    add_interpol1d(
+                        rpg_bin.data,
+                        rpg_met.data["wind_speed"] / 3.6,
+                        rpg_met.data["time"],
+                        "wind_speed",
+                    )
+                if "wind_direction" in rpg_met.data:
+                    add_interpol1d(
+                        rpg_bin.data,
+                        rpg_met.data["wind_direction"],
+                        rpg_met.data["time"],
+                        "wind_direction",
+                    )
+                if "rainfall_rate" in rpg_met.data:
+                    add_interpol1d(
+                        rpg_bin.data,
+                        rpg_met.data["rainfall_rate"] / 1000 / 3600,
+                        rpg_met.data["time"],
+                        "rainfall_rate",
+                    )
 
     elif data_type == "1B11":
         file_list_irt = get_file_list(path_to_files, "IRT")
