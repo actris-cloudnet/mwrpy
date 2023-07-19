@@ -98,7 +98,8 @@ ATTRIBUTES_2P01 = {
         units="m",
     ),
     "temperature": MetaData(
-        long_name="Retrieved temperature profile (single pointing)",
+        long_name="Temperature",
+        comment="Retrieved temperature profile from single pointing measurements",
         standard_name="air_temperature",
         units="K",
     ),
@@ -123,7 +124,7 @@ ATTRIBUTES_2P02 = {
     ),
     "temperature": MetaData(
         long_name="Temperature",
-        comment="Retrieved temperature profile from multiple pointing mwr measurements",
+        comment="Retrieved temperature profile from multiple pointing measurements",
         standard_name="air_temperature",
         units="K",
     ),

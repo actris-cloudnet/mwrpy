@@ -128,7 +128,7 @@ def c2k(T: np.ndarray) -> np.ndarray:
 
 def dir_avg(time: np.ndarray, spd: np.ndarray, drc: np.ndarray, win: float = 0.5):
     """Computes average wind direction (DEG) for a certain window length"""
-    width = len(time[time <= time[0] + win])
+    width = int(ma.round(win / ma.median(ma.diff(ma.masked_invalid(time)))))
     if (width % 2) != 0:
         width = width + 1
     seq = range(len(time))
@@ -158,12 +158,9 @@ def find_lwcl_free(lev1: dict) -> tuple[np.ndarray, np.ndarray]:
 
     index = np.ones(len(lev1["time"]), dtype=np.float32) * np.nan
     status = np.ones(len(lev1["time"]), dtype=np.int32)
-    freq_win = np.where(
-        (np.round(lev1["frequency"][:], 1) == 31.4)
-        | (np.round(lev1["frequency"][:], 1) == 90.0)
-    )[0]
-    if len(freq_win) == 1:
-        tb = np.squeeze(lev1["tb"][:, freq_win])
+    freq_31 = np.where(np.round(lev1["frequency"][:], 1) == 31.4)[0]
+    if len(freq_31) == 1:
+        tb = np.squeeze(lev1["tb"][:, freq_31])
         tb[
             (lev1["pointing_flag"][:] == 1) | (lev1["elevation_angle"][:] < 89.0)
         ] = np.nan
@@ -180,10 +177,7 @@ def find_lwcl_free(lev1: dict) -> tuple[np.ndarray, np.ndarray]:
             tb_thres = 0.15
             irt = lev1["irt"][:, :]
             irt[irt == -999.0] = np.nan
-            if irt.shape[1] > 1:
-                irt = np.nanmean(irt, axis=1)
-            else:
-                irt = np.squeeze(irt)
+            irt = np.nanmean(irt, axis=1) if irt.shape[1] > 1 else np.squeeze(irt)
             irt[
                 (lev1["pointing_flag"][:] == 1) | (lev1["elevation_angle"][:] < 89.0)
             ] = np.nan

@@ -24,7 +24,7 @@ def apply_met_qc(data: dict, params: dict) -> None:
 
     """
 
-    data["met_quality_flag"] = np.ones(len(data["time"]), dtype=np.int32) * -99
+    data["met_quality_flag"] = np.zeros(len(data["time"]), dtype=np.int32)
     var_name = [
         "air_temperature",
         "relative_humidity",

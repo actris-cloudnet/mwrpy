@@ -219,12 +219,7 @@ def spectral_consistency(data: dict, site: str) -> np.ndarray:
             & (data["elevation_angle"][:] < ele_ang + 0.5)
             & (data["pointing_flag"][:] == 0)
         )[0]
-        _, freq_ind, coeff_ind = np.intersect1d(
-            data["frequency"],
-            coeff["AL"],
-            assume_unique=False,
-            return_indices=True,
-        )
+        coeff_ind = np.searchsorted(coeff["AL"], data["frequency"])
         c_w1, c_w2, fac = (
             weights1(data["elevation_angle"][ele_ind]),
             weights2(data["elevation_angle"][ele_ind]),

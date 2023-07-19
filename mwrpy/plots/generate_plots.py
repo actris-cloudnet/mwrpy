@@ -650,9 +650,31 @@ def _plot_hkd(ax, data_in: ndarray, name: str, time: ndarray):
     time = _nan_time_gaps(time)
     if name == "t_amb":
         data_in[data_in == -999.0] = np.nan
+        if (data_in[:, 0].all() is ma.masked) | (data_in[:, 1].all() is ma.masked):
+            ax.yaxis.set_major_locator(NullLocator())
+        else:
+            ax.plot(
+                time,
+                np.abs(data_in[:, 0] - data_in[:, 1]),
+                color=_COLORS["darkgray"],
+                label="Difference",
+                linewidth=0.8,
+            )
+            _set_ax(
+                ax,
+                np.nanmax(np.abs(data_in[:, 0] - data_in[:, 1])) + 0.025,
+                "Sensor absolute difference (K)",
+                0.0,
+            )
+            ax.yaxis.set_label_position("right")
+            ax.legend(loc="upper right")
+
+        ax2 = ax.twinx()
         vmin, vmax = np.nanmin(data_in) - 1.0, np.nanmax(data_in) + 1.0
-        ax.plot(time, np.mean(data_in, axis=1), color="darkblue", label="Mean")
-        _set_ax(ax, vmax, "Sensor mean (K)", vmin)
+        ax2.plot(time, np.mean(data_in, axis=1), color="darkblue", label="Mean")
+        ax2.yaxis.tick_left()
+        ax2.yaxis.set_label_position("left")
+        _set_ax(ax2, vmax, "Sensor mean (K)", vmin)
         if np.nanmax(np.abs(data_in[:, 0] - data_in[:, 1])) > 0.3:
             ax.plot(
                 time,
@@ -661,28 +683,10 @@ def _plot_hkd(ax, data_in: ndarray, name: str, time: ndarray):
                 linewidth=0.8,
                 label="Threshold (Diff.)",
             )
-
-        ax2 = ax.twinx()
-        if (data_in[:, 0].all() is ma.masked) | (data_in[:, 1].all() is ma.masked):
-            ax2.yaxis.set_major_locator(NullLocator())
-        else:
-            ax2.plot(
-                time,
-                np.abs(data_in[:, 0] - data_in[:, 1]),
-                color=_COLORS["darkgray"],
-                label="Difference",
-                linewidth=0.8,
-            )
-            _set_ax(
-                ax2,
-                np.nanmax(np.abs(data_in[:, 0] - data_in[:, 1])) + 0.025,
-                "Sensor absolute difference (K)",
-                0.0,
-            )
-
         lines, labels = ax.get_legend_handles_labels()
         lines2, labels2 = ax2.get_legend_handles_labels()
         leg = ax2.legend(lines + lines2, labels + labels2, loc="upper right")
+        ax.yaxis.tick_right()
 
     if name == "t_rec":
         ax.plot(time, data_in[:, 0], color="sienna", linewidth=0.8, label="Receiver 1")
@@ -1029,14 +1033,24 @@ def _plot_tb(
             rotation="vertical",
             fontsize=20,
         )
-        fig.text(
-            0.37,
-            0.085,
-            "spectral consistency failed",
-            va="center",
-            fontsize=20,
-            color="r",
-        )
+        if len(frequency) % 6 == 2:
+            fig.text(
+                0.37,
+                0.085,
+                "spectral consistency failed",
+                va="center",
+                fontsize=20,
+                color="r",
+            )
+        else:
+            fig.text(
+                0.635,
+                0.085,
+                "spectral consistency failed",
+                va="center",
+                fontsize=20,
+                color="r",
+            )
 
     if axs.ndim > 1:
         axs[0, 0].set_title(
@@ -1244,7 +1258,8 @@ def _plot_tb(
         for irec, rec in enumerate(params["receiver_nb"]):
             axa[irec].set_position([0.125 + irec * 0.415, -0.05, 0.36, 0.125])
             no_flag = np.where(
-                np.sum(quality_flag[:, params["receiver"] == rec], axis=1) == 0
+                np.sum(quality_flag[:, np.array(params["receiver"]) == rec], axis=1)
+                == 0
             )[0]
             if len(no_flag) == 0:
                 no_flag = np.arange(len(time))
@@ -1295,7 +1310,6 @@ def _plot_tb(
 
 def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
     """Plot for meteorological sensors."""
-
     ylabel = ATTRIBUTES[name].ylabel
     if name == "rainfall_rate":
         data_in *= 1000.0 * 3600.0
@@ -1314,12 +1328,9 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
         rolling_mean, width = _calculate_rolling_mean(time, data)
 
     time = _nan_time_gaps(time)
-    if int(width / 2 - 1) < np.abs(int(-width / 2)):
-        rolling_mean = data
-    else:
-        rolling_mean = np.interp(
-            time, time[int(width / 2 - 1) : int(-width / 2)], rolling_mean
-        )
+    rolling_mean = np.interp(
+        time, time[int(width / 2 - 1) : int(-width / 2)], rolling_mean
+    )
 
     if name not in ("rainfall_rate", "air_temperature", "relative_humidity"):
         ax.plot(time, data, ".", alpha=0.8, color=_COLORS["darksky"], markersize=1)
@@ -1372,7 +1383,7 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
             markersize=3,
             label="Dewpoint",
         )
-        vmin, vmax = np.nanmin([data, t_d]) - 1.0, np.nanmax([data, t_d]) + 1.0
+        vmin, vmax = ma.min([data, t_d]) - 1.0, ma.max([data, t_d]) + 1.0
         ax.legend(loc="upper right", markerscale=2)
         _set_ax(ax, vmax, ylabel, min_y=vmin)
         ax.grid(True)

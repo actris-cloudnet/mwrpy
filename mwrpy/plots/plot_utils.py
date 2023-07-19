@@ -88,7 +88,7 @@ def _get_unmasked_values(
 
 def _nan_time_gaps(time: ndarray, tgap: float = 5.0 / 60.0) -> ndarray:
     """Finds time gaps bigger than 5min (default) and inserts nan."""
-    time_diff = np.diff(time)
+    time_diff = ma.diff(ma.masked_invalid(time))
     gaps = np.where(time_diff > tgap)[0] + 1
     if len(gaps) > 0:
         time[gaps[0 : np.min([len(time), gaps[-1]])]] = np.nan
@@ -119,13 +119,14 @@ def _calculate_rolling_mean(
     time: ndarray, data: ndarray, win: float = 0.5
 ) -> tuple[ndarray, int]:
     """Returns rolling mean and used window width."""
-    width = len(time[time <= time[0] + win])
+    # width = len(time[time <= time[0] + win])
+    width = int(ma.round(win / ma.median(ma.diff(ma.masked_invalid(time)))))
     if (width % 2) != 0:
         width = width + 1
     if data.ndim == 1:
         rolling_window = np.kaiser(width, 14)
         rolling_mean = np.convolve(data, rolling_window, "valid")
-        rolling_mean = rolling_mean / np.sum(rolling_window)
+        rolling_mean = rolling_mean / ma.sum(rolling_window)
     else:
         rolling_window = np.ones((1, width)) * np.blackman(width)
         rolling_mean = convolve2DFFT(data, rolling_window.T, max_missing=0.1)

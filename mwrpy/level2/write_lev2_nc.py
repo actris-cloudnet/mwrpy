@@ -194,11 +194,8 @@ def get_products(
         ret_product[index_ret] = tmp_product[index_ret]
 
         if product == "lwp":
-            freq_win = np.where(
-                (np.round(lev1["frequency"][:], 1) == 31.4)
-                | (np.round(lev1["frequency"][:], 1) == 90.0)
-            )[0]
-            if len(freq_win) != 1:
+            freq_31 = np.where(np.round(lev1["frequency"][:], 1) == 31.4)[0]
+            if len(freq_31) != 1:
                 rpg_dat["lwp"], rpg_dat["lwp_offset"] = (
                     ret_product,
                     np.ones(len(index)) * Fill_Value_Float,
