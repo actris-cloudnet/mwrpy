@@ -516,7 +516,8 @@ def get_processing_dates(args) -> tuple[str, str]:
 
 
 def _get_filename(prod: str, date_in: datetime.date, site: str) -> str:
-    global_attributes, params = read_yaml_config(site)
+    global_attributes = read_config(site, "global_specs")
+    params = read_config(site, "params")
     if np.char.isnumeric(prod[0]):
         level = prod[0]
     else:
@@ -592,7 +593,3 @@ def copy_global(
     for attr in attributes:
         if attr in source_attributes:
             setattr(target, attr, source.getncattr(attr))
-
-
-def read_yaml_config(site: str):
-    raise RuntimeError("This function is not implemented yet.")
