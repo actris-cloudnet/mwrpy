@@ -196,10 +196,10 @@ def get_mvr_coeff(
     elif (coeff["RT"] < 2) & (len(coeff["AL"]) > 1) & (prefix == "tpb"):
 
         def f_offset(_x):
-            return coeff["OS"][:]
+            return coeff["OS"]
 
         def f_lin(_x):
-            return coeff["TL"][:]
+            return coeff["TL"]
 
         def f_quad(_x):
             return np.empty(0)

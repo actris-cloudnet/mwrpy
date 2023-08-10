@@ -37,9 +37,9 @@ def lev1_to_nc(
     adds attributes and writes it into netCDF file.
 
     Args:
-        site: Name of site.
         data_type: Data type of the netCDF file.
         path_to_files: Folder containing one day of RPG MWR binary files.
+        site: Name of site.
         output_file: Output file name.
         coeff_files: List of coefficient files.
         instrument_config: Dictionary containing information about the instrument.
@@ -59,28 +59,23 @@ def lev1_to_nc(
             f"No instrument config given, using config file in repository for {site}."
         )
 
-    global_attributes = utils.read_config(site, "global_specs")
     params = utils.read_config(site, "params")
-
     if instrument_config is not None:
-        params_updated = {**params, **instrument_config}
-    else:
-        params_updated = params
-    assert isinstance(params_updated, dict)
+        params = {**params, **instrument_config}
 
-    if data_type != "1C01":
-        update_lev1_attributes(global_attributes, data_type)
-
-    rpg_bin = prepare_data(path_to_files, data_type, params_updated)
+    rpg_bin = prepare_data(path_to_files, data_type, params)
 
     if data_type in ("1B01", "1C01"):
-        apply_qc(site, rpg_bin, params_updated, coeff_files)
+        apply_qc(site, rpg_bin, params, coeff_files)
     if data_type in ("1B21", "1C01"):
-        apply_met_qc(rpg_bin.data, params_updated)
+        apply_met_qc(rpg_bin.data, params)
     hatpro = rpg_mwr.Rpg(rpg_bin.data)
     hatpro.find_valid_times()
     hatpro.data = get_data_attributes(hatpro.data, data_type)
     if output_file is not None:
+        global_attributes = utils.read_config(site, "global_specs")
+        if data_type != "1C01":
+            update_lev1_attributes(global_attributes, data_type)
         rpg_mwr.save_rpg(hatpro, output_file, global_attributes, data_type)
     return hatpro
 
