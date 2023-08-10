@@ -11,8 +11,8 @@ from mwrpy.utils import (
     convolve2DFFT,
     get_ret_freq,
     isbit,
+    read_config,
     read_nc_fields,
-    read_yaml_config,
     seconds2hours,
 )
 
@@ -33,7 +33,7 @@ def _get_ret_flag(nc_file: str, time: ndarray) -> ndarray:
     )
     quality_flag = quality_flag[q_ind, :]
     site = _read_location(nc_file)
-    _, params = read_yaml_config(site)
+    params = read_config(site, "params")
 
     if params["flag_status"][3] == 0:
         flag[t_ind[np.sum(isbit(quality_flag[:, freq_ind], 3), axis=1) > 0]] = 1
@@ -45,7 +45,8 @@ def _get_ret_flag(nc_file: str, time: ndarray) -> ndarray:
 def _get_lev1(nc_file: str) -> str:
     """Returns name of lev1 file."""
     site = _read_location(nc_file)
-    global_attributes, params = read_yaml_config(site)
+    global_attributes = read_config(site, "global_specs")
+    params = read_config(site, "params")
     datef = datetime.strptime(nc_file[-11:-3], "%Y%m%d")
     data_out_l1 = params["data_out"] + "level1/" + datef.strftime("%Y/%m/%d/")
     lev1_file = (

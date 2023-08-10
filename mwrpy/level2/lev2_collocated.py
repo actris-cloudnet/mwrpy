@@ -21,7 +21,7 @@ def generate_lev2_single(
             ("2I01", "2I02", "2P01", "2P03"),
             (lwp_file, iwv_file, t_prof_file, abs_hum_file),
         ):
-            lev2_to_nc(site, prod, mwr_l1c_file, file.name)
+            lev2_to_nc(prod, mwr_l1c_file, site=site, output_file=file.name)
 
         with (
             netCDF4.Dataset(output_file, "w", format="NETCDF4_CLASSIC") as nc_output,
@@ -90,10 +90,10 @@ def generate_lev2_multi(site: str, mwr_l1c_file: str, output_file: str):
             (temp_file, abs_hum_file, rel_hum_file, t_pot_file, eq_temp_file),
         ):
             lev2_to_nc(
-                site,
                 prod,
                 mwr_l1c_file,
-                file.name,
+                site=site,
+                output_file=file.name,
                 temp_file=temp_file.name if prod not in ("2P02", "2P03") else None,
                 hum_file=abs_hum_file.name if prod not in ("2P02", "2P03") else None,
             )
