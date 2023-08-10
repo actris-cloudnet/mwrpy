@@ -199,7 +199,7 @@ def get_mvr_coeff(
             return coeff["OS"][:]
 
         def f_lin(_x):
-            return coeff["TL"].T
+            return coeff["TL"][:]
 
         def f_quad(_x):
             return np.empty(0)
