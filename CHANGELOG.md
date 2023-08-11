@@ -1,3 +1,7 @@
+## 0.4.1 – 2023-08-11
+
+- Adjust file name parsing
+
 ## 0.4.0 – 2023-08-11
 
 - Read coefficients from input
