@@ -1,3 +1,9 @@
+## 0.4.0 – 2023-08-11
+
+- Read coefficients from input
+- Split ascii file reading to its own function
+- Implement spectral product
+
 ## 0.3.1 – 2023-05-26
 
 - Raise error if missing config files
