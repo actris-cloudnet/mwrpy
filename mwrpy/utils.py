@@ -262,7 +262,7 @@ def get_coeff_list(site: str | None, prefix: str, coeff_files: list | None) -> l
     if coeff_files is not None:
         c_list = []
         for file in coeff_files:
-            if f"_{prefix.lower()}_" in file.lower():
+            if f"{prefix.lower()}_" in file.lower():
                 logging.info("Using coefficient file: " + file)
                 c_list.append(file)
         return sorted(c_list)
