@@ -31,18 +31,9 @@ def stack_files(file_list: list[str]) -> tuple[dict, dict]:
                 target[name] = value
 
     ext = str(file_list[0][-3:]).lower()
-    if ext not in (
-        "brt",
-        "irt",
-        "met",
-        "hkd",
-        "blb",
-        "bls",
-        "spc",
-    ):
-        raise RuntimeError(["Error: no reader for file type " + ext])
-
-    read_type = type_reader[ext]
+    read_type = type_reader.get(ext)
+    if read_type is None:
+        raise NotImplementedError(f"No reader for file type {ext}")
     data: dict = {}
     header: dict = {}
 
