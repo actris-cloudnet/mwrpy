@@ -1,3 +1,7 @@
+## 0.4.3 – 2023-08-14
+
+- Add `MissingInputData` exception
+
 ## 0.4.2 – 2023-08-14
 
 - Skip files with only one measurement
