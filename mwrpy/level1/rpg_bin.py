@@ -49,6 +49,8 @@ def stack_files(file_list: list[str]) -> tuple[dict, dict]:
     for file in file_list:
         try:
             header_tmp, data_tmp = read_type(file)
+            if not isinstance(data_tmp["time"], np.ndarray):
+                raise ValueError("Skipping a file because time is not an array")
         except (TypeError, ValueError) as err:
             logging.warning(err)
             continue
