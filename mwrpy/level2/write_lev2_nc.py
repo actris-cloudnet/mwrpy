@@ -25,6 +25,10 @@ Fill_Value_Float = -999.0
 Fill_Value_Int = -99
 
 
+class MissingInputData(Exception):
+    pass
+
+
 def lev2_to_nc(
     data_type: str,
     lev1_file: str,
@@ -164,9 +168,10 @@ def get_products(
             0
         ]  # type: ignore
         if len(index) == 0:
-            raise RuntimeError(
-                ["No suitable data found for processing for data type: " + data_type]
+            raise MissingInputData(
+                f"No suitable data found for processing for data type: {data_type}"
             )
+
         coeff["retrieval_elevation_angles"] = str(
             np.sort(np.unique(ele_retrieval(elevation_angle[index], coeff)))
         )
@@ -266,8 +271,8 @@ def get_products(
             0
         ]  # type: ignore
         if len(index) == 0:
-            raise RuntimeError(
-                ["No suitable data found for processing for data type: " + data_type]
+            raise MissingInputData(
+                f"No suitable data found for processing for data type: {data_type}"
             )
         coeff["retrieval_elevation_angles"] = str(
             np.sort(np.unique(ele_retrieval(elevation_angle[index], coeff)))
@@ -376,8 +381,8 @@ def get_products(
                 )
 
         if len(ibl) == 0:
-            raise RuntimeError(
-                ["No suitable data found for processing for data type: " + data_type]
+            raise MissingInputData(
+                f"No suitable data found for processing for data type: {data_type}"
             )
 
         index = ibl[:, -1]  # type: ignore
