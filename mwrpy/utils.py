@@ -263,7 +263,7 @@ def get_coeff_list(site: str | None, prefix: str, coeff_files: list | None) -> l
         c_list = []
         for file in coeff_files:
             if f"{prefix.lower()}_" in file.lower():
-                logging.info("Using coefficient file: " + file)
+                logging.debug("Using coefficient file: " + file)
                 c_list.append(file)
         return sorted(c_list)
 
@@ -299,7 +299,7 @@ def get_file_list(path_to_files: str, extension: str):
         f_list = sorted(glob.glob(path_to_files + "/*." + extension.lower()))
     if len(f_list) == 0:
         logging.warning(
-            "Error: no binary files with extension "
+            "No binary files with extension "
             + extension
             + " found in directory "
             + path_to_files
