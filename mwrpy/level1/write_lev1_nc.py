@@ -92,10 +92,9 @@ def prepare_data(
         if len(brt_files) == 0:
             raise FileNotFoundError("No BRT files found")
         rpg_bin = RpgBin(brt_files)
-        rpg_bin.data["tb"] = rpg_bin.data["tb"][:, np.argsort(params["bandwidth"])]
-        rpg_bin.data["frequency"] = rpg_bin.header["_f"][
-            np.argsort(params["bandwidth"])
-        ]
+        ind_bandwidth = np.argsort(params["bandwidth"])
+        rpg_bin.data["tb"] = rpg_bin.data["tb"][:, ind_bandwidth]
+        rpg_bin.data["frequency"] = rpg_bin.header["_f"][ind_bandwidth]
         fields = [
             "bandwidth",
             "n_sidebands",
@@ -139,14 +138,7 @@ def prepare_data(
             rpg_hkd.data["status"][ind_hkd], params
         )
         if params["scan_time"] != Fill_Value_Int:
-            file_list_bls = []
-            try:
-                file_list_bls = get_file_list(path_to_files, "BLS")
-            except RuntimeError:
-                logging.error(
-                    "No binary files with extension bls found in directory "
-                    + path_to_files
-                )
+            file_list_bls = get_file_list(path_to_files, "BLS")
             if len(file_list_bls) > 0:
                 rpg_bls = RpgBin(file_list_bls)
                 _add_bls(rpg_bin, rpg_bls, rpg_hkd, params)
@@ -157,6 +149,7 @@ def prepare_data(
 
         if params["azi_cor"] != Fill_Value_Float:
             _azi_correction(rpg_bin.data, params)
+
         if params["const_azi"] != Fill_Value_Float:
             rpg_bin.data["azimuth_angle"] = (
                 rpg_bin.data["azimuth_angle"] + params["const_azi"]
@@ -164,10 +157,7 @@ def prepare_data(
 
         if data_type == "1C01":
             if params["ir_flag"]:
-                try:
-                    file_list_irt = get_file_list(path_to_files, "IRT")
-                except RuntimeError as err:
-                    logging.error(err)
+                file_list_irt = get_file_list(path_to_files, "IRT")
                 if len(file_list_irt) > 0:
                     rpg_irt = RpgBin(file_list_irt)
                     rpg_irt.data["irt"][rpg_irt.data["irt"] <= 125.5] = Fill_Value_Float
@@ -195,10 +185,7 @@ def prepare_data(
                 rpg_bin.data["liquid_cloud_flag_status"],
             ) = atmos.find_lwcl_free(rpg_bin.data)
 
-            try:
-                file_list_met = get_file_list(path_to_files, "MET")
-            except RuntimeError as err:
-                logging.error(err)
+            file_list_met = get_file_list(path_to_files, "MET")
             rpg_met = RpgBin(file_list_met)
             add_interpol1d(
                 rpg_bin.data,

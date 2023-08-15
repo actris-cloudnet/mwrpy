@@ -360,22 +360,20 @@ def get_products(
         )
 
         for ix0v in ix0:
-            if (ix0v + len(coeff["AG"]) < len(lev1["time"])) & (
+            ix1v = ix0v + len(coeff["AG"])
+
+            if (ix1v < len(lev1["time"])) & (
                 np.allclose(
-                    elevation_angle[ix0v : ix0v + len(coeff["AG"])],
+                    elevation_angle[ix0v:ix1v],
                     coeff["AG"],
                     atol=0.5,
                 )
             ):
-                ibl = np.append(
-                    ibl, [np.array(range(ix0v, ix0v + len(coeff["AG"])))], axis=0
-                )
+                ibl = np.append(ibl, [np.array(range(ix0v, ix1v))], axis=0)
                 tb = np.concatenate(
                     (
                         tb,
-                        np.expand_dims(
-                            lev1["tb"][ix0v : ix0v + len(coeff["AG"]), freq_ind].T, 2
-                        ),
+                        np.expand_dims(lev1["tb"][ix0v:ix1v, freq_ind].T, 2),
                     ),
                     axis=2,
                 )
