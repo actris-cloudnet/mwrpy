@@ -14,7 +14,6 @@ from mwrpy.level2.lev2_meta_nc import get_data_attributes
 from mwrpy.level2.lwp_offset import correct_lwp_offset
 from mwrpy.utils import (
     add_time_bounds,
-    get_coeff_list,
     get_ret_ang,
     get_ret_freq,
     interpol_2d,
@@ -70,30 +69,6 @@ def lev2_to_nc(
 
     with nc.Dataset(lev1_file) as lev1:
         params["altitude"] = np.median(lev1.variables["altitude"][:])
-
-        if data_type == "2P02":
-            bl_scan = _test_bl_scan(site, lev1, coeff_files)
-            if not bl_scan:
-                data_type = "2P01"
-        if data_type in ("2P04", "2P07", "2P08"):
-            bl_scan = _test_bl_scan(site, lev1, coeff_files)
-            t_product = "2P02"
-            if not bl_scan:
-                t_product = "2P01"
-            for d_type in [t_product, "2P03"]:
-                rpg_dat, coeff, index = get_products(
-                    site,
-                    lev1,
-                    d_type,
-                    params,
-                    coeff_files=coeff_files,
-                    temp_file=temp_file,
-                    hum_file=hum_file,
-                )
-                _combine_lev1(lev1, rpg_dat, index, d_type, params)
-                hatpro = rpg_mwr.Rpg(rpg_dat)
-                hatpro.data = get_data_attributes(hatpro.data, d_type)
-                rpg_mwr.save_rpg(hatpro, output_file, global_attributes, d_type)
 
         rpg_dat, coeff, index = get_products(
             site,
@@ -560,30 +535,6 @@ def load_product(filename: str):
     ret_freq = get_ret_freq(filename)
     ret_ang = get_ret_ang(filename)
     return file, ret_freq, ret_ang
-
-
-def _test_bl_scan(site: str | None, lev1: nc.Dataset, coeff_files: list | None) -> bool:
-    """Check for existing BL scans in lev1 data"""
-
-    if "elevation_angle" in lev1.variables:
-        elevation_angle = lev1["elevation_angle"][:]
-    else:
-        elevation_angle = 90 - lev1["zenith_angle"][:]
-
-    bl_scan = True
-    coeff_file = get_coeff_list(site, "tpb", coeff_files)
-    if len(coeff_file) > 0:
-        coeff = get_mvr_coeff(site, "tpb", lev1["frequency"][:], coeff_files)
-        bl_ind = np.where(
-            (elevation_angle[:] > coeff[0]["AG"][0] - 0.5)
-            & (elevation_angle[:] < coeff[0]["AG"][0] + 0.5)
-            & (lev1["pointing_flag"][:] == 1)
-        )[0]
-        if len(bl_ind) == 0:
-            bl_scan = False
-    else:
-        bl_scan = False
-    return bl_scan
 
 
 def ele_retrieval(ele_obs: np.ndarray, coeff: dict) -> np.ndarray:
