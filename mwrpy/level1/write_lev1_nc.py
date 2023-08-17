@@ -1,5 +1,4 @@
 """Module for writing Level 1 netCDF files"""
-import datetime
 import logging
 from collections.abc import Callable
 from itertools import groupby
@@ -18,7 +17,7 @@ from mwrpy.utils import (
     add_time_bounds,
     get_file_list,
     isbit,
-    read_yaml_config,
+    read_config,
     update_lev1_attributes,
 )
 
@@ -28,33 +27,56 @@ FuncType: TypeAlias = Callable[[str], np.ndarray]
 
 
 def lev1_to_nc(
-    site: str,
     data_type: str,
     path_to_files: str,
+    site: str | None = None,
     output_file: str | None = None,
+    coeff_files: list | None = None,
+    instrument_config: dict | None = None,
 ) -> rpg_mwr.Rpg:
     """This function reads one day of RPG MWR binary files,
     adds attributes and writes it into netCDF file.
 
     Args:
-        site: Name of site.
         data_type: Data type of the netCDF file.
         path_to_files: Folder containing one day of RPG MWR binary files.
+        site: Name of site.
         output_file: Output file name.
+        coeff_files: List of coefficient files.
+        instrument_config: Dictionary containing information about the instrument.
     """
 
-    global_attributes, params = read_yaml_config(site)
-    if data_type != "1C01":
-        update_lev1_attributes(global_attributes, data_type)
-    rpg_bin = prepare_data(path_to_files, data_type, params, site)
+    if site is None:
+        assert coeff_files is not None
+        assert instrument_config is not None
+
+    if coeff_files is None:
+        logging.info(
+            f"No coefficient files given, using files in repository for {site}."
+        )
+
+    if instrument_config is None:
+        logging.info(
+            f"No instrument config given, using config file in repository for {site}."
+        )
+
+    params = read_config(site, "params")
+    if instrument_config is not None:
+        params = {**params, **instrument_config}
+
+    rpg_bin = prepare_data(path_to_files, data_type, params)
+
     if data_type in ("1B01", "1C01"):
-        apply_qc(site, rpg_bin, params)
+        apply_qc(site, rpg_bin, params, coeff_files)
     if data_type in ("1B21", "1C01"):
         apply_met_qc(rpg_bin.data, params)
     hatpro = rpg_mwr.Rpg(rpg_bin.data)
     hatpro.find_valid_times()
     hatpro.data = get_data_attributes(hatpro.data, data_type)
     if output_file is not None:
+        global_attributes = read_config(site, "global_specs")
+        if data_type != "1C01":
+            update_lev1_attributes(global_attributes, data_type)
         rpg_mwr.save_rpg(hatpro, output_file, global_attributes, data_type)
     return hatpro
 
@@ -63,7 +85,6 @@ def prepare_data(
     path_to_files: str,
     data_type: str,
     params: dict,
-    site: str,
 ) -> RpgBin:
     """Load and prepare data for netCDF writing"""
 
@@ -72,10 +93,9 @@ def prepare_data(
         if len(brt_files) == 0:
             raise FileNotFoundError("No BRT files found")
         rpg_bin = RpgBin(brt_files)
-        rpg_bin.data["tb"] = rpg_bin.data["tb"][:, np.argsort(params["bandwidth"])]
-        rpg_bin.data["frequency"] = rpg_bin.header["_f"][
-            np.argsort(params["bandwidth"])
-        ]
+        ind_bandwidth = np.argsort(params["bandwidth"])
+        rpg_bin.data["tb"] = rpg_bin.data["tb"][:, ind_bandwidth]
+        rpg_bin.data["frequency"] = rpg_bin.header["_f"][ind_bandwidth]
         fields = [
             "bandwidth",
             "n_sidebands",
@@ -119,32 +139,18 @@ def prepare_data(
             rpg_hkd.data["status"][ind_hkd], params
         )
         if params["scan_time"] != Fill_Value_Int:
-            file_list_bls = []
-            try:
-                file_list_bls = get_file_list(path_to_files, "BLS")
-            except RuntimeError:
-                logging.error(
-                    "No binary files with extension bls found in directory "
-                    + path_to_files
-                )
+            file_list_bls = get_file_list(path_to_files, "BLS")
             if len(file_list_bls) > 0:
                 rpg_bls = RpgBin(file_list_bls)
                 _add_bls(rpg_bin, rpg_bls, rpg_hkd, params)
             else:
-                file_list_blb = []
-                try:
-                    file_list_blb = get_file_list(path_to_files, "BLB")
-                except RuntimeError:
-                    logging.error(
-                        "No binary files with extension blb found in directory "
-                        + path_to_files
-                    )
-                if len(file_list_blb) > 0:
-                    rpg_blb = RpgBin(file_list_blb)
-                    _add_blb(rpg_bin, rpg_blb, rpg_hkd, params, site)
+                file_list_blb = get_file_list(path_to_files, "BLB")
+                rpg_blb = RpgBin(file_list_blb)
+                _add_blb(rpg_bin, rpg_blb, rpg_hkd, params)
 
         if params["azi_cor"] != Fill_Value_Float:
             _azi_correction(rpg_bin.data, params)
+
         if params["const_azi"] != Fill_Value_Float:
             rpg_bin.data["azimuth_angle"] = (
                 rpg_bin.data["azimuth_angle"] + params["const_azi"]
@@ -152,10 +158,7 @@ def prepare_data(
 
         if data_type == "1C01":
             if params["ir_flag"]:
-                try:
-                    file_list_irt = get_file_list(path_to_files, "IRT")
-                except RuntimeError as err:
-                    logging.error(err)
+                file_list_irt = get_file_list(path_to_files, "IRT")
                 if len(file_list_irt) > 0:
                     rpg_irt = RpgBin(file_list_irt)
                     rpg_irt.data["irt"][rpg_irt.data["irt"] <= 125.5] = Fill_Value_Float
@@ -183,51 +186,47 @@ def prepare_data(
                 rpg_bin.data["liquid_cloud_flag_status"],
             ) = atmos.find_lwcl_free(rpg_bin.data)
 
-            try:
-                file_list_met = get_file_list(path_to_files, "MET")
-            except RuntimeError as err:
-                logging.error(err)
-            if len(file_list_met) > 0:
-                rpg_met = RpgBin(file_list_met)
+            file_list_met = get_file_list(path_to_files, "MET")
+            rpg_met = RpgBin(file_list_met)
+            add_interpol1d(
+                rpg_bin.data,
+                rpg_met.data["air_temperature"],
+                rpg_met.data["time"],
+                "air_temperature",
+            )
+            add_interpol1d(
+                rpg_bin.data,
+                rpg_met.data["relative_humidity"],
+                rpg_met.data["time"],
+                "relative_humidity",
+            )
+            add_interpol1d(
+                rpg_bin.data,
+                rpg_met.data["air_pressure"] * 100,
+                rpg_met.data["time"],
+                "air_pressure",
+            )
+            if "wind_speed" in rpg_met.data:
                 add_interpol1d(
                     rpg_bin.data,
-                    rpg_met.data["air_temperature"],
+                    rpg_met.data["wind_speed"] / 3.6,
                     rpg_met.data["time"],
-                    "air_temperature",
+                    "wind_speed",
                 )
+            if "wind_direction" in rpg_met.data:
                 add_interpol1d(
                     rpg_bin.data,
-                    rpg_met.data["relative_humidity"],
+                    rpg_met.data["wind_direction"],
                     rpg_met.data["time"],
-                    "relative_humidity",
+                    "wind_direction",
                 )
+            if "rainfall_rate" in rpg_met.data:
                 add_interpol1d(
                     rpg_bin.data,
-                    rpg_met.data["air_pressure"] * 100,
+                    rpg_met.data["rainfall_rate"] / 1000 / 3600,
                     rpg_met.data["time"],
-                    "air_pressure",
+                    "rainfall_rate",
                 )
-                if "wind_speed" in rpg_met.data:
-                    add_interpol1d(
-                        rpg_bin.data,
-                        rpg_met.data["wind_speed"] / 3.6,
-                        rpg_met.data["time"],
-                        "wind_speed",
-                    )
-                if "wind_direction" in rpg_met.data:
-                    add_interpol1d(
-                        rpg_bin.data,
-                        rpg_met.data["wind_direction"],
-                        rpg_met.data["time"],
-                        "wind_direction",
-                    )
-                if "rainfall_rate" in rpg_met.data:
-                    add_interpol1d(
-                        rpg_bin.data,
-                        rpg_met.data["rainfall_rate"] / 1000 / 3600,
-                        rpg_met.data["time"],
-                        "rainfall_rate",
-                    )
 
     elif data_type == "1B11":
         file_list_irt = get_file_list(path_to_files, "IRT")
@@ -381,7 +380,7 @@ def _add_bls(brt: RpgBin, bls: RpgBin, hkd: RpgBin, params: dict) -> None:
     brt.header["n"] = len(brt.data["time"])
 
 
-def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict, site: str) -> None:
+def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict) -> None:
     """Add BLB boundary-layer scans using a linear time axis"""
 
     time_bnds_add: np.ndarray = np.empty([0], dtype=np.int32)
@@ -404,15 +403,17 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict, site: str) -> 
     )
 
     for time_ind, time_blb in enumerate(blb.data["time"]):
-        if (
-            (site in ["juelich", "cologne"])
-            & (
-                datetime.datetime.utcfromtimestamp(hkd.data["time"][0])
-                >= datetime.datetime(2022, 12, 1)
-            )
-            & (time_blb + int(params["scan_time"]) < hkd.data["time"][-1])
-        ):
-            time_blb = time_blb + int(params["scan_time"])
+        # TBD: timestamp in .BLB files changed with newer software version
+        # if (
+        #     (site in ["juelich", "cologne"])
+        #     & (
+        #         datetime.datetime.utcfromtimestamp(hkd.data["time"][0])
+        #         >= datetime.datetime(2022, 12, 1)
+        #     )
+        #     & (time_blb + int(params["scan_time"]) < hkd.data["time"][-1])
+        # ):
+        #     time_blb = time_blb + int(params["scan_time"])
+
         seqi = np.where(
             np.abs(hkd.data["time"][seqs[:, 1] + seqs[:, 2] - 1] - time_blb) < 60
         )[0]

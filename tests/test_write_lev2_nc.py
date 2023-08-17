@@ -19,26 +19,26 @@ def test_level2_processing():
 
     site = "hyytiala"
 
-    lev1_to_nc(site, "1C01", DATA_DIR, lev1_file)
+    lev1_to_nc("1C01", DATA_DIR, site, lev1_file)
 
     # mwr-single
-    lev2_to_nc(site, "2I01", lev1_file, lev2_file)
-    lev2_to_nc(site, "2I02", lev1_file, lev2_file)
-    lev2_to_nc(site, "2P01", lev1_file, lev2_file)
-    lev2_to_nc(site, "2P03", lev1_file, hum_file)
+    lev2_to_nc("2I01", lev1_file, lev2_file, site=site)
+    lev2_to_nc("2I02", lev1_file, lev2_file, site=site)
+    lev2_to_nc("2P01", lev1_file, lev2_file, site=site)
+    lev2_to_nc("2P03", lev1_file, hum_file, site=site)
 
     # generate_lev2_single(site, lev1_file, lev2_file)
 
     # mwr-multi
-    lev2_to_nc(site, "2P02", lev1_file, temp_file)
+    lev2_to_nc("2P02", lev1_file, temp_file, site=site)
     lev2_to_nc(
-        site, "2P04", lev1_file, lev2_file, temp_file=temp_file, hum_file=hum_file
+        "2P04", lev1_file, lev2_file, site=site, temp_file=temp_file, hum_file=hum_file
     )
     lev2_to_nc(
-        site, "2P07", lev1_file, lev2_file, temp_file=temp_file, hum_file=hum_file
+        "2P07", lev1_file, lev2_file, site=site, temp_file=temp_file, hum_file=hum_file
     )
     lev2_to_nc(
-        site, "2P08", lev1_file, lev2_file, temp_file=temp_file, hum_file=hum_file
+        "2P08", lev1_file, lev2_file, site=site, temp_file=temp_file, hum_file=hum_file
     )
 
     # generate_lev2_multi(site, lev1_file, lev2_file)

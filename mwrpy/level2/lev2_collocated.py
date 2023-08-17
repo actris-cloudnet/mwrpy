@@ -2,7 +2,7 @@ from tempfile import NamedTemporaryFile
 
 import netCDF4
 
-from mwrpy.level2.write_lev2_nc import _test_bl_scan, lev2_to_nc
+from mwrpy.level2.write_lev2_nc import lev2_to_nc
 from mwrpy.utils import copy_global, copy_variables
 
 
@@ -16,36 +16,12 @@ def generate_lev2_single(
         NamedTemporaryFile() as iwv_file,
         NamedTemporaryFile() as t_prof_file,
         NamedTemporaryFile() as abs_hum_file,
-        NamedTemporaryFile() as rel_hum_file,
-        NamedTemporaryFile() as t_pot_file,
-        NamedTemporaryFile() as eq_temp_file,
     ):
-        products = zip(
-            ("2I01", "2I02", "2P01", "2P03", "2P04", "2P07", "2P08"),
-            (
-                lwp_file,
-                iwv_file,
-                t_prof_file,
-                abs_hum_file,
-                rel_hum_file,
-                t_pot_file,
-                eq_temp_file,
-            ),
-        )
-
-        for prod, file in products:
-            lev2_to_nc(
-                site,
-                prod,
-                mwr_l1c_file,
-                file.name,
-                temp_file=t_prof_file.name
-                if prod in ("2P04", "2P07", "2P08")
-                else None,
-                hum_file=abs_hum_file.name
-                if prod in ("2P04", "2P07", "2P08")
-                else None,
-            )
+        for prod, file in zip(
+            ("2I01", "2I02", "2P01", "2P03"),
+            (lwp_file, iwv_file, t_prof_file, abs_hum_file),
+        ):
+            lev2_to_nc(prod, mwr_l1c_file, site=site, output_file=file.name)
 
         with (
             netCDF4.Dataset(output_file, "w", format="NETCDF4_CLASSIC") as nc_output,
@@ -53,9 +29,6 @@ def generate_lev2_single(
             netCDF4.Dataset(iwv_file.name, "r") as nc_iwv,
             netCDF4.Dataset(abs_hum_file.name, "r") as nc_hum,
             netCDF4.Dataset(t_prof_file.name, "r") as nc_t_prof,
-            netCDF4.Dataset(rel_hum_file.name, "r") as nc_rel_hum,
-            netCDF4.Dataset(t_pot_file.name, "r") as nc_t_pot,
-            netCDF4.Dataset(eq_temp_file.name, "r") as nc_eq_temp,
         ):
             nc_output.createDimension("height", len(nc_t_prof.variables["height"][:]))
             nc_output.createDimension("time", len(nc_lwp.variables["time"][:]))
@@ -96,44 +69,17 @@ def generate_lev2_single(
                         "azimuth_angle",
                     ),
                 ),
-                (
-                    nc_rel_hum,
-                    (
-                        "relative_humidity",
-                        "relative_humidity_random_error",
-                        "relative_humidity_systematic_error",
-                    ),
-                ),
-                (
-                    nc_t_pot,
-                    (
-                        "potential_temperature",
-                        "potential_temperature_random_error",
-                        "potential_temperature_systematic_error",
-                    ),
-                ),
-                (
-                    nc_eq_temp,
-                    (
-                        "equivalent_potential_temperature",
-                        "equivalent_potential_temperature_random_error",
-                        "equivalent_potential_temperature_systematic_error",
-                    ),
-                ),
             ):
                 copy_variables(source, nc_output, variables)
 
             copy_global(nc_lwp, nc_output, nc_lwp.ncattrs())
 
+        return nc_output
+
 
 def generate_lev2_multi(site: str, mwr_l1c_file: str, output_file: str):
-    with netCDF4.Dataset(mwr_l1c_file) as lev1:
-        bl_scan = _test_bl_scan(site, lev1)
-    if not bl_scan:
-        raise RuntimeError(["No multiple pointing data found."])
-
     with (
-        NamedTemporaryFile() as t_prof_file,
+        NamedTemporaryFile() as temp_file,
         NamedTemporaryFile() as abs_hum_file,
         NamedTemporaryFile() as rel_hum_file,
         NamedTemporaryFile() as t_pot_file,
@@ -141,20 +87,20 @@ def generate_lev2_multi(site: str, mwr_l1c_file: str, output_file: str):
     ):
         for prod, file in zip(
             ("2P02", "2P03", "2P04", "2P07", "2P08"),
-            (t_prof_file, abs_hum_file, rel_hum_file, t_pot_file, eq_temp_file),
+            (temp_file, abs_hum_file, rel_hum_file, t_pot_file, eq_temp_file),
         ):
             lev2_to_nc(
-                site,
                 prod,
                 mwr_l1c_file,
-                file.name,
-                temp_file=t_prof_file.name if prod not in ("2P02", "2P03") else None,
+                site=site,
+                output_file=file.name,
+                temp_file=temp_file.name if prod not in ("2P02", "2P03") else None,
                 hum_file=abs_hum_file.name if prod not in ("2P02", "2P03") else None,
             )
 
         with (
             netCDF4.Dataset(output_file, "w", format="NETCDF4_CLASSIC") as nc_output,
-            netCDF4.Dataset(t_prof_file.name, "r") as nc_temp,
+            netCDF4.Dataset(temp_file.name, "r") as nc_temp,
             netCDF4.Dataset(rel_hum_file.name, "r") as nc_rel_hum,
             netCDF4.Dataset(t_pot_file.name, "r") as nc_t_pot,
             netCDF4.Dataset(eq_temp_file.name, "r") as nc_eq_temp,
@@ -208,3 +154,5 @@ def generate_lev2_multi(site: str, mwr_l1c_file: str, output_file: str):
                 copy_variables(source, nc_output, variables)
 
             copy_global(nc_temp, nc_output, nc_temp.ncattrs())
+
+        return nc_output

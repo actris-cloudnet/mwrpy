@@ -1,3 +1,21 @@
+## 0.4.3 – 2023-08-14
+
+- Add `MissingInputData` exception
+
+## 0.4.2 – 2023-08-14
+
+- Skip files with only one measurement
+
+## 0.4.1 – 2023-08-11
+
+- Adjust file name parsing
+
+## 0.4.0 – 2023-08-11
+
+- Read coefficients from input
+- Split ascii file reading to its own function
+- Implement spectral product
+
 ## 0.3.1 – 2023-05-26
 
 - Raise error if missing config files

@@ -4,7 +4,7 @@ import logging
 import os
 from collections.abc import Callable
 from io import SEEK_END
-from typing import BinaryIO, Literal, TypeAlias
+from typing import Any, BinaryIO, Literal, TypeAlias
 
 import numpy as np
 
@@ -46,18 +46,9 @@ def stack_files(file_list: list[str]) -> tuple[dict, dict]:
                 target[name] = value
 
     ext = str(file_list[0][-3:]).lower()
-    if ext not in (
-        "brt",
-        "irt",
-        "met",
-        "hkd",
-        "blb",
-        "bls",
-        "spc",
-    ):
-        raise RuntimeError(["Error: no reader for file type " + ext])
-
-    read_type = type_reader[ext]
+    read_type = type_reader.get(ext)
+    if read_type is None:
+        raise NotImplementedError(f"No reader for file type {ext}")
     data: dict = {}
     header: dict = {}
 
@@ -141,7 +132,7 @@ def read_bls(file_name: str) -> tuple[dict, dict]:
     """This function reads RPG MWR .BLS binary files."""
     version: Literal[2]
     with open(file_name, "rb") as file:
-        header = _read_from_file(
+        header = _read_one(
             file,
             [("_code", "<i4"), ("n", "<i4"), ("_n_f", "<i4")],
         )
@@ -149,7 +140,7 @@ def read_bls(file_name: str) -> tuple[dict, dict]:
             version = 2
         else:
             raise RuntimeError(f"Error: BLS file code {header['_code']} not supported")
-        header |= _read_from_file(
+        header |= _read_one(
             file,
             [
                 ("_xmin", "<f", header["_n_f"]),
@@ -159,7 +150,7 @@ def read_bls(file_name: str) -> tuple[dict, dict]:
                 ("_n_ang", "<i4"),
             ],
         )
-        header |= _read_from_file(file, [("_ang", "<f", header["_n_ang"])])
+        header |= _read_one(file, [("_ang", "<f", header["_n_ang"])])
 
         dt: list[Field] = [
             ("time", "<i4"),
@@ -168,7 +159,7 @@ def read_bls(file_name: str) -> tuple[dict, dict]:
             ("tb", "<f", header["_n_f"]),
             ("_angles", "<i4"),
         ]
-        data = _read_from_file(file, dt, header["n"] * header["_n_ang"])
+        data = _read_many(file, dt, header["n"] * header["_n_ang"])
         _check_eof(file)
 
     data["elevation_angle"], data["azimuth_angle"] = _decode_angles(
@@ -182,7 +173,7 @@ def read_brt(file_name: str) -> tuple[dict, dict]:
     """Reads BRT files and returns header and data as dictionary."""
     version: Literal[1, 2]
     with open(file_name, "rb") as file:
-        header = _read_from_file(
+        header = _read_one(
             file,
             [("_code", "<i4"), ("n", "<i4"), ("_time_ref", "<i4"), ("_n_f", "<i4")],
         )
@@ -192,7 +183,7 @@ def read_brt(file_name: str) -> tuple[dict, dict]:
             version = 2
         else:
             raise RuntimeError(f"Error: BRT file code {header['_code']} not supported")
-        header |= _read_from_file(
+        header |= _read_one(
             file,
             [
                 ("_f", "<f", header["_n_f"]),
@@ -200,7 +191,7 @@ def read_brt(file_name: str) -> tuple[dict, dict]:
                 ("_xmax", "<f", header["_n_f"]),
             ],
         )
-        data = _read_from_file(
+        data = _read_many(
             file,
             [
                 ("time", "<i4"),
@@ -221,16 +212,16 @@ def read_brt(file_name: str) -> tuple[dict, dict]:
 def read_blb(file_name: str) -> tuple[dict, dict]:
     """Reads BLB files and returns header and data as dictionary."""
     with open(file_name, "rb") as file:
-        header = _read_from_file(file, [("_code", "<i4"), ("n", "<i4")])
+        header = _read_one(file, [("_code", "<i4"), ("n", "<i4")])
         if header["_code"] == 567845847:
             header["_n_f"] = 14
             version = 1
         elif header["_code"] == 567845848:
-            header |= _read_from_file(file, [("_n_f", "<i4")])
+            header |= _read_one(file, [("_n_f", "<i4")])
             version = 2
         else:
             raise RuntimeError(f"Error: BLB file code {header['_code']} not supported")
-        header |= _read_from_file(
+        header |= _read_one(
             file,
             [
                 ("_xmin", "<f", header["_n_f"]),
@@ -239,16 +230,14 @@ def read_blb(file_name: str) -> tuple[dict, dict]:
             ],
         )
         if version == 1:
-            header |= _read_from_file(file, [("_n_f", "<i4")])
-        header |= _read_from_file(
-            file, [("_f", "<f", header["_n_f"]), ("_n_ang", "<i4")]
-        )
-        header |= _read_from_file(file, [("_ang", "<f", header["_n_ang"])])
+            header |= _read_one(file, [("_n_f", "<i4")])
+        header |= _read_one(file, [("_f", "<f", header["_n_f"]), ("_n_ang", "<i4")])
+        header |= _read_one(file, [("_ang", "<f", header["_n_ang"])])
         dt: list[Field] = [("time", "<i4"), ("rain", "b")]
         for n in range(header["_n_f"]):
             dt += [(f"tb_{n}", "<f", header["_n_ang"])]
             dt += [(f"temp_sfc_{n}", "<f")]
-        data = _read_from_file(file, dt, header["n"])
+        data = _read_many(file, dt, header["n"])
         _check_eof(file)
 
     data_out = {
@@ -275,7 +264,7 @@ def read_irt(file_name: str) -> tuple[dict, dict]:
     version: Literal[1, 2, 3]
 
     with open(file_name, "rb") as file:
-        header = _read_from_file(
+        header = _read_one(
             file,
             [
                 ("_code", "<i4"),
@@ -300,8 +289,8 @@ def read_irt(file_name: str) -> tuple[dict, dict]:
             header["_n_f"] = 1
             header["_f"] = 11.1
         else:
-            header |= _read_from_file(file, [("_n_f", "<i4")])
-            header |= _read_from_file(file, [("_f", "<f", (header["_n_f"],))])
+            header |= _read_one(file, [("_n_f", "<i4")])
+            header |= _read_one(file, [("_f", "<f", (header["_n_f"],))])
         dt: list[Field] = [
             ("time", "<i4"),
             ("rain", "b"),
@@ -309,7 +298,7 @@ def read_irt(file_name: str) -> tuple[dict, dict]:
         ]
         if version > 1:
             dt += [("_angles", "<f" if version == 2 else "<i4")]
-        data = _read_from_file(file, dt, header["n"])
+        data = _read_many(file, dt, header["n"])
         _check_eof(file)
 
     if "_angles" in data:
@@ -324,7 +313,7 @@ def read_irt(file_name: str) -> tuple[dict, dict]:
 def read_hkd(file_name: str) -> tuple[dict, dict]:
     """Reads HKD files and returns header and data as dictionary."""
     with open(file_name, "rb") as file:
-        header = _read_from_file(
+        header = _read_one(
             file,
             [("_code", "<i4"), ("n", "<i4"), ("_time_ref", "<i4"), ("_sel", "<i4")],
         )
@@ -341,7 +330,7 @@ def read_hkd(file_name: str) -> tuple[dict, dict]:
             dt += [("qual", "<i4")]
         if header["_sel"] & 0x20:
             dt += [("status", "<i4")]
-        data = _read_from_file(file, dt, header["n"])
+        data = _read_many(file, dt, header["n"])
         _check_eof(file)
 
     header = _fix_header(header)
@@ -351,11 +340,11 @@ def read_hkd(file_name: str) -> tuple[dict, dict]:
 def read_met(file_name: str) -> tuple[dict, dict]:
     """Reads MET files and returns header and data as dictionary."""
     with open(file_name, "rb") as file:
-        header = _read_from_file(file, [("_code", "<i4"), ("n", "<i4")])
+        header = _read_one(file, [("_code", "<i4"), ("n", "<i4")])
         if header["_code"] == 599658943:
             header["_n_add"] = 0
         elif header["_code"] == 599658944:
-            header |= _read_from_file(file, [("_n_add", "b")])
+            header |= _read_one(file, [("_n_add", "b")])
         else:
             raise ValueError(f"Error: MET file code {header['_code']} not supported")
         dt: list[Field] = [
@@ -386,8 +375,8 @@ def read_met(file_name: str) -> tuple[dict, dict]:
             hdt.append(("_rainfall_rate_min", "<f"))
             hdt.append(("_rainfall_rate_max", "<f"))
         hdt.append(("_time_ref", "<i4"))
-        header |= _read_from_file(file, hdt)
-        data = _read_from_file(file, dt, header["n"])
+        header |= _read_one(file, hdt)
+        data = _read_many(file, dt, header["n"])
         _check_eof(file)
 
     data["relative_humidity"] /= 100  # Converted in the original code
@@ -395,12 +384,22 @@ def read_met(file_name: str) -> tuple[dict, dict]:
     return header, data
 
 
-def _read_from_file(file: BinaryIO, fields: list[Field], count: int = 1) -> dict:
+def _read(file: BinaryIO, fields: list[Field], count: int) -> np.ndarray:
     arr = np.fromfile(file, np.dtype(fields), count)
     if (read := len(arr)) != count:
         raise IOError(f"Read {read} of {count} records from file")
-    if count == 1:
-        arr = arr[0]
+    return arr
+
+
+def _read_one(file: BinaryIO, fields: list[Field]) -> dict[str, Any]:
+    arr = _read(file, fields, 1)[0]
+    return {field: arr[field] for field, *args in fields}
+
+
+def _read_many(
+    file: BinaryIO, fields: list[Field], count: int
+) -> dict[str, np.ndarray]:
+    arr = _read(file, fields, count)
     return {field: arr[field] for field, *args in fields}
 
 

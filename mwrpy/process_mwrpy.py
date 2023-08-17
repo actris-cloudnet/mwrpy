@@ -12,7 +12,7 @@ from mwrpy.utils import (
     date_range,
     get_processing_dates,
     isodate2date,
-    read_yaml_config,
+    read_config,
 )
 
 PRODUCT_NAME = {
@@ -71,10 +71,10 @@ def process_product(prod: str, date: datetime.date, site: str):
 
     if prod[0] == "1":
         lev1_to_nc(
-            site,
             prod,
             _get_raw_file_path(date, site),
-            output_file,
+            site=site,
+            output_file=output_file,
         )
     elif prod[0] == "2":
         if prod in ("2P04", "2P07", "2P08"):
@@ -84,10 +84,10 @@ def process_product(prod: str, date: datetime.date, site: str):
             temp_file = None
             hum_file = None
         lev2_to_nc(
-            site,
             prod,
             _get_filename("1C01", date, site),
-            output_file,
+            site=site,
+            output_file=output_file,
             temp_file=temp_file,
             hum_file=hum_file,
         )
@@ -173,5 +173,5 @@ def plot_product(prod: str, date, site: str):
 
 
 def _get_raw_file_path(date_in: datetime.date, site: str) -> str:
-    _, params = read_yaml_config(site)
+    params = read_config(site, "params")
     return os.path.join(params["data_in"], date_in.strftime("%Y/%m/%d/"))

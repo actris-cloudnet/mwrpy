@@ -32,9 +32,9 @@ from mwrpy.plots.plot_utils import (
 )
 from mwrpy.utils import (
     isbit,
+    read_config,
     read_nc_field_name,
     read_nc_fields,
-    read_yaml_config,
     seconds2hours,
 )
 
@@ -445,7 +445,7 @@ def _plot_segment_data(ax, data: ma.MaskedArray, name: str, axes: tuple, nc_file
         colorbar.set_ticks(np.arange(len(clabel)))
         if name == "quality_flag_3":
             site = _read_location(nc_file)
-            _, params = read_yaml_config(site)
+            params = read_config(site, "params")
             clabel[2] = clabel[2] + " (" + str(params["TB_threshold"][1]) + " K)"
             clabel[1] = clabel[1] + " (" + str(params["TB_threshold"][0]) + " K)"
         colorbar.ax.set_yticklabels(clabel, fontsize=13)
@@ -860,7 +860,7 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
     """Plot for Level 1 quality flags."""
 
     site = _read_location(nc_file)
-    _, params = read_yaml_config(site)
+    params = read_config(site, "params")
 
     fig.clear()
     nsub = 4
@@ -982,7 +982,7 @@ def _plot_tb(
 ):
     """Plot for microwave brigthness temperatures."""
     site = _read_location(nc_file)
-    _, params = read_yaml_config(site)
+    params = read_config(site, "params")
     frequency = read_nc_fields(nc_file, "frequency")
     quality_flag = read_nc_fields(nc_file, "quality_flag")
     if name == "tb_spectrum":
