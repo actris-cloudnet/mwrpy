@@ -43,10 +43,10 @@ def lev2_to_nc(
     and writes it into a netCDF file.
 
     Args:
-        site: Name of site.
         data_type: Data type of the netCDF file.
         lev1_file: Path of Level 1 file.
         output_file: Name of output file.
+        site: Name of site.
         temp_file: Name of temperature product file.
         hum_file: Name of humidity product file.
         coeff_files: List of coefficient files.

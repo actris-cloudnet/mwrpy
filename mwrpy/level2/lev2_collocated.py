@@ -35,10 +35,10 @@ def generate_lev2_single(
 
         for prod, file in products:
             lev2_to_nc(
-                site,
                 prod,
                 mwr_l1c_file,
-                file.name,
+                output_file=file.name,
+                site=site,
                 temp_file=t_prof_file.name
                 if prod in ("2P04", "2P07", "2P08")
                 else None,
@@ -143,8 +143,8 @@ def generate_lev2_multi(site: str, mwr_l1c_file: str, output_file: str):
             lev2_to_nc(
                 prod,
                 mwr_l1c_file,
-                site=site,
                 output_file=file.name,
+                site=site,
                 temp_file=temp_file.name if prod not in ("2P02", "2P03") else None,
                 hum_file=abs_hum_file.name if prod not in ("2P02", "2P03") else None,
             )

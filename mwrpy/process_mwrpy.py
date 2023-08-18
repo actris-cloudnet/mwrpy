@@ -86,8 +86,8 @@ def process_product(prod: str, date: datetime.date, site: str):
         lev2_to_nc(
             prod,
             _get_filename("1C01", date, site),
-            site=site,
             output_file=output_file,
+            site=site,
             temp_file=temp_file,
             hum_file=hum_file,
         )
