@@ -403,17 +403,6 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict) -> None:
     )
 
     for time_ind, time_blb in enumerate(blb.data["time"]):
-        # TBD: timestamp in .BLB files changed with newer software version
-        # if (
-        #     (site in ["juelich", "cologne"])
-        #     & (
-        #         datetime.datetime.utcfromtimestamp(hkd.data["time"][0])
-        #         >= datetime.datetime(2022, 12, 1)
-        #     )
-        #     & (time_blb + int(params["scan_time"]) < hkd.data["time"][-1])
-        # ):
-        #     time_blb = time_blb + int(params["scan_time"])
-
         seqi = np.where(
             np.abs(hkd.data["time"][seqs[:, 1] + seqs[:, 2] - 1] - time_blb) < 60
         )[0]
