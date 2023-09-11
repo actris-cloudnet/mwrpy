@@ -191,8 +191,8 @@ def find_lwcl_free(lev1: dict) -> tuple[np.ndarray, np.ndarray]:
         tb_thres = 0.2
         index[(tb_mx["Tb"] > tb_thres)] = 1.0
         df = pd.DataFrame({"index": index}, index=ind)
-        df = df.fillna(method="bfill", limit=120)
-        df = df.fillna(method="ffill", limit=120)
+        df = df.bfill(limit=120)
+        df = df.ffill(limit=120)
         index = np.array(df["index"])
         index[(tb_mx["Tb"] < tb_thres) & (index != 1.0)] = 0.0
         index[(lev1["elevation_angle"][:] < 89.0) & (index != 1.0)] = 2.0
