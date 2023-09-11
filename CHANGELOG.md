@@ -1,3 +1,8 @@
+## 0.5.0 – 2023-09-11
+
+- Support files with one measurement
+- Merge spectral-product branch
+
 ## 0.4.3 – 2023-08-14
 
 - Add `MissingInputData` exception
