@@ -142,7 +142,7 @@ class TestBlbFileReading:
                 ]
             ),
             "_n_ang": 10,
-            "_ang": np.array([4.2, 4.8, 5.4, 6.6, 8.4, 11.4, 14.4, 19.2, 30.0, 90.0]),
+            "_ang": np.array([90.0, 30.0, 19.2, 14.4, 11.4, 8.4, 6.6, 5.4, 4.8, 4.2]),
         }
         for key, value in data.items():
             assert isinstance(self.header[key], type(value))
