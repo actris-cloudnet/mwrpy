@@ -44,6 +44,9 @@ def generate_lev2_single(
         nc_output.createDimension("height", len(nc_t_prof.variables["height"][:]))
         nc_output.createDimension("time", len(nc_lwp.variables["time"][:]))
         nc_output.createDimension("bnds", 2)
+        nc_output.createDimension(
+            "frequency", len(nc_lwp.variables["quality_flag"][:, :].T)
+        )
 
         for source, variables in (
             (nc_iwv, ("iwv", "iwv_random_error", "iwv_systematic_error")),
@@ -78,6 +81,8 @@ def generate_lev2_single(
                     "lwp_systematic_error",
                     "elevation_angle",
                     "azimuth_angle",
+                    "quality_flag",
+                    "quality_flag_status",
                 ),
             ),
             (
@@ -143,6 +148,9 @@ def generate_lev2_multi(site: str, mwr_l1c_file: str, output_file: str):
         nc_output.createDimension("time", len(nc_temp.variables["time"][:]))
         nc_output.createDimension("height", len(nc_temp.variables["height"][:]))
         nc_output.createDimension("bnds", 2)
+        nc_output.createDimension(
+            "frequency", len(nc_temp.variables["quality_flag"][:, :].T)
+        )
 
         for source, variables in (
             (
@@ -156,6 +164,8 @@ def generate_lev2_multi(site: str, mwr_l1c_file: str, output_file: str):
                     "altitude",
                     "elevation_angle",
                     "azimuth_angle",
+                    "quality_flag",
+                    "quality_flag_status",
                     "temperature",
                     "temperature_random_error",
                     "temperature_systematic_error",

@@ -151,7 +151,9 @@ def get_products(
         coeff["retrieval_elevation_angles"] = str(
             np.sort(np.unique(ele_retrieval(elevation_angle[index], coeff)))
         )
-        coeff["retrieval_frequencies"] = str(np.sort(np.unique(coeff["FR"])))
+        coeff["retrieval_frequencies"] = str(
+            np.sort(np.unique(coeff["FR"][coeff["FR"][:] > 0.0]))
+        )
 
         if coeff["RT"] < 2:
             coeff_offset = offset(elevation_angle[index])
@@ -253,7 +255,9 @@ def get_products(
         coeff["retrieval_elevation_angles"] = str(
             np.sort(np.unique(ele_retrieval(elevation_angle[index], coeff)))
         )
-        coeff["retrieval_frequencies"] = str(np.sort(np.unique(coeff["FR"])))
+        coeff["retrieval_frequencies"] = str(
+            np.sort(np.unique(coeff["FR"][coeff["FR"][:] > 0.0]))
+        )
 
         rpg_dat["height"] = coeff["AL"][:] + params["altitude"]
 
@@ -311,7 +315,7 @@ def get_products(
                 site, "tpb", lev1["frequency"][:], coeff_files
             )
 
-        coeff["AG"] = np.sort(coeff["AG"])
+        coeff["AG"] = np.flip(np.sort(coeff["AG"]))
         _, freq_ind, _ = np.intersect1d(
             lev1["frequency"][:],
             coeff["FR"],
@@ -321,7 +325,9 @@ def get_products(
         _, freq_bl, _ = np.intersect1d(
             coeff["FR"], coeff["FR_BL"], assume_unique=False, return_indices=True
         )
-        coeff["retrieval_frequencies"] = str(np.sort(np.unique(coeff["FR"])))
+        coeff["retrieval_frequencies"] = str(
+            np.sort(np.unique(coeff["FR"][coeff["FR"][:] > 0.0]))
+        )
 
         ix0 = np.where(
             (elevation_angle[:] > coeff["AG"][0] - 0.5)
@@ -415,7 +421,11 @@ def get_products(
 
         coeff, index = {}, np.empty(0, np.int32)
         coeff["retrieval_frequencies"] = str(
-            np.unique(np.sort(np.concatenate([tem_freq, hum_freq])))
+            np.unique(
+                np.sort(
+                    np.concatenate([tem_freq[tem_freq > 0.0], hum_freq[hum_freq > 0.0]])
+                )
+            )
         )
         coeff["retrieval_elevation_angles"] = str(
             np.unique(np.sort(np.concatenate([tem_ang, hum_ang])))
@@ -483,6 +493,8 @@ def _combine_lev1(
     lev1_vars = [
         "time",
         "time_bnds",
+        "quality_flag",
+        "quality_flag_status",
         "azimuth_angle",
         "elevation_angle",
         "zenith_angle",
@@ -501,10 +513,16 @@ def _combine_lev1(
             elif (ivars == "time_bnds") & (data_type in ("2P04", "2P07", "2P08")):
                 rpg_dat[ivars] = np.ones(lev1[ivars].shape, np.int32) * Fill_Value_Int
             else:
-                try:
-                    rpg_dat[ivars] = lev1[ivars][index]
-                except IndexError:
-                    rpg_dat[ivars] = lev1[ivars][:]
+                if lev1[ivars].ndim > 1:
+                    try:
+                        rpg_dat[ivars] = lev1[ivars][index, :]
+                    except IndexError:
+                        rpg_dat[ivars] = lev1[ivars][:, :]
+                else:
+                    try:
+                        rpg_dat[ivars] = lev1[ivars][index]
+                    except IndexError:
+                        rpg_dat[ivars] = lev1[ivars][:]
 
 
 def _add_att(global_attributes: dict, coeff: dict) -> None:

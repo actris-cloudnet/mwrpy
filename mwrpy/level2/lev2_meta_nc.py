@@ -52,6 +52,32 @@ def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
     return rpg_variables
 
 
+DEFINITIONS_COM = {
+    "quality_flag": (
+        "\n"
+        "Bit 1: missing_tb\n"
+        "Bit 2: tb_below_threshold\n"
+        "Bit 3: tb_above_threshold\n"
+        "Bit 4: spectral_consistency_above_threshold\n"
+        "Bit 5: receiver_sanity_failed\n"
+        "Bit 6: rain_detected\n"
+        "Bit 7: sun_moon_in_beam\n"
+        "Bit 8: tb_offset_above_threshold"
+    ),
+    "quality_flag_status": (
+        "\n"
+        "Bit 1: missing_tb_not_checked\n"
+        "Bit 2: tb_lower_threshold_not_checked\n"
+        "Bit 3: tb_upper_threshold_not_checked\n"
+        "Bit 4: spectral_consistency_not_checked\n"
+        "Bit 5: receiver_sanity_not_checked\n"
+        "Bit 6: rain_not_checked\n"
+        "Bit 7: sun_moon_in_beam_not_checked\n"
+        "Bit 8: tb_offset_not_checked"
+    ),
+}
+
+
 ATTRIBUTES_COM = {
     "time": MetaData(
         long_name="Time (UTC) of the measurement",
@@ -87,6 +113,20 @@ ATTRIBUTES_COM = {
         long_name="Sensor elevation angle",
         units="degree",
         comment="0=horizon, 90=zenith",
+    ),
+    "quality_flag": MetaData(
+        long_name="Quality flag",
+        units="1",
+        definition=DEFINITIONS_COM["quality_flag"],
+        comment="0 indicates data with good quality according to applied tests.\n"
+        "The list of (not) applied tests is encoded in quality_flag_status",
+    ),
+    "quality_flag_status": MetaData(
+        long_name="Quality flag status",
+        units="1",
+        definition=DEFINITIONS_COM["quality_flag_status"],
+        comment="Checks not executed in determination of quality_flag.\n"
+        "0 indicates quality check has been applied.",
     ),
 }
 
