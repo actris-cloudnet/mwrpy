@@ -163,6 +163,7 @@ def read_bls(file_name: str) -> tuple[dict, dict]:
     data["elevation_angle"], data["azimuth_angle"] = _decode_angles(
         data["_angles"], version
     )
+    data["elevation_angle"] = np.flip(data["elevation_angle"])
     header = _fix_header(header)
     return header, data
 
@@ -252,7 +253,6 @@ def read_blb(file_name: str) -> tuple[dict, dict]:
         else:
             data_out[key] = data[key]
 
-    header["_ang"] = np.flip(header["_ang"])  # Flipped in the original code
     header = _fix_header(header)
     return header, data_out
 

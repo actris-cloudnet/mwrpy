@@ -145,8 +145,9 @@ def prepare_data(
                 _add_bls(rpg_bin, rpg_bls, rpg_hkd, params)
             else:
                 file_list_blb = get_file_list(path_to_files, "BLB")
-                rpg_blb = RpgBin(file_list_blb)
-                _add_blb(rpg_bin, rpg_blb, rpg_hkd, params)
+                if len(file_list_blb) > 0:
+                    rpg_blb = RpgBin(file_list_blb)
+                    _add_blb(rpg_bin, rpg_blb, rpg_hkd, params)
 
         if params["azi_cor"] != Fill_Value_Float:
             _azi_correction(rpg_bin.data, params)
@@ -407,7 +408,12 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict) -> None:
             np.abs(hkd.data["time"][seqs[:, 1] + seqs[:, 2] - 1] - time_blb) < 60
         )[0]
         if len(seqi) != 1:
-            continue
+            time_blb = time_blb + int(params["scan_time"])
+            seqi = np.where(
+                np.abs(hkd.data["time"][seqs[:, 1] + seqs[:, 2] - 1] - time_blb) < 60
+            )[0]
+            if len(seqi) != 1:
+                continue
 
         if (
             np.abs(time_blb - hkd.data["time"][seqs[seqi, 1]][0])
