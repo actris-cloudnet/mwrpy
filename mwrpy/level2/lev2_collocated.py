@@ -171,8 +171,6 @@ def generate_lev2_multi(site: str, mwr_l1c_file: str, output_file: str):
                     "altitude",
                     "elevation_angle",
                     "azimuth_angle",
-                    "quality_flag",
-                    "quality_flag_status",
                     "temperature",
                     "temperature_random_error",
                     "temperature_systematic_error",
