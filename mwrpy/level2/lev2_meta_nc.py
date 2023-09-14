@@ -114,20 +114,6 @@ ATTRIBUTES_COM = {
         units="degree",
         comment="0=horizon, 90=zenith",
     ),
-    "quality_flag": MetaData(
-        long_name="Quality flag",
-        units="1",
-        definition=DEFINITIONS_COM["quality_flag"],
-        comment="0 indicates data with good quality according to applied tests.\n"
-        "The list of (not) applied tests is encoded in quality_flag_status",
-    ),
-    "quality_flag_status": MetaData(
-        long_name="Quality flag status",
-        units="1",
-        definition=DEFINITIONS_COM["quality_flag_status"],
-        comment="Checks not executed in determination of quality_flag.\n"
-        "0 indicates quality check has been applied.",
-    ),
 }
 
 
@@ -152,6 +138,20 @@ ATTRIBUTES_2P01 = {
         long_name="Systematic uncertainty of retrieved\n"
         "temperature profile (single pointing)",
         units="K",
+    ),
+    "temperature_quality_flag": MetaData(
+        long_name="Quality flag",
+        units="1",
+        definition=DEFINITIONS_COM["quality_flag"],
+        comment="0 indicates data with good quality according to applied tests.\n"
+        "The list of (not) applied tests is encoded in quality_flag_status",
+    ),
+    "temperature_quality_flag_status": MetaData(
+        long_name="Quality flag status",
+        units="1",
+        definition=DEFINITIONS_COM["quality_flag_status"],
+        comment="Checks not executed in determination of quality_flag.\n"
+        "0 indicates quality check has been applied.",
     ),
 }
 
@@ -178,6 +178,20 @@ ATTRIBUTES_2P02 = {
         "temperature profile (multiple pointing)",
         units="K",
     ),
+    "temperature_quality_flag": MetaData(
+        long_name="Quality flag",
+        units="1",
+        definition=DEFINITIONS_COM["quality_flag"],
+        comment="0 indicates data with good quality according to applied tests.\n"
+        "The list of (not) applied tests is encoded in quality_flag_status",
+    ),
+    "temperature_quality_flag_status": MetaData(
+        long_name="Quality flag status",
+        units="1",
+        definition=DEFINITIONS_COM["quality_flag_status"],
+        comment="Checks not executed in determination of quality_flag.\n"
+        "0 indicates quality check has been applied.",
+    ),
 }
 
 
@@ -198,6 +212,20 @@ ATTRIBUTES_2P03 = {
     "absolute_humidity_systematic_error": MetaData(
         long_name="Systematic uncertainty of absolute humidity",
         units="kg m-3",
+    ),
+    "absolute_humidity_quality_flag": MetaData(
+        long_name="Quality flag",
+        units="1",
+        definition=DEFINITIONS_COM["quality_flag"],
+        comment="0 indicates data with good quality according to applied tests.\n"
+        "The list of (not) applied tests is encoded in quality_flag_status",
+    ),
+    "absolute_humidity_quality_flag_status": MetaData(
+        long_name="Quality flag status",
+        units="1",
+        definition=DEFINITIONS_COM["quality_flag_status"],
+        comment="Checks not executed in determination of quality_flag.\n"
+        "0 indicates quality check has been applied.",
     ),
 }
 
@@ -288,6 +316,20 @@ ATTRIBUTES_2I01 = {
         long_name="Subtracted offset correction of liquid water path",
         units="kg m-2",
     ),
+    "lwp_quality_flag": MetaData(
+        long_name="Quality flag",
+        units="1",
+        definition=DEFINITIONS_COM["quality_flag"],
+        comment="0 indicates data with good quality according to applied tests.\n"
+        "The list of (not) applied tests is encoded in quality_flag_status",
+    ),
+    "lwp_quality_flag_status": MetaData(
+        long_name="Quality flag status",
+        units="1",
+        definition=DEFINITIONS_COM["quality_flag_status"],
+        comment="Checks not executed in determination of quality_flag.\n"
+        "0 indicates quality check has been applied.",
+    ),
 }
 
 
@@ -304,6 +346,20 @@ ATTRIBUTES_2I02 = {
     "iwv_systematic_error": MetaData(
         long_name="Systematic uncertainty of retrieved column-integrated water vapour",
         units="kg m-2",
+    ),
+    "iwv_quality_flag": MetaData(
+        long_name="Quality flag",
+        units="1",
+        definition=DEFINITIONS_COM["quality_flag"],
+        comment="0 indicates data with good quality according to applied tests.\n"
+        "The list of (not) applied tests is encoded in quality_flag_status",
+    ),
+    "iwv_quality_flag_status": MetaData(
+        long_name="Quality flag status",
+        units="1",
+        definition=DEFINITIONS_COM["quality_flag_status"],
+        comment="Checks not executed in determination of quality_flag.\n"
+        "0 indicates quality check has been applied.",
     ),
 }
 
