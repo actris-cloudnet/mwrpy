@@ -114,6 +114,20 @@ ATTRIBUTES_COM = {
         units="degree",
         comment="0=horizon, 90=zenith",
     ),
+    "quality_flag": MetaData(
+        long_name="Quality flag",
+        units="1",
+        definition=DEFINITIONS_COM["quality_flag"],
+        comment="0 indicates data with good quality according to applied tests.\n"
+        "The list of (not) applied tests is encoded in quality_flag_status",
+    ),
+    "quality_flag_status": MetaData(
+        long_name="Quality flag status",
+        units="1",
+        definition=DEFINITIONS_COM["quality_flag_status"],
+        comment="Checks not executed in determination of quality_flag.\n"
+        "0 indicates quality check has been applied.",
+    ),
 }
 
 

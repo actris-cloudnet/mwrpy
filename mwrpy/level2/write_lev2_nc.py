@@ -516,6 +516,8 @@ def _combine_lev1(
     lev1_vars = [
         "time",
         "time_bnds",
+        "quality_flag",
+        "quality_flag_status",
         "azimuth_angle",
         "elevation_angle",
         "zenith_angle",
@@ -534,10 +536,16 @@ def _combine_lev1(
             elif (ivars == "time_bnds") & (data_type in ("2P04", "2P07", "2P08")):
                 rpg_dat[ivars] = np.ones(lev1[ivars].shape, np.int32) * Fill_Value_Int
             else:
-                try:
-                    rpg_dat[ivars] = lev1[ivars][index]
-                except IndexError:
-                    rpg_dat[ivars] = lev1[ivars][:]
+                if lev1[ivars].ndim > 1:
+                    try:
+                        rpg_dat[ivars] = lev1[ivars][index, :]
+                    except IndexError:
+                        rpg_dat[ivars] = lev1[ivars][:, :]
+                else:
+                    try:
+                        rpg_dat[ivars] = lev1[ivars][index]
+                    except IndexError:
+                        rpg_dat[ivars] = lev1[ivars][:]
 
 
 def _add_att(global_attributes: dict, coeff: dict) -> None:
