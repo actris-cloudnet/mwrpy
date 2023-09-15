@@ -206,6 +206,8 @@ def get_products(
         else:
             rpg_dat["iwv"] = tmp_product
 
+        _get_qf(rpg_dat, lev1, coeff, index, product)
+
     elif data_type in ("2P01", "2P03"):
         if data_type == "2P01":
             product, ret = "temperature", "tpt"
@@ -302,6 +304,8 @@ def get_products(
             )
             if product == "absolute_humidity":
                 rpg_dat[product] = rpg_dat[product] / 1000.0
+
+        _get_qf(rpg_dat, lev1, coeff, index, product)
 
     elif data_type == "2P02":
         coeff = get_mvr_coeff(site, "tpb", lev1["frequency"][:], coeff_files)
@@ -413,6 +417,8 @@ def get_products(
                 + coeff["output_offset"][:, np.newaxis]
             )
 
+        _get_qf(rpg_dat, lev1, coeff, index, "temperature")
+
     elif data_type in ("2P04", "2P07", "2P08"):
         assert temp_file is not None
         assert hum_file is not None
@@ -482,6 +488,23 @@ def get_products(
     return rpg_dat, coeff, index
 
 
+def _get_qf(
+    rpg_dat: dict, lev1: nc.Dataset, coeff: dict, index: np.ndarray, product: str
+) -> None:
+    _, freq_ind, _ = np.intersect1d(
+        lev1["frequency"][:],
+        coeff["FR"][:],
+        assume_unique=False,
+        return_indices=True,
+    )
+    rpg_dat[product + "_quality_flag"] = np.max(
+        lev1["quality_flag"][index, freq_ind], axis=1
+    )
+    rpg_dat[product + "_quality_flag_status"] = lev1["quality_flag_status"][
+        index, freq_ind[0]
+    ]
+
+
 def _combine_lev1(
     lev1: nc.Dataset,
     rpg_dat: dict,
@@ -493,8 +516,6 @@ def _combine_lev1(
     lev1_vars = [
         "time",
         "time_bnds",
-        "quality_flag",
-        "quality_flag_status",
         "azimuth_angle",
         "elevation_angle",
         "zenith_angle",
@@ -513,16 +534,10 @@ def _combine_lev1(
             elif (ivars == "time_bnds") & (data_type in ("2P04", "2P07", "2P08")):
                 rpg_dat[ivars] = np.ones(lev1[ivars].shape, np.int32) * Fill_Value_Int
             else:
-                if lev1[ivars].ndim > 1:
-                    try:
-                        rpg_dat[ivars] = lev1[ivars][index, :]
-                    except IndexError:
-                        rpg_dat[ivars] = lev1[ivars][:, :]
-                else:
-                    try:
-                        rpg_dat[ivars] = lev1[ivars][index]
-                    except IndexError:
-                        rpg_dat[ivars] = lev1[ivars][:]
+                try:
+                    rpg_dat[ivars] = lev1[ivars][index]
+                except IndexError:
+                    rpg_dat[ivars] = lev1[ivars][:]
 
 
 def _add_att(global_attributes: dict, coeff: dict) -> None:
