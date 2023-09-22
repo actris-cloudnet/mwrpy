@@ -44,7 +44,7 @@ def correct_lwp_offset(
     ).mean()
 
     lwp_offset = lwp_offset.interpolate(method="linear")
-    lwp_offset = lwp_offset.fillna(method="bfill")
+    lwp_offset = lwp_offset.bfill()
     lwp_offset["Lwp"][(np.isnan(lwp_offset["Lwp"])) | (lwp_org == -999.0)] = 0.0
     lwp_org -= lwp_offset["Lwp"].values
     return lwp_org, lwp_offset["Lwp"].values

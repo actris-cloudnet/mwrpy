@@ -425,26 +425,15 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict) -> None:
             ):
                 scan_quadrant = 180.0
 
+            time0 = hkd.data["time"][seqs[seqi, 1]][0]
+            time_norm = int(np.floor(((time_blb - 1) - time0) / (blb.header["_n_ang"])))
             time_add = np.concatenate(
                 (
                     time_add,
                     np.squeeze(
                         np.linspace(
-                            hkd.data["time"][seqs[seqi, 1]]
-                            + int(
-                                np.floor(
-                                    ((time_blb - 1) - hkd.data["time"][seqs[seqi, 1]])
-                                    / (blb.header["_n_ang"])
-                                )
-                            ),
-                            hkd.data["time"][seqs[seqi, 1]]
-                            + (blb.header["_n_ang"])
-                            * int(
-                                np.floor(
-                                    ((time_blb - 1) - hkd.data["time"][seqs[seqi, 1]])
-                                    / (blb.header["_n_ang"])
-                                )
-                            ),
+                            time0 + time_norm,
+                            time0 + time_norm * blb.header["_n_ang"],
                             blb.header["_n_ang"],
                             dtype=np.int32,
                         )

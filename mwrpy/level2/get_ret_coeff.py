@@ -261,7 +261,7 @@ def get_mvr_coeff(
 
     if str(c_list[0][-3:]).lower() == "ret":
         retrieval_type = ["linear regression", "quadratic regression", "neural network"]
-        coeff["retrieval_type"] = retrieval_type[int(coeff["RT"])]
+        coeff["retrieval_type"] = retrieval_type[int(coeff["RT"][0])]
         coeff["retrieval_elevation_angles"] = str(coeff["AG"])
         coeff["retrieval_frequencies"] = str(coeff["FR"][:])
         if coeff["TS"] == 0:
