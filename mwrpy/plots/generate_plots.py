@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import netCDF4
 import numpy as np
 from matplotlib import rcParams
-from matplotlib.colors import BoundaryNorm, ListedColormap
+from matplotlib.colors import BoundaryNorm, Colormap, ListedColormap
 from matplotlib.patches import Patch
 from matplotlib.ticker import (
     FixedLocator,
@@ -64,12 +64,12 @@ class Dimensions:
         x0, y0, x1, y1 = (
             Bbox.union([ax.get_window_extent() for ax in axes])
             .translated(-tightbbox.x0, -tightbbox.y0)
-            .extents.round()
+            .extents
         )
-        self.margin_top = int(self.height - y1)
-        self.margin_right = int(self.width - x1 - 1)
-        self.margin_bottom = int(y0 - 1)
-        self.margin_left = int(x0)
+        self.margin_top = int(self.height - round(y1))
+        self.margin_right = int(self.width - round(x1) - 1)
+        self.margin_bottom = int(round(y0) - 1)
+        self.margin_left = int(round(x0))
 
 
 def generate_figure(
@@ -425,10 +425,10 @@ def _plot_segment_data(ax, data: ma.MaskedArray, name: str, axes: tuple, nc_file
     """
     if name == "tb_missing":
         cmap = ListedColormap(["#FFFFFF00", _COLORS["gray"]])
-        pl = ax.pcolor(*axes, data.T, cmap=cmap, shading="nearest", vmin=-0.5, vmax=1.5)
+        ax.pcolor(*axes, data.T, cmap=cmap, shading="nearest", vmin=-0.5, vmax=1.5)
     elif name == "tb_qf":
         cmap = ListedColormap([_COLORS["lightgray"], _COLORS["darkgray"]])
-        pl = ax.pcolor(*axes, data.T, cmap=cmap, shading="nearest", vmin=-0.5, vmax=1.5)
+        ax.pcolor(*axes, data.T, cmap=cmap, shading="nearest", vmin=-0.5, vmax=1.5)
     else:
         variables = ATTRIBUTES[name]
         assert variables.clabel is not None
@@ -513,11 +513,11 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
         hum_flag = np.zeros(len(axes[0]), np.int32)
 
     if variables.plot_type == "bit":
-        cmap = ListedColormap(variables.cbar)
+        cmap: Colormap = ListedColormap(str(variables.cbar))
         pos = ax.get_position()
         ax.set_position([pos.x0, pos.y0, pos.width * 0.965, pos.height])
     else:
-        cmap = plt.get_cmap(variables.cbar, nlev1)
+        cmap = plt.get_cmap(str(variables.cbar), nlev1)
 
     vmin, vmax = variables.plot_range
 
@@ -588,8 +588,8 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
     cbl = plt.clabel(cp, fontsize=8)
     ta = np.array([])
     for l in cbl:
-        l.set_va("bottom")
-        l.set_weight("bold")
+        l.set_verticalalignment("bottom")
+        l.set_fontweight("bold")
         if float(l.get_text()) in ta:
             l.set_visible(False)
         ta = np.append(ta, [float(l.get_text())])
