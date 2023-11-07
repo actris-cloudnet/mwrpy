@@ -28,6 +28,7 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 test = ["mypy", "pylint", "pytest", "pytest-flakefinder", "types-PyYAML", "types-pytz"]
+dev = ["release-version"]
 
 [project.urls]
 Homepage = "https://github.com/actris-cloudnet/mwrpy"
@@ -62,6 +63,11 @@ disable = [
   "too-many-locals",
   "too-many-statements",
 ]
+
+[tool.release-version]
+filename = "mwrpy/version.py"
+pattern = ["MAJOR = (?P<major>\\d+)", "MINOR = (?P<minor>\\d+)", "PATCH = (?P<patch>\\d+)"]
+changelog = "CHANGELOG.md"
 
 [tool.setuptools.dynamic]
 version = {attr = "mwrpy.version.__version__"}
