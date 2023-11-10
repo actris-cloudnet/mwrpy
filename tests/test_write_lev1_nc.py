@@ -4,7 +4,7 @@ import os
 import netCDF4
 import numpy as np
 
-from mwrpy import lev1_to_nc
+from mwrpy.level1.write_lev1_nc import lev1_to_nc
 
 PACKAGE_DIR = os.path.abspath(os.path.dirname(__file__))
 DATA_DIR = f"{PACKAGE_DIR}/data/hyytiala"

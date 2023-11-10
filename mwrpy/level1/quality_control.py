@@ -139,8 +139,9 @@ def orbpos(data: dict, params: dict) -> np.ndarray:
     obs_loc = ephem.Observer()
 
     for ind, time in enumerate(data["time"]):
-        obs_loc.lat, obs_loc.lon = str(data["latitude"][ind]), str(
-            data["longitude"][ind]
+        obs_loc.lat, obs_loc.lon = (
+            str(data["latitude"][ind]),
+            str(data["longitude"][ind]),
         )
         obs_loc.elevation = data["altitude"][ind]
         obs_loc.date = datetime.datetime.utcfromtimestamp(time).strftime(
@@ -230,11 +231,13 @@ def spectral_consistency(
             weights2(data["elevation_angle"][ele_ind]),
             factor(data["elevation_angle"][ele_ind]),
         )
-        in_sc, in_os = input_scale(data["elevation_angle"][ele_ind]), input_offset(
-            data["elevation_angle"][ele_ind]
+        in_sc, in_os = (
+            input_scale(data["elevation_angle"][ele_ind]),
+            input_offset(data["elevation_angle"][ele_ind]),
         )
-        op_sc, op_os = output_scale(data["elevation_angle"][ele_ind]), output_offset(
-            data["elevation_angle"][ele_ind]
+        op_sc, op_os = (
+            output_scale(data["elevation_angle"][ele_ind]),
+            output_offset(data["elevation_angle"][ele_ind]),
         )
 
         ret_in[ele_ind, 1:] = (ret_in[ele_ind, 1:] - in_os) * in_sc

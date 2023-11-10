@@ -140,9 +140,7 @@ def get_products(
                 < 0.5,
                 axis=1,
             )
-        )[
-            0
-        ]  # type: ignore
+        )[0]  # type: ignore
         if len(index) == 0:
             raise MissingInputData(
                 f"No suitable data found for processing for data type: {data_type}"
@@ -171,11 +169,13 @@ def get_products(
                 weights2(elevation_angle[index]),
                 factor(elevation_angle[index]),
             )
-            in_sc, in_os = input_scale(elevation_angle[index]), input_offset(
-                elevation_angle[index]
+            in_sc, in_os = (
+                input_scale(elevation_angle[index]),
+                input_offset(elevation_angle[index]),
             )
-            op_sc, op_os = output_scale(elevation_angle[index]), output_offset(
-                elevation_angle[index]
+            op_sc, op_os = (
+                output_scale(elevation_angle[index]),
+                output_offset(elevation_angle[index]),
             )
 
             ret_in[index, 1:] = (ret_in[index, 1:] - in_os[:, :]) * in_sc[:, :]
@@ -247,9 +247,7 @@ def get_products(
                 < 0.5,
                 axis=1,
             )
-        )[
-            0
-        ]  # type: ignore
+        )[0]  # type: ignore
         if len(index) == 0:
             raise MissingInputData(
                 f"No suitable data found for processing for data type: {data_type}"
@@ -281,11 +279,13 @@ def get_products(
                 weights2(elevation_angle[index]),
                 factor(elevation_angle[index]),
             )
-            in_sc, in_os = input_scale(elevation_angle[index]), input_offset(
-                elevation_angle[index]
+            in_sc, in_os = (
+                input_scale(elevation_angle[index]),
+                input_offset(elevation_angle[index]),
             )
-            op_sc, op_os = output_scale(elevation_angle[index]), output_offset(
-                elevation_angle[index]
+            op_sc, op_os = (
+                output_scale(elevation_angle[index]),
+                output_offset(elevation_angle[index]),
             )
 
             ret_in[index, 1:] = (ret_in[index, 1:] - in_os) * in_sc

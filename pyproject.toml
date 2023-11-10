@@ -42,28 +42,6 @@ check_untyped_defs = true
 module = ["ephem.*", "matplotlib.*", "metpy.*", "mpl_toolkits.*", "netCDF4.*", "pandas.*", "scipy.*"]
 ignore_missing_imports = true
 
-[tool.pylint]
-max-line-length = 88
-ignored-modules = ["ephem", "metpy", "netCDF4", "numpy", "scipy", "timezonefinder"]
-disable = [
-  "duplicate-code",
-  "fixme",
-  "invalid-name",
-  "logging-fstring-interpolation",
-  "logging-not-lazy",
-  "missing-class-docstring",
-  "missing-function-docstring",
-  "missing-module-docstring",
-  "too-few-public-methods",
-  "too-many-arguments",
-  "too-many-branches",
-  "too-many-function-args",
-  "too-many-instance-attributes",
-  "too-many-lines",
-  "too-many-locals",
-  "too-many-statements",
-]
-
 [tool.release-version]
 filename = "mwrpy/version.py"
 pattern = ["MAJOR = (?P<major>\\d+)", "MINOR = (?P<minor>\\d+)", "PATCH = (?P<patch>\\d+)"]

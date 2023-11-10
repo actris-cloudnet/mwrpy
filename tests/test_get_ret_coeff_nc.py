@@ -102,7 +102,16 @@ class TestLWP:
                 continue
             match key:
                 case (
-                    "RB" | "CC" | "TS" | "HS" | "ZS" | "IR" | "I1" | "I2" | "SU" | "AL"
+                    "RB"
+                    | "CC"
+                    | "TS"
+                    | "HS"
+                    | "ZS"
+                    | "IR"
+                    | "I1"
+                    | "I2"
+                    | "SU"
+                    | "AL"
                 ):
                     data = (0, 0, 0)
                 case "RP" | "DB" | "PS" | "DY":
@@ -158,7 +167,7 @@ class TestLWP:
             if isinstance(item, str):
                 continue
             match key:
-                case ("RB" | "CC" | "TS" | "HS" | "ZS" | "IR" | "I1" | "I2" | "SU"):
+                case "RB" | "CC" | "TS" | "HS" | "ZS" | "IR" | "I1" | "I2" | "SU":
                     data = (0, 0, 0)
                 case "AL":
                     data = (0.0, 10000.0, 3181.976806640625)
@@ -219,7 +228,7 @@ class TestLWP:
             if isinstance(item, str):
                 continue
             match key:
-                case ("RB" | "CC" | "TS" | "HS" | "ZS" | "IR" | "I1" | "I2" | "SU"):
+                case "RB" | "CC" | "TS" | "HS" | "ZS" | "IR" | "I1" | "I2" | "SU":
                     data = (0, 0, 0)
                 case "AL":
                     data = (0.0, 10000.0, 3181.976806640625)
@@ -290,7 +299,7 @@ class TestLWP:
             if isinstance(item, str):
                 continue
             match key:
-                case ("RB" | "CC" | "TS" | "HS" | "ZS" | "IR" | "I1" | "I2" | "SU"):
+                case "RB" | "CC" | "TS" | "HS" | "ZS" | "IR" | "I1" | "I2" | "SU":
                     data = (0, 0, 0)
                 case "AL":
                     data = (0.0, 10000.0, 3181.976806640625)

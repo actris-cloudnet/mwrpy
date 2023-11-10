@@ -587,12 +587,12 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
     )
     cbl = plt.clabel(cp, fontsize=8)
     ta = np.array([])
-    for l in cbl:
-        l.set_verticalalignment("bottom")
-        l.set_fontweight("bold")
-        if float(l.get_text()) in ta:
-            l.set_visible(False)
-        ta = np.append(ta, [float(l.get_text())])
+    for lab in cbl:
+        lab.set_verticalalignment("bottom")
+        lab.set_fontweight("bold")
+        if float(lab.get_text()) in ta:
+            lab.set_visible(False)
+        ta = np.append(ta, [float(lab.get_text())])
     ax.contour(
         time,
         axes[1],
@@ -723,9 +723,11 @@ def _plot_hkd(ax, data_in: ndarray, name: str, time: ndarray):
         leg = ax2.legend(lines + lines2, labels + labels2, loc="upper right")
 
     if name == "t_sta":
-        vmin, vmax = 0.0, np.nanmax(
-            [np.nanmax(data_in[:, 0]), np.nanmax(data_in[:, 1])]
-        ) + 0.1 * np.nanmax([np.nanmax(data_in[:, 0]), np.nanmax(data_in[:, 1])])
+        vmin, vmax = (
+            0.0,
+            np.nanmax([np.nanmax(data_in[:, 0]), np.nanmax(data_in[:, 1])])
+            + 0.1 * np.nanmax([np.nanmax(data_in[:, 0]), np.nanmax(data_in[:, 1])]),
+        )
         ax.plot(time, data_in[:, 0], color="sienna", linewidth=0.8, label="Receiver 1")
         ax.plot(
             time,
@@ -905,8 +907,9 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
     if params["flag_status"][3] == 0:
         qf = _get_freq_flag(data_in, np.array([3]))
         if len(gtim) > 0:
-            time_i, data_g = np.linspace(time[0], time[-1], len(time)), np.zeros(
-                (len(time), 20), np.float32
+            time_i, data_g = (
+                np.linspace(time[0], time[-1], len(time)),
+                np.zeros((len(time), 20), np.float32),
             )
             for ig, _ in enumerate(gtim[:, 0]):
                 xind = np.where((time_i >= gtim[ig, 0]) & (time_i <= gtim[ig, 1]))
@@ -929,8 +932,9 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
 
     qf = _get_freq_flag(data_in, np.array([1, 2]))
     if len(gtim) > 0:
-        time_i, data_g = np.linspace(time[0], time[-1], len(time)), np.zeros(
-            (len(time), 20), np.float32
+        time_i, data_g = (
+            np.linspace(time[0], time[-1], len(time)),
+            np.zeros((len(time), 20), np.float32),
         )
         for ig, _ in enumerate(gtim[:, 0]):
             xind = np.where((time_i >= gtim[ig, 0]) & (time_i <= gtim[ig, 1]))
@@ -1536,8 +1540,9 @@ def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
     case_date = _read_date(nc_file)
     gtim = _gap_array(time, case_date, 15.0 / 60.0)
     if len(gtim) > 0:
-        time_i, data_g = np.linspace(time[0], time[-1], len(time)), np.zeros(
-            (len(time), 10), np.float32
+        time_i, data_g = (
+            np.linspace(time[0], time[-1], len(time)),
+            np.zeros((len(time), 10), np.float32),
         )
         for ig, _ in enumerate(gtim[:, 0]):
             xind = np.where((time_i >= gtim[ig, 0]) & (time_i <= gtim[ig, 1]))

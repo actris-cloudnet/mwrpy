@@ -120,8 +120,9 @@ def prepare_data(
             (
                 rpg_bin.data["liquid_cloud_flag"],
                 rpg_bin.data["liquid_cloud_flag_status"],
-            ) = np.ones(len(rpg_bin.data["time"]), np.int32) * 2, np.ones(
-                len(rpg_bin.data["time"]), np.int32
+            ) = (
+                np.ones(len(rpg_bin.data["time"]), np.int32) * 2,
+                np.ones(len(rpg_bin.data["time"]), np.int32),
             )
 
         file_list_hkd = get_file_list(path_to_files, "HKD")
@@ -392,8 +393,7 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict) -> None:
     tb_add: np.ndarray = np.empty([0], dtype=np.int32)
     status_add: np.ndarray = np.empty([0], dtype=np.int32)
     seqs_all = [
-        (key, len(list(val)))
-        for key, val in groupby(hkd.data["status"][:] & 2**18 > 0)
+        (key, len(list(val))) for key, val in groupby(hkd.data["status"][:] & 2**18 > 0)
     ]
     seqs = np.array(
         [
