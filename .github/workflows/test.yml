@@ -1,9 +1,9 @@
-name: MWRpy tests
+name: MWRpy test and lint
 
 on: [push, pull_request]
 
 jobs:
-  build:
+  test:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -19,15 +19,12 @@ jobs:
           cache: "pip"
       - name: Install dependencies
         run: |
+          pip install --upgrade pip
           pip install .[test]
+      - name: Run pre-commit checks
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          pre-commit run --all-files --show-diff-on-failure
       - name: Test with pytest-flakefinder
         run: |
           pytest --flake-finder --flake-runs=2
-      - name: Lint with pylint
-        run: |
-          pylint mwrpy
-          pylint tests
-      - name: Typecheck with mypy
-        run: |
-          mypy mwrpy
-          mypy tests

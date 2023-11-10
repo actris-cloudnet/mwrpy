@@ -27,7 +27,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-test = ["mypy", "pylint", "pytest", "pytest-flakefinder", "types-PyYAML", "types-pytz"]
+test = ["mypy", "pre-commit", "pytest", "pytest-flakefinder", "types-PyYAML", "types-pytz"]
 dev = ["release-version"]
 
 [project.urls]
