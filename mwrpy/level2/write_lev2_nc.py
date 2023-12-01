@@ -19,6 +19,8 @@ from mwrpy.utils import (
     interpol_2d,
     interpolate_2d,
     read_config,
+    setbit,
+    isbit,
 )
 
 Fill_Value_Float = -999.0
@@ -497,9 +499,13 @@ def _get_qf(
         assume_unique=False,
         return_indices=True,
     )
-    rpg_dat[product + "_quality_flag"] = np.max(
-        lev1["quality_flag"][index, freq_ind], axis=1
-    )
+    rpg_dat[product + "_quality_flag"] = np.zeros(len(index), np.int32)
+    for bit in range(8):
+        bit_set = np.any(isbit(lev1["quality_flag"][index, freq_ind], bit), axis=1)
+        if np.any(bit_set):
+            rpg_dat[product + "_quality_flag"][bit_set] = setbit(
+                rpg_dat[product + "_quality_flag"][bit_set], bit
+            )
     rpg_dat[product + "_quality_flag_status"] = lev1["quality_flag_status"][
         index, freq_ind[0]
     ]
