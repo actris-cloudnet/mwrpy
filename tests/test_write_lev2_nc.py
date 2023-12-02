@@ -1,50 +1,54 @@
 import os
 
+import tempfile
 from mwrpy.level1.write_lev1_nc import lev1_to_nc
 from mwrpy.level2.lev2_collocated import generate_lev2_multi, generate_lev2_single
-from mwrpy.level2.write_lev2_nc import lev2_to_nc
+import glob
+import pytest
+
+SITE = "hyytiala"
 
 PACKAGE_DIR = os.path.abspath(os.path.dirname(__file__))
-DATA_DIR = f"{PACKAGE_DIR}/data/hyytiala"
+DATA_DIR = f"{PACKAGE_DIR}/data/{SITE}"
 COEFFICIENTS_DIR = f"{PACKAGE_DIR}/../mwrpy/site_config/"
-DATE = "2023-04-06"
+COEFF_FILES = glob.glob(f"{COEFFICIENTS_DIR}/{SITE}/coefficients/*.ret")
 
 
-def test_level2_processing():
-    lev1_file = "temp_file1.nc"
-    lev2_file = "temp_file2.nc"
-    temp_file = "temp_file3.nc"
-    hum_file = "temp_file4.nc"
+@pytest.fixture(scope="module")
+def l1_file(request):
+    fd, path = tempfile.mkstemp()
+    os.close(fd)
+    lev1_to_nc("1C01", DATA_DIR, SITE, path)
 
-    site = "hyytiala"
+    def delete_file():
+        os.unlink(path)
 
-    lev1_to_nc("1C01", DATA_DIR, site, lev1_file)
+    request.addfinalizer(delete_file)
+    return path
 
-    # mwr-single
-    lev2_to_nc("2I01", lev1_file, lev2_file, site=site)
-    lev2_to_nc("2I02", lev1_file, lev2_file, site=site)
-    lev2_to_nc("2P01", lev1_file, lev2_file, site=site)
-    lev2_to_nc("2P03", lev1_file, hum_file, site=site)
 
-    generate_lev2_single(site, lev1_file, lev2_file)
+def test_generate_lev2_single_site(l1_file):
+    fd, path = tempfile.mkstemp()
+    os.close(fd)
+    generate_lev2_single(SITE, l1_file, path)
+    os.unlink(path)
 
-    # mwr-multi
-    lev2_to_nc("2P02", lev1_file, temp_file, site=site)
-    lev2_to_nc(
-        "2P04", lev1_file, lev2_file, site=site, temp_file=temp_file, hum_file=hum_file
-    )
-    lev2_to_nc(
-        "2P07", lev1_file, lev2_file, site=site, temp_file=temp_file, hum_file=hum_file
-    )
-    lev2_to_nc(
-        "2P08", lev1_file, lev2_file, site=site, temp_file=temp_file, hum_file=hum_file
-    )
 
-    generate_lev2_multi(site, lev1_file, lev2_file)
+def test_generate_lev2_single_no_site(l1_file):
+    fd, path = tempfile.mkstemp()
+    os.close(fd)
+    generate_lev2_single(None, l1_file, path, coeff_files=COEFF_FILES)
+    os.unlink(path)
 
-    for file in (lev1_file, lev2_file, temp_file, hum_file):
-        if os.path.exists(file):
-            try:
-                os.remove(file)
-            except PermissionError:
-                pass
+
+def test_generate_lev2_multi_site(l1_file):
+    fd, path = tempfile.mkstemp()
+    os.close(fd)
+    generate_lev2_multi(SITE, l1_file, path)
+    os.unlink(path)
+
+
+def test_generate_lev2_multi_no_site(l1_file):
+    fd, path = tempfile.mkstemp()
+    os.close(fd)
+    generate_lev2_multi(None, l1_file, path, coeff_files=COEFF_FILES)

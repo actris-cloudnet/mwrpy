@@ -7,9 +7,10 @@ from mwrpy.utils import copy_global, copy_variables
 
 
 def generate_lev2_single(
-    site: str,
+    site: str | None,
     mwr_l1c_file: str,
     output_file: str,
+    coeff_files: list[str] | None = None,
 ):
     products = {
         "2I01": "lwp",
@@ -29,6 +30,7 @@ def generate_lev2_single(
             site=site,
             temp_file=products["2P01"] if prod in ("2P04", "2P07", "2P08") else None,
             hum_file=products["2P03"] if prod in ("2P04", "2P07", "2P08") else None,
+            coeff_files=coeff_files,
         )
 
     with (
@@ -129,7 +131,12 @@ def generate_lev2_single(
         return nc_output
 
 
-def generate_lev2_multi(site: str, mwr_l1c_file: str, output_file: str):
+def generate_lev2_multi(
+    site: str | None,
+    mwr_l1c_file: str,
+    output_file: str,
+    coeff_files: list[str] | None = None,
+):
     products = {
         "2P02": "temp",
         "2P03": "abs_hum",
@@ -146,6 +153,7 @@ def generate_lev2_multi(site: str, mwr_l1c_file: str, output_file: str):
             site=site,
             temp_file=products["2P02"] if prod not in ("2P02", "2P03") else None,
             hum_file=products["2P03"] if prod not in ("2P02", "2P03") else None,
+            coeff_files=coeff_files,
         )
 
     with (
