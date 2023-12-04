@@ -18,9 +18,9 @@ from mwrpy.utils import (
     get_ret_freq,
     interpol_2d,
     interpolate_2d,
+    isbit,
     read_config,
     setbit,
-    isbit,
 )
 
 Fill_Value_Float = -999.0

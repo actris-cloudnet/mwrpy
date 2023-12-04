@@ -1,10 +1,11 @@
+import glob
 import os
-
 import tempfile
+
+import pytest
+
 from mwrpy.level1.write_lev1_nc import lev1_to_nc
 from mwrpy.level2.lev2_collocated import generate_lev2_multi, generate_lev2_single
-import glob
-import pytest
 
 SITE = "hyytiala"
 
