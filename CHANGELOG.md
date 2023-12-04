@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.1 – 2023-12-04
+
+- Fix package exports
+
 ## 0.6.0 – 2023-12-02
 
 - Add flags to level 2 products
