@@ -47,6 +47,12 @@ filename = "mwrpy/version.py"
 pattern = ["MAJOR = (?P<major>\\d+)", "MINOR = (?P<minor>\\d+)", "PATCH = (?P<patch>\\d+)"]
 changelog = "CHANGELOG.md"
 
+[tool.ruff]
+extend-select = ["I"]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"__init__.py" = ["F401"]
+
 [tool.setuptools.dynamic]
 version = {attr = "mwrpy.version.__version__"}
 
