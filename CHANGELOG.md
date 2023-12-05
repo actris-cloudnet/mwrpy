@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.2 – 2023-12-05
+
+- Optimize bit handling in level 2 processing
+
 ## 0.6.1 – 2023-12-04
 
 - Fix package exports
