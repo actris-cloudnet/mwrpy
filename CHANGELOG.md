@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.3 – 2023-12-05
+
+- Use tempfiles
+
 ## 0.6.2 – 2023-12-05
 
 - Optimize bit handling in level 2 processing
