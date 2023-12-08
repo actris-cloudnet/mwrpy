@@ -31,6 +31,11 @@ class MetaData(NamedTuple):
     standard_name: str | None = None
     definition: str | None = None
     comment: str | None = None
+    retrieval_type: str | None = None
+    retrieval_elevation_angles: str | None = None
+    retrieval_frequencies: str | None = None
+    retrieval_auxiliary_input: str | None = None
+    retrieval_description: str | None = None
 
 
 def seconds2hours(time_in_seconds: np.ndarray) -> np.ndarray:
@@ -374,26 +379,14 @@ def update_lev1_attributes(attributes: dict, data_type: str) -> None:
             del attributes[name]
 
 
-def get_ret_ang(nc_file: str) -> list:
-    """Returns highest elevation angle used in retrieval."""
-    with netCDF4.Dataset(nc_file) as nc:
-        ang = []
-        ang_str = re.split(r"[^0-9.]", nc.retrieval_elevation_angles)
-        for ii in ang_str:
-            if ii != "":
-                ang.append(float(ii))
-    return ang
-
-
-def get_ret_freq(nc_file: str) -> np.ndarray:
-    """Returns frequencies used in retrieval."""
-    with netCDF4.Dataset(nc_file) as nc:
-        freq = []
-        freq_str = re.split(r"[^0-9.]", nc.retrieval_frequencies)
-        for ii in freq_str:
-            if ii != "":
-                freq.append(float(ii))
-    return np.array(freq, dtype=np.float32)
+def get_ret_info(ret_org: str) -> np.ndarray:
+    """Returns frequencies or angles used in retrieval."""
+    ret_inf = []
+    ret_str = re.split(r"[^0-9.]", ret_org)
+    for ii in ret_str:
+        if ii != "":
+            ret_inf.append(float(ii))
+    return np.array(ret_inf, dtype=np.float32)
 
 
 def read_nc_field_name(nc_file: str, name: str) -> str:

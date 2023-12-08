@@ -9,36 +9,23 @@ from numpy import ma, ndarray
 
 from mwrpy.utils import (
     convolve2DFFT,
-    get_ret_freq,
     isbit,
     read_config,
-    read_nc_fields,
-    seconds2hours,
 )
 
 
-def _get_ret_flag(nc_file: str, time: ndarray) -> ndarray:
+def _get_ret_flag(nc_file: str, variable: str) -> ndarray:
     """Returns quality flag for frequencies used in retrieval."""
-    flag = np.zeros(len(time), np.int32)
-    lev1_file = _get_lev1(nc_file)
-    quality_flag = read_nc_fields(lev1_file, "quality_flag")
-    t_lev1 = read_nc_fields(lev1_file, "time")
-    f_lev1 = read_nc_fields(lev1_file, "frequency")
-    freq = get_ret_freq(nc_file)
-    _, freq_ind, _ = np.intersect1d(
-        f_lev1, freq, assume_unique=False, return_indices=True
-    )
-    _, q_ind, t_ind = np.intersect1d(
-        seconds2hours(t_lev1), time.data, assume_unique=False, return_indices=True
-    )
-    quality_flag = quality_flag[q_ind, :]
+    file = netCDF4.Dataset(nc_file)
+    quality_flag = file.variables[variable + "_quality_flag"]
+    flag = np.zeros(len(quality_flag), np.int32)
     site = _read_location(nc_file)
     params = read_config(site, "params")
 
     if params["flag_status"][3] == 0:
-        flag[t_ind[np.sum(isbit(quality_flag[:, freq_ind], 3), axis=1) > 0]] = 1
+        flag[isbit(quality_flag[:], 3) > 0] = 1
     else:
-        flag[t_ind[np.sum(quality_flag[:, freq_ind], axis=1) > 0]] = 1
+        flag[quality_flag[:] > 0] = 1
     return flag
 
 

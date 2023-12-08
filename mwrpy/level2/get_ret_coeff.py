@@ -268,7 +268,7 @@ def get_mvr_coeff(
             coeff["retrieval_auxiliary_input"] = "no_surface"
         else:
             coeff["retrieval_auxiliary_input"] = "surface"
-        coeff["retrieval_description"] = "Neural network"
+        coeff["retrieval_description"] = "RPG retrieval"
 
     elif str(c_list[0][-2:]).lower() == "nc":
         coeff["retrieval_type"] = c_file.regression_type

@@ -504,7 +504,7 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
         "equivalent_potential_temperature",
     ):
         hum_time = seconds2hours(read_nc_fields(hum_file, "time"))
-        hum_flag = _get_ret_flag(hum_file, hum_time)
+        hum_flag = _get_ret_flag(hum_file, "absolute_humidity")
         hum_tmp, width = _calculate_rolling_mean(hum_time, hum_flag, win=15 / 60)
         hum_flag = np.interp(
             axes[0], hum_time[int(width / 2 - 1) : int(-width / 2)], hum_tmp
@@ -545,7 +545,14 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
         alpha=0.5,
     )
 
-    flag = _get_ret_flag(nc_file, axes[0])
+    if name in (
+        "relative_humidity",
+        "potential_temperature",
+        "equivalent_potential_temperature",
+    ):
+        flag = _get_ret_flag(nc_file, "absolute_humidity")
+    else:
+        flag = _get_ret_flag(nc_file, name)
 
     if np.ma.median(np.diff(axes[0][:])) < 5 / 60:
         flag_tmp, width = _calculate_rolling_mean(axes[0], flag, win=15 / 60)
@@ -1510,7 +1517,7 @@ def _calculate_ticks(x, yl, yl2):
 def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
     """Plot for integrated quantities (LWP, IWV)."""
 
-    flag = _get_ret_flag(nc_file, time)
+    flag = _get_ret_flag(nc_file, name)
     data0, time0 = data_in[flag == 0], time[flag == 0]
     if len(data0) == 0:
         data0, time0 = data_in, time

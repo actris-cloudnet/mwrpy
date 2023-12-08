@@ -5,11 +5,12 @@ from typing import TypeAlias
 from mwrpy.utils import MetaData
 
 
-def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
+def get_data_attributes(rpg_variables: dict, data_type: str, coeff: dict) -> dict:
     """Adds Metadata for RPG MWR Level 2 variables for NetCDF file writing.
     Args:
         rpg_variables: RpgArray instances.
         data_type: Data type of the netCDF file.
+        coeff: Coefficient data of variable
 
     Returns:
         Dictionary
@@ -36,10 +37,24 @@ def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
             ["Data type " + data_type + " not supported for file writing."]
         )
 
+    fields = [
+        "retrieval_type",
+        "retrieval_elevation_angles",
+        "retrieval_frequencies",
+        "retrieval_auxiliary_input",
+        "retrieval_description",
+    ]
+
     read_att = att_reader[data_type]
     attributes = dict(ATTRIBUTES_COM, **read_att)
     for key in list(rpg_variables):
         if key in attributes:
+            if getattr(attributes[key], "retrieval_type") is not None:
+                for field in fields:
+                    if field in coeff:
+                        attributes[key] = attributes[key]._replace(
+                            **{field: coeff[field]}
+                        )
             rpg_variables[key].set_attributes(attributes[key])
         else:
             del rpg_variables[key]
@@ -128,6 +143,7 @@ ATTRIBUTES_2P01 = {
         comment="Retrieved temperature profile from single pointing measurements",
         standard_name="air_temperature",
         units="K",
+        retrieval_type="",
     ),
     "temperature_random_error": MetaData(
         long_name="Random uncertainty of retrieved\n"
@@ -167,6 +183,7 @@ ATTRIBUTES_2P02 = {
         comment="Retrieved temperature profile from multiple pointing measurements",
         standard_name="air_temperature",
         units="K",
+        retrieval_type="",
     ),
     "temperature_random_error": MetaData(
         long_name="Random uncertainty of retrieved\n"
@@ -204,6 +221,7 @@ ATTRIBUTES_2P03 = {
     "absolute_humidity": MetaData(
         long_name="Absolute humidity",
         units="kg m-3",
+        retrieval_type="",
     ),
     "absolute_humidity_random_error": MetaData(
         long_name="Random uncertainty of absolute humidity",
@@ -240,6 +258,7 @@ ATTRIBUTES_2P04 = {
         long_name="Relative humidity",
         standard_name="relative_humidity",
         units="1",
+        retrieval_type="",
     ),
     "relative_humidity_random_error": MetaData(
         long_name="Random uncertainty of relative humidity",
@@ -262,6 +281,7 @@ ATTRIBUTES_2P07 = {
         long_name="Potential temperature",
         standard_name="air_potential_temperature",
         units="K",
+        retrieval_type="",
     ),
     "potential_temperature_random_error": MetaData(
         long_name="Random uncertainty of potential temperature",
@@ -284,6 +304,7 @@ ATTRIBUTES_2P08 = {
         long_name="Equivalent potential temperature",
         standard_name="air_equivalent_potential_temperature",
         units="K",
+        retrieval_type="",
     ),
     "equivalent_potential_temperature_random_error": MetaData(
         long_name="Random uncertainty of equivalent potential temperature",
@@ -301,6 +322,7 @@ ATTRIBUTES_2I01 = {
         long_name="Retrieved column-integrated liquid water path",
         standard_name="atmosphere_cloud_liquid_water_content",
         units="kg m-2",
+        retrieval_type="",
     ),
     "lwp_random_error": MetaData(
         long_name="Random uncertainty of retrieved\n"
@@ -338,6 +360,7 @@ ATTRIBUTES_2I02 = {
         long_name="Retrieved column-integrated water vapour",
         standard_name="atmosphere_mass_content_of_water_vapor",
         units="kg m-2",
+        retrieval_type="",
     ),
     "iwv_random_error": MetaData(
         long_name="Random uncertainty of retrieved column-integrated water vapour",

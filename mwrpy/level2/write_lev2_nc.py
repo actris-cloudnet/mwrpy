@@ -14,8 +14,7 @@ from mwrpy.level2.lev2_meta_nc import get_data_attributes
 from mwrpy.level2.lwp_offset import correct_lwp_offset
 from mwrpy.utils import (
     add_time_bounds,
-    get_ret_ang,
-    get_ret_freq,
+    get_ret_info,
     interpol_2d,
     interpolate_2d,
     read_config,
@@ -81,9 +80,9 @@ def lev2_to_nc(
             hum_file=hum_file,
         )
         _combine_lev1(lev1, rpg_dat, index, data_type, params)
-        _add_att(global_attributes, coeff)
+        _del_att(global_attributes)
         hatpro = rpg_mwr.Rpg(rpg_dat)
-        hatpro.data = get_data_attributes(hatpro.data, data_type)
+        hatpro.data = get_data_attributes(hatpro.data, data_type, coeff)
         rpg_mwr.save_rpg(hatpro, output_file, global_attributes, data_type)
 
 
@@ -422,23 +421,41 @@ def get_products(
     elif data_type in ("2P04", "2P07", "2P08"):
         assert temp_file is not None
         assert hum_file is not None
-        tem_dat, tem_freq, tem_ang = load_product(temp_file)
-        hum_dat, hum_freq, hum_ang = load_product(hum_file)
+        tem_dat = load_product(temp_file)
+        hum_dat = load_product(hum_file)
 
         coeff, index = {}, np.empty(0, np.int32)
         coeff["retrieval_frequencies"] = str(
             np.unique(
                 np.sort(
-                    np.concatenate([tem_freq[tem_freq > 0.0], hum_freq[hum_freq > 0.0]])
+                    np.concatenate(
+                        [
+                            get_ret_info(tem_dat["temperature"].retrieval_frequencies),
+                            get_ret_info(
+                                hum_dat["absolute_humidity"].retrieval_frequencies
+                            ),
+                        ]
+                    )
                 )
             )
         )
         coeff["retrieval_elevation_angles"] = str(
-            np.unique(np.sort(np.concatenate([tem_ang, hum_ang])))
+            np.unique(
+                np.sort(
+                    np.concatenate(
+                        [
+                            get_ret_info(
+                                tem_dat["temperature"].retrieval_elevation_angles
+                            ),
+                            get_ret_info(
+                                hum_dat["absolute_humidity"].retrieval_elevation_angles
+                            ),
+                        ]
+                    )
+                )
+            )
         )
-        coeff["retrieval_description"] = (
-            "derived product from: " + temp_file + ", " + hum_file
-        )
+        coeff["retrieval_type"] = "derived product"
         coeff["dependencies"] = temp_file + ", " + hum_file
         if len(hum_dat.variables["height"][:]) == len(tem_dat.variables["height"][:]):
             hum_int = interpol_2d(
@@ -540,22 +557,8 @@ def _combine_lev1(
                     rpg_dat[ivars] = lev1[ivars][:]
 
 
-def _add_att(global_attributes: dict, coeff: dict) -> None:
-    """Add retrieval and calibration attributes"""
-    fields = [
-        "retrieval_type",
-        "retrieval_elevation_angles",
-        "retrieval_frequencies",
-        "retrieval_auxiliary_input",
-        "retrieval_description",
-    ]
-    for name in fields:
-        if name in coeff:
-            global_attributes[name] = coeff[name]
-        else:
-            global_attributes[name] = ""
-
-    # remove lev1 only attributes
+def _del_att(global_attributes: dict) -> None:
+    """Remove lev1 only attributes"""
     att_del = ["ir_instrument", "met_instrument", "_accuracy"]
     att_names = global_attributes.keys()
     for name in list(att_names):
@@ -566,9 +569,7 @@ def _add_att(global_attributes: dict, coeff: dict) -> None:
 def load_product(filename: str):
     """Load existing lev2 file for deriving other products"""
     file = nc.Dataset(filename)
-    ret_freq = get_ret_freq(filename)
-    ret_ang = get_ret_ang(filename)
-    return file, ret_freq, ret_ang
+    return file
 
 
 def ele_retrieval(ele_obs: np.ndarray, coeff: dict) -> np.ndarray:
