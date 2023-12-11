@@ -126,20 +126,7 @@ def get_products(
             ) = get_mvr_coeff(site, product, lev1["frequency"][:], coeff_files)
         ret_in = retrieval_input(lev1, coeff)
 
-        index = np.where(
-            (lev1["pointing_flag"][:] == 0)
-            & np.any(
-                np.abs(
-                    (np.ones((len(elevation_angle[:]), len(coeff["AG"]))) * coeff["AG"])
-                    - np.transpose(
-                        np.ones((len(coeff["AG"]), len(elevation_angle[:])))
-                        * elevation_angle[:]
-                    )
-                )
-                < 0.5,
-                axis=1,
-            )
-        )[0]  # type: ignore
+        index = np.where(lev1["pointing_flag"][:] == 0)[0]  # type: ignore
         if len(index) == 0:
             raise MissingInputData(
                 f"No suitable data found for processing for data type: {data_type}"
@@ -191,19 +178,40 @@ def get_products(
                 + op_os
             )
 
-        if product == "lwp":
-            freq_31 = np.where(np.round(lev1["frequency"][:], 1) == 31.4)[0]
-            if len(freq_31) != 1:
-                rpg_dat["lwp"], rpg_dat["lwp_offset"] = (
-                    tmp_product,
-                    np.ones(len(index)) * Fill_Value_Float,
+        index_ret = np.where(
+            np.any(
+                np.abs(
+                    (
+                        np.ones((len(elevation_angle[index]), len(coeff["AG"])))
+                        * coeff["AG"]
+                    )
+                    - np.transpose(
+                        np.ones((len(coeff["AG"]), len(elevation_angle[index])))
+                        * elevation_angle[index]
+                    )
                 )
-            else:
-                rpg_dat["lwp"], rpg_dat["lwp_offset"] = correct_lwp_offset(
-                    lev1.variables, tmp_product, index
+                < 0.5,
+                axis=1,
+            )
+        )[0]  # type: ignore
+        ret_product = np.ones(len(index), np.float32) * Fill_Value_Float
+        ret_product[index_ret] = tmp_product[index_ret]
+
+        if product == "lwp":
+            freq_win = np.where((np.round(lev1["frequency"][:], 1) == 31.4))[0]
+            rpg_dat["lwp"], rpg_dat["lwp_offset"] = (
+                ret_product,
+                np.ones(len(index)) * Fill_Value_Float,
+            )
+            if len(freq_win) == 1:
+                (
+                    rpg_dat["lwp"][index_ret],
+                    rpg_dat["lwp_offset"][index_ret],
+                ) = correct_lwp_offset(
+                    lev1.variables, ret_product[index_ret], index_ret
                 )
         else:
-            rpg_dat["iwv"] = tmp_product
+            rpg_dat["iwv"] = ret_product
 
         _get_qf(rpg_dat, lev1, coeff, index, product)
 
@@ -233,20 +241,7 @@ def get_products(
 
         ret_in = retrieval_input(lev1, coeff)
 
-        index = np.where(
-            (lev1["pointing_flag"][:] == 0)
-            & np.any(
-                np.abs(
-                    (np.ones((len(elevation_angle[:]), len(coeff["AG"]))) * coeff["AG"])
-                    - np.transpose(
-                        np.ones((len(coeff["AG"]), len(elevation_angle[:])))
-                        * elevation_angle[:]
-                    )
-                )
-                < 0.5,
-                axis=1,
-            )
-        )[0]  # type: ignore
+        index = np.where(lev1["pointing_flag"][:] == 0)[0]  # type: ignore
         if len(index) == 0:
             raise MissingInputData(
                 f"No suitable data found for processing for data type: {data_type}"
@@ -264,13 +259,13 @@ def get_products(
             coeff_offset = offset(elevation_angle[index])
             coeff_lin = lin(elevation_angle[index])
             coeff_quad = quad(elevation_angle[index])
-            rpg_dat[product] = (
+            tmp_dat = (
                 coeff_offset
                 + np.einsum("ijk,ik->ij", coeff_lin, ret_in[index, :])
                 + np.einsum("ijk,ik->ij", coeff_quad, ret_in[index, :] ** 2)
             )
             if (coeff["RT"] == 1) & (data_type == "2P03"):
-                rpg_dat[product][:, :] = rpg_dat[product][:, :] / 1000.0
+                tmp_dat[:, :] = tmp_dat[:, :] / 1000.0
 
         else:
             c_w1, c_w2, fac = (
@@ -293,7 +288,7 @@ def get_products(
                 fac[:].reshape((len(index), 1))
                 * np.einsum("ijk,ij->ik", c_w1, ret_in[index, :])
             )
-            rpg_dat[product] = (
+            tmp_dat = (
                 np.tanh(
                     fac[:].reshape((len(index), 1))
                     * np.einsum("ijk,ik->ij", c_w2, hidden_layer)
@@ -302,9 +297,30 @@ def get_products(
                 + op_os
             )
             if product == "absolute_humidity":
-                rpg_dat[product] = rpg_dat[product] / 1000.0
+                tmp_dat = tmp_dat / 1000.0
 
         _get_qf(rpg_dat, lev1, coeff, index, product)
+
+        index_ret = np.where(
+            np.any(
+                np.abs(
+                    (
+                        np.ones((len(elevation_angle[index]), len(coeff["AG"])))
+                        * coeff["AG"]
+                    )
+                    - np.transpose(
+                        np.ones((len(coeff["AG"]), len(elevation_angle[index])))
+                        * elevation_angle[index]
+                    )
+                )
+                < 0.5,
+                axis=1,
+            )
+        )[0]  # type: ignore
+        rpg_dat[product] = (
+            np.ones((len(index), len(rpg_dat["height"])), np.float32) * Fill_Value_Float
+        )
+        rpg_dat[product][index_ret, :] = tmp_dat[index_ret, :]
 
     elif data_type == "2P02":
         coeff = get_mvr_coeff(site, "tpb", lev1["frequency"][:], coeff_files)
