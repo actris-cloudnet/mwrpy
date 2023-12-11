@@ -11,14 +11,20 @@ from mwrpy.utils import (
     convolve2DFFT,
     isbit,
     read_config,
+    seconds2hours,
 )
 
 
-def _get_ret_flag(nc_file: str, variable: str) -> ndarray:
+def _get_ret_flag(nc_file: str, time: np.ndarray, variable: str) -> ndarray:
     """Returns quality flag for frequencies used in retrieval."""
     file = netCDF4.Dataset(nc_file)
     quality_flag = file.variables[variable + "_quality_flag"]
-    flag = np.zeros(len(quality_flag), np.int32)
+    time_variable = seconds2hours(file.variables["time"])
+    _, index, _ = np.intersect1d(
+        time_variable, time, assume_unique=True, return_indices=True
+    )
+    quality_flag = quality_flag[index]
+    flag = np.zeros(len(time), np.int32)
     site = _read_location(nc_file)
     params = read_config(site, "params")
 

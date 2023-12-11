@@ -1,4 +1,5 @@
 """Module for plotting"""
+import glob
 import locale
 from datetime import date, datetime
 
@@ -472,6 +473,14 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
 
     assert variables.plot_range is not None
 
+    if any(map(nc_file.__contains__, ["2P04", "2P07", "2P08"])):
+        file_name = glob.glob(nc_file.rsplit("/", 1)[0] + "/MWR_2P02*")
+        if len(file_name) == 0:
+            file_name = glob.glob(nc_file.rsplit("/", 1)[0] + "/MWR_2P01*")
+        tem_file = file_name[0]
+    else:
+        tem_file = nc_file
+
     if name == "potential_temperature":
         hum_file = nc_file.replace("2P07", "2P03")
 
@@ -504,7 +513,7 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
         "equivalent_potential_temperature",
     ):
         hum_time = seconds2hours(read_nc_fields(hum_file, "time"))
-        hum_flag = _get_ret_flag(hum_file, "absolute_humidity")
+        hum_flag = _get_ret_flag(hum_file, hum_time, "absolute_humidity")
         hum_tmp, width = _calculate_rolling_mean(hum_time, hum_flag, win=15 / 60)
         hum_flag = np.interp(
             axes[0], hum_time[int(width / 2 - 1) : int(-width / 2)], hum_tmp
@@ -550,9 +559,9 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
         "potential_temperature",
         "equivalent_potential_temperature",
     ):
-        flag = _get_ret_flag(nc_file, "absolute_humidity")
+        flag = _get_ret_flag(tem_file, axes[0], "temperature")
     else:
-        flag = _get_ret_flag(nc_file, name)
+        flag = _get_ret_flag(tem_file, axes[0], name)
 
     if np.ma.median(np.diff(axes[0][:])) < 5 / 60:
         flag_tmp, width = _calculate_rolling_mean(axes[0], flag, win=15 / 60)
@@ -1517,7 +1526,7 @@ def _calculate_ticks(x, yl, yl2):
 def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
     """Plot for integrated quantities (LWP, IWV)."""
 
-    flag = _get_ret_flag(nc_file, name)
+    flag = _get_ret_flag(nc_file, time, name)
     data0, time0 = data_in[flag == 0], time[flag == 0]
     if len(data0) == 0:
         data0, time0 = data_in, time
