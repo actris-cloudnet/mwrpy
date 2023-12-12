@@ -78,7 +78,9 @@ def process_product(prod: str, date: datetime.date, site: str):
         )
     elif prod[0] == "2":
         if prod in ("2P04", "2P07", "2P08"):
-            temp_file = _get_filename("2P01", date, site)
+            temp_file = _get_filename("2P02", date, site)
+            if len(temp_file) == 0:
+                temp_file = _get_filename("2P01", date, site)
             hum_file = _get_filename("2P03", date, site)
         else:
             temp_file = None

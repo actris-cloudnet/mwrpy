@@ -332,7 +332,8 @@ def spectral_consistency(
                     ).mean()
                     tb_mean = tb_mean.reindex(tb_df.index, method="nearest")
 
-                    fact = [2.5, 3.5]  # factor for receiver retrieval uncertainty
+                    fact = [3.0, 4.0]  # factor for receiver retrieval uncertainty
+                    min_err = [0.2, 0.4]  # minimum channel error per receiver
                     # flag for individual channels based on retrieval uncertainty
                     flag_ind[
                         ele_ind[
@@ -341,7 +342,12 @@ def spectral_consistency(
                                     tb_df["Tb"].values[ele_ind]
                                     - tb_mean["Tb"].values[ele_ind]
                                 )
-                                > cfile["predictand_err"][0]
+                                > np.max(
+                                    (
+                                        cfile["predictand_err"][0],
+                                        min_err[data["receiver"][ifreq] - 1],
+                                    )
+                                )
                                 * fact[data["receiver"][ifreq] - 1]
                             )
                         ],
@@ -352,7 +358,7 @@ def spectral_consistency(
                 np.abs(data["tb"][:, ifreq] - data["tb_spectrum"][:, ifreq])
             )
 
-    th_rec = [1.0, 2.0]  # threshold for receiver mean absolute difference
+    th_rec = [1.5, 2.0]  # threshold for receiver mean absolute difference
     # receiver flag based on mean absolute difference
     for _, rec in enumerate(data["receiver_nb"]):
         flag_ind[

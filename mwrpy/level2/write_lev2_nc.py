@@ -14,8 +14,7 @@ from mwrpy.level2.lev2_meta_nc import get_data_attributes
 from mwrpy.level2.lwp_offset import correct_lwp_offset
 from mwrpy.utils import (
     add_time_bounds,
-    get_ret_ang,
-    get_ret_freq,
+    get_ret_info,
     interpol_2d,
     interpolate_2d,
     read_config,
@@ -81,9 +80,9 @@ def lev2_to_nc(
             hum_file=hum_file,
         )
         _combine_lev1(lev1, rpg_dat, index, data_type, params)
-        _add_att(global_attributes, coeff)
+        _del_att(global_attributes)
         hatpro = rpg_mwr.Rpg(rpg_dat)
-        hatpro.data = get_data_attributes(hatpro.data, data_type)
+        hatpro.data = get_data_attributes(hatpro.data, data_type, coeff)
         rpg_mwr.save_rpg(hatpro, output_file, global_attributes, data_type)
 
 
@@ -127,20 +126,7 @@ def get_products(
             ) = get_mvr_coeff(site, product, lev1["frequency"][:], coeff_files)
         ret_in = retrieval_input(lev1, coeff)
 
-        index = np.where(
-            (lev1["pointing_flag"][:] == 0)
-            & np.any(
-                np.abs(
-                    (np.ones((len(elevation_angle[:]), len(coeff["AG"]))) * coeff["AG"])
-                    - np.transpose(
-                        np.ones((len(coeff["AG"]), len(elevation_angle[:])))
-                        * elevation_angle[:]
-                    )
-                )
-                < 0.5,
-                axis=1,
-            )
-        )[0]  # type: ignore
+        index = np.where(lev1["pointing_flag"][:] == 0)[0]  # type: ignore
         if len(index) == 0:
             raise MissingInputData(
                 f"No suitable data found for processing for data type: {data_type}"
@@ -192,19 +178,40 @@ def get_products(
                 + op_os
             )
 
-        if product == "lwp":
-            freq_31 = np.where(np.round(lev1["frequency"][:], 1) == 31.4)[0]
-            if len(freq_31) != 1:
-                rpg_dat["lwp"], rpg_dat["lwp_offset"] = (
-                    tmp_product,
-                    np.ones(len(index)) * Fill_Value_Float,
+        index_ret = np.where(
+            np.any(
+                np.abs(
+                    (
+                        np.ones((len(elevation_angle[index]), len(coeff["AG"])))
+                        * coeff["AG"]
+                    )
+                    - np.transpose(
+                        np.ones((len(coeff["AG"]), len(elevation_angle[index])))
+                        * elevation_angle[index]
+                    )
                 )
-            else:
-                rpg_dat["lwp"], rpg_dat["lwp_offset"] = correct_lwp_offset(
-                    lev1.variables, tmp_product, index
+                < 0.5,
+                axis=1,
+            )
+        )[0]  # type: ignore
+        ret_product = np.ones(len(index), np.float32) * Fill_Value_Float
+        ret_product[index_ret] = tmp_product[index_ret]
+
+        if product == "lwp":
+            freq_win = np.where((np.round(lev1["frequency"][:], 1) == 31.4))[0]
+            rpg_dat["lwp"], rpg_dat["lwp_offset"] = (
+                ret_product,
+                np.ones(len(index)) * Fill_Value_Float,
+            )
+            if len(freq_win) == 1:
+                (
+                    rpg_dat["lwp"][index_ret],
+                    rpg_dat["lwp_offset"][index_ret],
+                ) = correct_lwp_offset(
+                    lev1.variables, ret_product[index_ret], index_ret
                 )
         else:
-            rpg_dat["iwv"] = tmp_product
+            rpg_dat["iwv"] = ret_product
 
         _get_qf(rpg_dat, lev1, coeff, index, product)
 
@@ -234,20 +241,7 @@ def get_products(
 
         ret_in = retrieval_input(lev1, coeff)
 
-        index = np.where(
-            (lev1["pointing_flag"][:] == 0)
-            & np.any(
-                np.abs(
-                    (np.ones((len(elevation_angle[:]), len(coeff["AG"]))) * coeff["AG"])
-                    - np.transpose(
-                        np.ones((len(coeff["AG"]), len(elevation_angle[:])))
-                        * elevation_angle[:]
-                    )
-                )
-                < 0.5,
-                axis=1,
-            )
-        )[0]  # type: ignore
+        index = np.where(lev1["pointing_flag"][:] == 0)[0]  # type: ignore
         if len(index) == 0:
             raise MissingInputData(
                 f"No suitable data found for processing for data type: {data_type}"
@@ -265,13 +259,13 @@ def get_products(
             coeff_offset = offset(elevation_angle[index])
             coeff_lin = lin(elevation_angle[index])
             coeff_quad = quad(elevation_angle[index])
-            rpg_dat[product] = (
+            tmp_dat = (
                 coeff_offset
                 + np.einsum("ijk,ik->ij", coeff_lin, ret_in[index, :])
                 + np.einsum("ijk,ik->ij", coeff_quad, ret_in[index, :] ** 2)
             )
             if (coeff["RT"] == 1) & (data_type == "2P03"):
-                rpg_dat[product][:, :] = rpg_dat[product][:, :] / 1000.0
+                tmp_dat[:, :] = tmp_dat[:, :] / 1000.0
 
         else:
             c_w1, c_w2, fac = (
@@ -294,7 +288,7 @@ def get_products(
                 fac[:].reshape((len(index), 1))
                 * np.einsum("ijk,ij->ik", c_w1, ret_in[index, :])
             )
-            rpg_dat[product] = (
+            tmp_dat = (
                 np.tanh(
                     fac[:].reshape((len(index), 1))
                     * np.einsum("ijk,ik->ij", c_w2, hidden_layer)
@@ -303,9 +297,30 @@ def get_products(
                 + op_os
             )
             if product == "absolute_humidity":
-                rpg_dat[product] = rpg_dat[product] / 1000.0
+                tmp_dat = tmp_dat / 1000.0
 
         _get_qf(rpg_dat, lev1, coeff, index, product)
+
+        index_ret = np.where(
+            np.any(
+                np.abs(
+                    (
+                        np.ones((len(elevation_angle[index]), len(coeff["AG"])))
+                        * coeff["AG"]
+                    )
+                    - np.transpose(
+                        np.ones((len(coeff["AG"]), len(elevation_angle[index])))
+                        * elevation_angle[index]
+                    )
+                )
+                < 0.5,
+                axis=1,
+            )
+        )[0]  # type: ignore
+        rpg_dat[product] = (
+            np.ones((len(index), len(rpg_dat["height"])), np.float32) * Fill_Value_Float
+        )
+        rpg_dat[product][index_ret, :] = tmp_dat[index_ret, :]
 
     elif data_type == "2P02":
         coeff = get_mvr_coeff(site, "tpb", lev1["frequency"][:], coeff_files)
@@ -422,23 +437,41 @@ def get_products(
     elif data_type in ("2P04", "2P07", "2P08"):
         assert temp_file is not None
         assert hum_file is not None
-        tem_dat, tem_freq, tem_ang = load_product(temp_file)
-        hum_dat, hum_freq, hum_ang = load_product(hum_file)
+        tem_dat = load_product(temp_file)
+        hum_dat = load_product(hum_file)
 
         coeff, index = {}, np.empty(0, np.int32)
         coeff["retrieval_frequencies"] = str(
             np.unique(
                 np.sort(
-                    np.concatenate([tem_freq[tem_freq > 0.0], hum_freq[hum_freq > 0.0]])
+                    np.concatenate(
+                        [
+                            get_ret_info(tem_dat["temperature"].retrieval_frequencies),
+                            get_ret_info(
+                                hum_dat["absolute_humidity"].retrieval_frequencies
+                            ),
+                        ]
+                    )
                 )
             )
         )
         coeff["retrieval_elevation_angles"] = str(
-            np.unique(np.sort(np.concatenate([tem_ang, hum_ang])))
+            np.unique(
+                np.sort(
+                    np.concatenate(
+                        [
+                            get_ret_info(
+                                tem_dat["temperature"].retrieval_elevation_angles
+                            ),
+                            get_ret_info(
+                                hum_dat["absolute_humidity"].retrieval_elevation_angles
+                            ),
+                        ]
+                    )
+                )
+            )
         )
-        coeff["retrieval_description"] = (
-            "derived product from: " + temp_file + ", " + hum_file
-        )
+        coeff["retrieval_type"] = "derived product"
         coeff["dependencies"] = temp_file + ", " + hum_file
         if len(hum_dat.variables["height"][:]) == len(tem_dat.variables["height"][:]):
             hum_int = interpol_2d(
@@ -540,22 +573,8 @@ def _combine_lev1(
                     rpg_dat[ivars] = lev1[ivars][:]
 
 
-def _add_att(global_attributes: dict, coeff: dict) -> None:
-    """Add retrieval and calibration attributes"""
-    fields = [
-        "retrieval_type",
-        "retrieval_elevation_angles",
-        "retrieval_frequencies",
-        "retrieval_auxiliary_input",
-        "retrieval_description",
-    ]
-    for name in fields:
-        if name in coeff:
-            global_attributes[name] = coeff[name]
-        else:
-            global_attributes[name] = ""
-
-    # remove lev1 only attributes
+def _del_att(global_attributes: dict) -> None:
+    """Remove lev1 only attributes"""
     att_del = ["ir_instrument", "met_instrument", "_accuracy"]
     att_names = global_attributes.keys()
     for name in list(att_names):
@@ -566,9 +585,7 @@ def _add_att(global_attributes: dict, coeff: dict) -> None:
 def load_product(filename: str):
     """Load existing lev2 file for deriving other products"""
     file = nc.Dataset(filename)
-    ret_freq = get_ret_freq(filename)
-    ret_ang = get_ret_ang(filename)
-    return file, ret_freq, ret_ang
+    return file
 
 
 def ele_retrieval(ele_obs: np.ndarray, coeff: dict) -> np.ndarray:
