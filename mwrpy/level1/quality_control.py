@@ -332,7 +332,7 @@ def spectral_consistency(
                     ).mean()
                     tb_mean = tb_mean.reindex(tb_df.index, method="nearest")
 
-                    fact = [2.5, 3.5]  # factor for receiver retrieval uncertainty
+                    fact = [3.0, 4.0]  # factor for receiver retrieval uncertainty
                     min_err = [0.2, 0.4]  # minimum channel error per receiver
                     # flag for individual channels based on retrieval uncertainty
                     flag_ind[
