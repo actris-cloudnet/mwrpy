@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.0 – 2023-12-13
+
+- Update lev2 quality flags and attributes
+- Change lev2 indexing to allow combining products retrieved with different elevation angles
+- Update thresholds for spectral retrieval
+
 ## 0.6.3 – 2023-12-05
 
 - Use tempfiles
