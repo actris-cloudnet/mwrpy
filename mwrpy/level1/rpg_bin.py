@@ -54,7 +54,7 @@ def stack_files(file_list: list[str]) -> tuple[dict, dict]:
     for file in file_list:
         try:
             header_tmp, data_tmp = read_type(file)
-        except (TypeError, ValueError) as err:
+        except (TypeError, ValueError, IOError) as err:
             logging.warning(err)
             continue
         _stack_header(header_tmp, header, np.add)
@@ -75,7 +75,10 @@ class RpgBin:
         self.data: dict = {}
         self._init_data()
         if str(file_list[0][-3:]).lower() != "his":
-            self.find_valid_times()
+            try:
+                self.find_valid_times()
+            except ValueError as err:
+                logging.warning(err)
 
     def _init_data(self):
         for key, data in self.raw_data.items():
@@ -124,6 +127,11 @@ class RpgBin:
                     else:
                         screened_data = array[ind, :]
                     self.data[key] = screened_data
+                else:
+                    self.data.pop(key, None)
+                    raise ValueError(
+                        ["Mismatch with time coordinate, removing: " + key]
+                    )
 
 
 def read_bls(file_name: str) -> tuple[dict, dict]:
