@@ -203,7 +203,7 @@ def get_products(
                 ret_product,
                 np.ones(len(index)) * Fill_Value_Float,
             )
-            if len(freq_win) == 1:
+            if len(freq_win) == 1 and len(index_ret) > 0:
                 (
                     rpg_dat["lwp"][index_ret],
                     rpg_dat["lwp_offset"][index_ret],
