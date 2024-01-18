@@ -9,7 +9,8 @@ def correct_lwp_offset(
     lev1: dict, lwp_org: np.ndarray, index: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray]:
     """This function corrects Lwp offset using the
-    2min standard deviation of the 31.4 GHz channel and IR temperature
+    2min Lwp standard deviation and the water vapor
+    channel as proxy for a humidity dependent threshold
 
     Args:
         lev1: Level 1 data.
@@ -33,7 +34,19 @@ def correct_lwp_offset(
     lwp_max = lwp_std.rolling(
         pd.tseries.frequencies.to_offset("20min"), center=True, min_periods=100
     ).max()
-    lwp[(lwcl_i != 0) | (lwp > 0.06) | (lwp_max["Lwp"][:] > 0.003)] = np.nan
+    freq_31 = np.where(np.round(lev1["frequency"][:], 1) == 31.4)[0]
+    freq_22 = np.where(np.round(lev1["frequency"][:], 1) == 22.2)[0]
+    tb_rat = pd.DataFrame(
+        {"Tb": np.squeeze(lev1["tb"][index, freq_22] / lev1["tb"][index, freq_31])},
+        index=ind,
+    )
+    tb_max = tb_rat.rolling(
+        pd.tseries.frequencies.to_offset("20min"), center=True, min_periods=100
+    ).max()
+
+    lwp[
+        (lwcl_i != 0) | (lwp > 0.06) | (lwp_max["Lwp"] > (tb_max["Tb"] * 0.0015))
+    ] = np.nan
     lwp_df = pd.DataFrame({"Lwp": lwp}, index=ind)
     lwp_offset = lwp_df.rolling(
         pd.tseries.frequencies.to_offset("20min"), center=True, min_periods=100
