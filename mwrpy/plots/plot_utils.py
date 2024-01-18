@@ -109,22 +109,23 @@ def _gap_array(time: ndarray, case_date, tgap: float = 5.0 / 60.0) -> ndarray:
     return gtim
 
 
-def _calculate_rolling_mean(
-    time: ndarray, data: ndarray, win: float = 0.5
-) -> tuple[ndarray, int]:
-    """Returns rolling mean and used window width."""
-    # width = len(time[time <= time[0] + win])
+def _calculate_rolling_mean(time: ndarray, data: ndarray, win: float = 0.5) -> ndarray:
+    """Returns rolling mean."""
     width = int(ma.round(win / ma.median(ma.diff(ma.masked_invalid(time)))))
+    data = ma.filled(data, np.nan)
     if (width % 2) != 0:
         width = width + 1
     if data.ndim == 1:
-        rolling_window = np.kaiser(width, 14)
-        rolling_mean = np.convolve(data, rolling_window, "valid")
-        rolling_mean = rolling_mean / ma.sum(rolling_window)
+        rolling_window = np.repeat(1.0, width) / width
+        rolling_mean = np.convolve(data, rolling_window, mode="valid")
+        edge = width // 2
+        rolling_mean = np.pad(
+            rolling_mean, (edge, edge - 1), mode="constant", constant_values=np.nan
+        )
     else:
         rolling_window = np.ones((1, width)) * np.blackman(width)
         rolling_mean = convolve2DFFT(data, rolling_window.T, max_missing=0.1)
-    return rolling_mean, width
+    return rolling_mean
 
 
 def _read_location(nc_file: str) -> str:
