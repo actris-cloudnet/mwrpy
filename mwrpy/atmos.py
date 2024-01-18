@@ -153,13 +153,14 @@ def winddir(spd: np.ndarray, drc: np.ndarray):
 
 
 def find_lwcl_free(lev1: dict) -> tuple[np.ndarray, np.ndarray]:
-    """Identifying liquid water cloud free periods using 31.4 GHz TB variability + IRT.
-    Uses pre-defined time index and additionally returns status of IRT availability"""
+    """Identifying liquid water cloud free periods using 31.4 GHz TB variability.
+    Uses water vapor channel as proxy for a humidity dependent threshold."""
 
-    index = np.ones(len(lev1["time"]), dtype=np.float32) * np.nan
+    index = np.ones(len(lev1["time"]), dtype=np.int32)
     status = np.ones(len(lev1["time"]), dtype=np.int32)
     freq_31 = np.where(np.round(lev1["frequency"][:], 1) == 31.4)[0]
-    if len(freq_31) == 1:
+    freq_22 = np.where(np.round(lev1["frequency"][:], 1) == 22.2)[0]
+    if len(freq_31) == 1 and len(freq_22) == 1:
         tb = np.squeeze(lev1["tb"][:, freq_31])
         tb[
             (lev1["pointing_flag"][:] == 1) | (lev1["elevation_angle"][:] < 89.0)
@@ -173,28 +174,17 @@ def find_lwcl_free(lev1: dict) -> tuple[np.ndarray, np.ndarray]:
             pd.tseries.frequencies.to_offset("20min"), center=True, min_periods=100
         ).max()
 
-        if "irt" in lev1:
-            tb_thres = 0.15
-            irt = lev1["irt"][:, :]
-            irt[irt == -999.0] = np.nan
-            irt = np.nanmean(irt, axis=1) if irt.shape[1] > 1 else np.squeeze(irt)
-            irt[
-                (lev1["pointing_flag"][:] == 1) | (lev1["elevation_angle"][:] < 89.0)
-            ] = np.nan
-            irt_df = pd.DataFrame({"Irt": irt[:]}, index=ind)
-            irt_mx = irt_df.rolling(
-                pd.tseries.frequencies.to_offset("20min"), center=True, min_periods=100
-            ).max()
-            index[(irt_mx["Irt"] > 263.15) & (tb_mx["Tb"] > tb_thres)] = 1.0
-            status[:] = 0
+        tb_wv = np.squeeze(lev1["tb"][:, freq_22])
+        tb_rat = pd.DataFrame({"Tb": tb_wv / tb}, index=ind)
+        tb_max = tb_rat.rolling(
+            pd.tseries.frequencies.to_offset("20min"), center=True, min_periods=100
+        ).max()
+        index[tb_mx["Tb"] < (0.1 * tb_max["Tb"])] = 0
 
-        tb_thres = 0.2
-        index[(tb_mx["Tb"] > tb_thres)] = 1.0
         df = pd.DataFrame({"index": index}, index=ind)
         df = df.bfill(limit=120)
         df = df.ffill(limit=120)
         index = np.array(df["index"])
-        index[(tb_mx["Tb"] < tb_thres) & (index != 1.0)] = 0.0
-        index[(lev1["elevation_angle"][:] < 89.0) & (index != 1.0)] = 2.0
+        index[(lev1["elevation_angle"][:] < 89.0) & (index != 0)] = 2
 
-    return np.nan_to_num(index, nan=2).astype(int), status
+    return index, status
