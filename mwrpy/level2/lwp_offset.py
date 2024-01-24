@@ -36,8 +36,10 @@ def correct_lwp_offset(
     ).max()
     freq_31 = np.where(np.round(lev1["frequency"][:], 1) == 31.4)[0]
     freq_22 = np.where(np.round(lev1["frequency"][:], 1) == 22.2)[0]
+    tb = lev1["tb"][index, :]
+    tb[lev1["elevation_angle"][index] < 89.0] = np.nan
     tb_rat = pd.DataFrame(
-        {"Tb": np.squeeze(lev1["tb"][index, freq_22] / lev1["tb"][index, freq_31])},
+        {"Tb": np.squeeze(tb[:, freq_22] / tb[:, freq_31])},
         index=ind,
     )
     tb_max = tb_rat.rolling(
@@ -45,13 +47,24 @@ def correct_lwp_offset(
     ).max()
 
     lwp[
-        (lwcl_i != 0) | (lwp > 0.06) | (lwp_max["Lwp"] > (tb_max["Tb"] * 0.002))
+        (lwcl_i != 0) | (lwp > 0.06) | (lwp_max["Lwp"] > (tb_max["Tb"] * 0.0025))
     ] = np.nan
     lwp_df = pd.DataFrame({"Lwp": lwp}, index=ind)
     lwp_offset = lwp_df.rolling(
         pd.tseries.frequencies.to_offset("20min"), center=True, min_periods=100
     ).mean()
+    lwp_offset = lwp_offset.interpolate(method="linear")
+    lwp_offset = lwp_offset.bfill()
 
+    lwp_mx = lwp_offset.rolling(
+        pd.tseries.frequencies.to_offset("60min"), center=True, min_periods=100
+    ).max()
+    lwp_mn = lwp_offset.rolling(
+        pd.tseries.frequencies.to_offset("60min"), center=True, min_periods=100
+    ).min()
+    lwp_offset["Lwp"][
+        (lwp_mx["Lwp"][:] - lwp_mn["Lwp"][:]) / tb_max["Tb"] > (tb_max["Tb"] * 0.002)
+    ] = np.nan
     lwp_offset = lwp_offset.interpolate(method="linear")
     lwp_offset = lwp_offset.bfill()
     lwp_offset["Lwp"][(np.isnan(lwp_offset["Lwp"])) | (lwp_org == -999.0)] = 0.0
