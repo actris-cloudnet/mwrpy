@@ -176,10 +176,10 @@ def find_lwcl_free(lev1: dict) -> tuple[np.ndarray, np.ndarray]:
 
         tb_wv = np.squeeze(lev1["tb"][:, freq_22])
         tb_rat = pd.DataFrame({"Tb": tb_wv / tb}, index=ind)
-        tb_max = tb_rat.rolling(
+        tb_rat = tb_rat.rolling(
             pd.tseries.frequencies.to_offset("20min"), center=True, min_periods=100
         ).max()
-        index[tb_mx["Tb"] < (0.1 * tb_max["Tb"])] = 0
+        index[tb_mx["Tb"] < np.median(tb_rat["Tb"]) * 0.1] = 0
 
         df = pd.DataFrame({"index": index}, index=ind)
         df = df.bfill(limit=120)
