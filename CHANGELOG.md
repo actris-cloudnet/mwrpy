@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.1 – 2024-02-07
+
+- Skip invalid files
+
 ## 0.7.0 – 2023-12-13
 
 - Update lev2 quality flags and attributes
