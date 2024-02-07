@@ -16,6 +16,10 @@ Dim = int | tuple[int, ...]
 Field = tuple[str, str] | tuple[str, str, Dim]
 
 
+class InvalidFileError(Exception):
+    pass
+
+
 def stack_files(file_list: list[str]) -> tuple[dict, dict]:
     """This function calls extension specific reader and stacks data and header."""
 
@@ -54,8 +58,8 @@ def stack_files(file_list: list[str]) -> tuple[dict, dict]:
     for file in file_list:
         try:
             header_tmp, data_tmp = read_type(file)
-        except (TypeError, ValueError, IOError) as err:
-            logging.warning(err)
+        except (TypeError, ValueError, InvalidFileError) as err:
+            logging.warning(f"Skipping '{file}': {err}")
             continue
         _stack_header(header_tmp, header, np.add)
         _stack_data(data_tmp, data, np.concatenate)
@@ -117,7 +121,7 @@ class RpgBin:
 
     def _screen(self, ind: np.ndarray):
         if len(ind) < 1:
-            raise RuntimeError(["Error: no valid data for date: " + str(self.date)])
+            raise InvalidFileError(f"No valid data for date: {self.date}")
         n_time = len(self.data["time"])
         for key, array in self.data.items():
             if isinstance(array, np.ndarray):
@@ -145,7 +149,7 @@ def read_bls(file_name: str) -> tuple[dict, dict]:
         if header["_code"] == 567846000:
             version = 2
         else:
-            raise RuntimeError(f"Error: BLS file code {header['_code']} not supported")
+            raise InvalidFileError(f"BLS file code {header['_code']} not supported")
         header |= _read_one(
             file,
             [
@@ -189,7 +193,7 @@ def read_brt(file_name: str) -> tuple[dict, dict]:
         elif header["_code"] == 666000:
             version = 2
         else:
-            raise RuntimeError(f"Error: BRT file code {header['_code']} not supported")
+            raise InvalidFileError(f"BRT file code {header['_code']} not supported")
         header |= _read_one(
             file,
             [
@@ -227,7 +231,7 @@ def read_blb(file_name: str) -> tuple[dict, dict]:
             header |= _read_one(file, [("_n_f", "<i4")])
             version = 2
         else:
-            raise RuntimeError(f"Error: BLB file code {header['_code']} not supported")
+            raise InvalidFileError(f"BLB file code {header['_code']} not supported")
         header |= _read_one(
             file,
             [
@@ -288,9 +292,7 @@ def read_irt(file_name: str) -> tuple[dict, dict]:
             case 671112000:
                 version = 3
             case _:
-                raise ValueError(
-                    f"Error: IRT file code {header['_code']} not supported"
-                )
+                raise InvalidFileError(f"IRT file code {header['_code']} not supported")
         if version == 1:
             header["_n_f"] = 1
             header["_f"] = 11.1
@@ -352,7 +354,7 @@ def read_met(file_name: str) -> tuple[dict, dict]:
         elif header["_code"] == 599658944:
             header |= _read_one(file, [("_n_add", "b")])
         else:
-            raise ValueError(f"Error: MET file code {header['_code']} not supported")
+            raise InvalidFileError(f"MET file code {header['_code']} not supported")
         dt: list[Field] = [
             ("time", "<i4"),
             ("rain", "b"),
@@ -393,7 +395,7 @@ def read_met(file_name: str) -> tuple[dict, dict]:
 def _read(file: BinaryIO, fields: list[Field], count: int) -> np.ndarray:
     arr = np.fromfile(file, np.dtype(fields), count)
     if (read := len(arr)) != count:
-        raise IOError(f"Read {read} of {count} records from file")
+        raise InvalidFileError(f"Read {read} of {count} records from file")
     return arr
 
 
@@ -414,7 +416,7 @@ def _check_eof(file: BinaryIO):
     file.seek(0, SEEK_END)
     end_offset = file.tell()
     if current_offset != end_offset:
-        raise IOError(f"{end_offset - current_offset} unread bytes")
+        raise InvalidFileError(f"{end_offset - current_offset} unread bytes")
 
 
 def _decode_angles(
