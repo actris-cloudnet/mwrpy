@@ -190,7 +190,7 @@ def get_products(
                         * elevation_angle[index]
                     )
                 )
-                < 0.5,
+                <= 0.5,
                 axis=1,
             )
         )[0]  # type: ignore
@@ -203,12 +203,12 @@ def get_products(
                 ret_product,
                 np.ones(len(index)) * Fill_Value_Float,
             )
-            if len(freq_win) == 1:
+            if len(freq_win) == 1 and len(index_ret) > 0:
                 (
                     rpg_dat["lwp"][index_ret],
                     rpg_dat["lwp_offset"][index_ret],
                 ) = correct_lwp_offset(
-                    lev1.variables, ret_product[index_ret], index_ret
+                    lev1.variables, ret_product[index_ret], index[index_ret]
                 )
         else:
             rpg_dat["iwv"] = ret_product
@@ -313,7 +313,7 @@ def get_products(
                         * elevation_angle[index]
                     )
                 )
-                < 0.5,
+                <= 0.5,
                 axis=1,
             )
         )[0]  # type: ignore

@@ -146,7 +146,9 @@ def prepare_data(
                 _add_bls(rpg_bin, rpg_bls, rpg_hkd, params)
             else:
                 file_list_blb = get_file_list(path_to_files, "BLB")
-                if len(file_list_blb) > 0:
+                if len(file_list_blb) > 0 and np.any(
+                    rpg_hkd.data["status"][:] & 2**18 > 0
+                ):
                     rpg_blb = RpgBin(file_list_blb)
                     _add_blb(rpg_bin, rpg_blb, rpg_hkd, params)
 
