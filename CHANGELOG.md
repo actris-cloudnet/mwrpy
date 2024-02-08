@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0 – 2024-02-08
+
+- Improve LWP offset correction with humidity dependent threshold
+- Adjust method for cloud detection
+- Fix rolling mean calculation for plotting
+
 ## 0.7.1 – 2024-02-07
 
 - Skip invalid files
