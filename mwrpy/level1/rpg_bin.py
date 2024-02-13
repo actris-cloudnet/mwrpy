@@ -8,16 +8,13 @@ from typing import Any, BinaryIO, Literal, TypeAlias
 import numpy as np
 
 from mwrpy import utils
+from mwrpy.exceptions import InvalidFileError, MissingInputData
 
 Fill_Value_Float = -999.0
 Fill_Value_Int = -99
 
 Dim = int | tuple[int, ...]
 Field = tuple[str, str] | tuple[str, str, Dim]
-
-
-class InvalidFileError(Exception):
-    pass
 
 
 def stack_files(file_list: list[str]) -> tuple[dict, dict]:
@@ -64,6 +61,8 @@ def stack_files(file_list: list[str]) -> tuple[dict, dict]:
         _stack_header(header_tmp, header, np.add)
         _stack_data(data_tmp, data, np.concatenate)
 
+    if not data or not header:
+        raise MissingInputData("No valid data found in files")
     return header, data
 
 

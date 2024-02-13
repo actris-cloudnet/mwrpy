@@ -127,6 +127,7 @@ def prepare_data(
 
         file_list_hkd = get_file_list(path_to_files, "HKD")
         rpg_hkd = RpgBin(file_list_hkd)
+
         rpg_bin.data["status"] = np.zeros(
             (len(rpg_bin.data["time"]), len(params["receiver"])), np.int32
         )

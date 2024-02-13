@@ -9,6 +9,7 @@ from timezonefinder import TimezoneFinder
 
 from mwrpy import rpg_mwr
 from mwrpy.atmos import eq_pot_tem, pot_tem, rel_hum
+from mwrpy.exceptions import MissingInputData
 from mwrpy.level2.get_ret_coeff import get_mvr_coeff
 from mwrpy.level2.lev2_meta_nc import get_data_attributes
 from mwrpy.level2.lwp_offset import correct_lwp_offset
@@ -22,10 +23,6 @@ from mwrpy.utils import (
 
 Fill_Value_Float = -999.0
 Fill_Value_Int = -99
-
-
-class MissingInputData(Exception):
-    pass
 
 
 def lev2_to_nc(
