@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.1 – 2024-02-13
+
+- Add exceptions.py
+- Avoid mwr-multi processing if only one measurement
+
 ## 0.8.0 – 2024-02-08
 
 - Improve LWP offset correction with humidity dependent threshold
