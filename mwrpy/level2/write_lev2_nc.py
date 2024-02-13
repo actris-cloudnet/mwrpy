@@ -379,7 +379,7 @@ def get_products(
                     axis=2,
                 )
 
-        if len(ibl) == 0:
+        if len(ibl) <= 1:
             raise MissingInputData(
                 f"No suitable data found for processing for data type: {data_type}"
             )
