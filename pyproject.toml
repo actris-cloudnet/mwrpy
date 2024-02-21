@@ -32,6 +32,7 @@ dev = ["release-version"]
 
 [project.urls]
 Homepage = "https://github.com/actris-cloudnet/mwrpy"
+Documentation = "https://actris-cloudnet.github.io/cloudnetpy/"
 Repository = "https://github.com/actris-cloudnet/mwrpy"
 Changelog = "https://github.com/actris-cloudnet/mwrpy/blob/main/CHANGELOG.md"
 
