@@ -3,15 +3,29 @@
 [![MWRpy tests](https://github.com/actris-cloudnet/mwrpy/actions/workflows/test.yml/badge.svg)](https://github.com/actris-cloudnet/mwrpy/actions/workflows/test.yml)
 [![PyPI version](https://badge.fury.io/py/mwrpy.svg)](https://badge.fury.io/py/mwrpy)
 
-MWRpy is a Python software to process RPG Microwave Radiometer data and is developed at the University of Cologne, Germany as part of the [Aerosol, Clouds and Trace Gases Research Infrastructure (ACTRIS)](https://actris.eu/).
+MWRpy is a Python software to process RPG Microwave Radiometer data and is developed
+at the University of Cologne, Germany as part
+of the [Aerosol, Clouds and Trace Gases Research Infrastructure (ACTRIS)](https://actris.eu/).
 
-The software features reading raw data, Level 1 quality control, generation of Level 2 data products and visualization.
+The software features reading raw data, Level 1 quality control, generation of
+Level 2 data products and visualization and is based on the IDL code
+[mwr_pro](https://zenodo.org/records/7973553).
 
-The data format including metadata information, variable names and file naming is designed to be compliant with the data structure and naming convention developed in the [EUMETNET Profiling Programme E-PROFILE](https://www.eumetnet.eu/).
+The netCDF data format including metadata information, variable names and file naming
+is designed to be compliant with the data structure and naming convention
+developed in the [EUMETNET Profiling Programme E-PROFILE](https://www.eumetnet.eu/).
+
+MWRpy documentation: <https://actris-cloudnet.github.io/mwrpy/>
 
 ![MWRpy example output](https://atmos.meteo.uni-koeln.de/~hatpro/quicklooks/obs/site/jue/tophat/actris/level2/2022/10/29/20221029_juelich_temperature.png)
 
 ## Installation
+
+From PyPI:
+
+```shell
+python3 -m pip install mwrpy
+```
 
 From GitHub:
 
@@ -29,12 +43,12 @@ MWRpy requires Python 3.10 or newer.
 ## Configuration
 
 The folder `mwrpy/site_config/` contains configuration files for each instrument
-type. For example, this is the [configuration file for HATPRO](mwrpy/site_config/hatpro.yaml).
+type, which defines the input and output data paths etc.
+For example, this is the [configuration file for RPG-HATPRO](mwrpy/site_config/hatpro.yaml).
 
-The folders for each site, e.g. `mwrpy/site_config/hyytiala/`, contain
-site-specific retrieval coefficients and the file `config.yaml` which
-defines the input and output data paths etc. For example, this is the
-[configuration file for Hyytiälä](mwrpy/site_config/hyytiala/config.yaml).
+The folders for each site, e.g. `mwrpy/site_config/hyytiala/`, contain a
+site and instrument specific configuration file (`config.yaml`) and retrieval coefficients.
+For example, this is the [configuration file for Hyytiälä](mwrpy/site_config/hyytiala/config.yaml).
 
 ## Command line usage
 
@@ -45,21 +59,21 @@ MWRpy can be run using the command line tool `mwrpy/cli.py`:
 
 Arguments:
 
-| Short | Long         | Default           | Description                                                                        |
-| :---- | :----------- | :---------------- | :--------------------------------------------------------------------------------- |
-| `-h`  | `--help`     |                   | Show help and exit.                                                                |
-| `-s`  | `--site`     |                   | Site to process data from, e.g, `hyytiala`. Required.                              |
-| `-d`  | `--date`     |                   | Single date to be processed. Alternatively, `--start` and `--stop` can be defined. |
-|       | `--start`    | `current day - 1` | Starting date.                                                                     |
-|       | `--stop`     | `current day `    | Stopping date.                                                                     |
-| `-p`  | `--products` | all               | Processed products, e.g, `1C01,2I02,2P03`, see below.                              |
+| Short | Long         | Default             | Description                                                                        |
+| :---- | :----------- | :------------------ | :--------------------------------------------------------------------------------- |
+| `-h`  | `--help`     |                     | Show help and exit.                                                                |
+| `-s`  | `--site`     |                     | Site to process data from, e.g, `hyytiala`. Required.                              |
+| `-d`  | `--date`     |                     | Single date to be processed. Alternatively, `--start` and `--stop` can be defined. |
+|       | `--start`    | `current day - 1`   | Starting date.                                                                     |
+|       | `--stop`     | `current day `      | Stopping date.                                                                     |
+| `-p`  | `--products` | 1C01, single, multi | Processed products, e.g, `1C01, 2I02, 2P03, single`, see below.                    |
 
 Commands:
 
-| Command   | Description                      |
-| :-------- | :------------------------------- |
-| `process` | Process data and generate plots. |
-| `plot`    | Only generate plots.             |
+| Command   | Description                                |
+| :-------- | :----------------------------------------- |
+| `process` | Process data and generate plots (default). |
+| `plot`    | Only generate plots.                       |
 
 ### Data types
 
