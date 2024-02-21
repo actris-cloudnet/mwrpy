@@ -20,6 +20,7 @@ repos:
     rev: v3.0.3
     hooks:
       - id: prettier
+        exclude: ^docs/source/_templates/
   - repo: https://github.com/pappasam/toml-sort
     rev: v0.23.1
     hooks:
