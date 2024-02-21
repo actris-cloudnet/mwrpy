@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.2 – 2024-02-21
+
+- Add documentation
+
 ## 0.8.1 – 2024-02-13
 
 - Add exceptions.py
