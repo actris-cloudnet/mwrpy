@@ -62,11 +62,12 @@ def correct_lwp_offset(
     lwp_mn = lwp_offset.rolling(
         pd.tseries.frequencies.to_offset("60min"), center=True, min_periods=100
     ).min()
-    lwp_offset["Lwp"][
-        (lwp_mx["Lwp"][:] - lwp_mn["Lwp"][:]) / tb_max["Tb"] > (tb_max["Tb"] * 0.002)
+    lwp_offset.loc[
+        (lwp_mx["Lwp"][:] - lwp_mn["Lwp"][:]) / tb_max["Tb"] > (tb_max["Tb"] * 0.002),
+        "Lwp",
     ] = np.nan
     lwp_offset = lwp_offset.interpolate(method="linear")
     lwp_offset = lwp_offset.bfill()
-    lwp_offset["Lwp"][(np.isnan(lwp_offset["Lwp"])) | (lwp_org == -999.0)] = 0.0
+    lwp_offset.loc[(np.isnan(lwp_offset["Lwp"])) | (lwp_org == -999.0), "Lwp"] = 0.0
     lwp_org -= lwp_offset["Lwp"].values
     return lwp_org, lwp_offset["Lwp"].values
