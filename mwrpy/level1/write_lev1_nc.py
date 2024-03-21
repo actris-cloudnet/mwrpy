@@ -140,18 +140,16 @@ def prepare_data(
         rpg_bin.data["status"][ind_brt, :] = hkd_sanity_check(
             rpg_hkd.data["status"][ind_hkd], params
         )
-        if params["scan_time"] != Fill_Value_Int:
-            file_list_bls = get_file_list(path_to_files, "BLS")
-            if len(file_list_bls) > 0:
-                rpg_bls = RpgBin(file_list_bls)
-                _add_bls(rpg_bin, rpg_bls, rpg_hkd, params)
-            else:
-                file_list_blb = get_file_list(path_to_files, "BLB")
-                if len(file_list_blb) > 0 and np.any(
-                    rpg_hkd.data["status"][:] & 2**18 > 0
-                ):
-                    rpg_blb = RpgBin(file_list_blb)
-                    _add_blb(rpg_bin, rpg_blb, rpg_hkd, params)
+
+        file_list_bls = get_file_list(path_to_files, "BLS")
+        if len(file_list_bls) > 0:
+            rpg_bls = RpgBin(file_list_bls)
+            _add_bls(rpg_bin, rpg_bls, rpg_hkd, params)
+        else:
+            file_list_blb = get_file_list(path_to_files, "BLB")
+            if len(file_list_blb) > 0 and np.any(rpg_hkd.data["status"][:] & 2**18 > 0):
+                rpg_blb = RpgBin(file_list_blb)
+                _add_blb(rpg_bin, rpg_blb, rpg_hkd, params)
 
         if params["azi_cor"] != Fill_Value_Float:
             _azi_correction(rpg_bin.data, params)
@@ -405,13 +403,14 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict) -> None:
             if bool(key) is True
         ]
     )
+    scan_time = np.median(seqs[1:-1, 2])
 
     for time_ind, time_blb in enumerate(blb.data["time"]):
         seqi = np.where(
             np.abs(hkd.data["time"][seqs[:, 1] + seqs[:, 2] - 1] - time_blb) < 60
         )[0]
         if len(seqi) != 1:
-            time_blb = time_blb + int(params["scan_time"])
+            time_blb = time_blb + int(scan_time)
             seqi = np.where(
                 np.abs(hkd.data["time"][seqs[:, 1] + seqs[:, 2] - 1] - time_blb) < 60
             )[0]
@@ -476,7 +475,7 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict) -> None:
             if len(time_bnds_add) == 0:
                 time_bnds_add = add_time_bounds(
                     time_add,
-                    int(np.floor(params["scan_time"] / (blb.header["_n_ang"]))),
+                    int(np.floor(scan_time / (blb.header["_n_ang"]))),
                 )
             else:
                 time_bnds_add = np.concatenate(
@@ -484,7 +483,7 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict) -> None:
                         time_bnds_add,
                         add_time_bounds(
                             time_add,
-                            int(np.floor(params["scan_time"] / (blb.header["_n_ang"]))),
+                            int(np.floor(scan_time / (blb.header["_n_ang"]))),
                         ),
                     )
                 )
