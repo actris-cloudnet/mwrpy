@@ -159,7 +159,7 @@ ATTRIBUTES_1B01 = {
         units="K",
     ),
     "azimuth_angle": MetaData(
-        long_name="Azimuth angle",
+        long_name="Sensor azimuth angle",
         standard_name="sensor_azimuth_angle",
         units="degree",
         comment="0=North, 90=East, 180=South, 270=West",
@@ -321,7 +321,7 @@ ATTRIBUTES_1B21 = {
         units="m s-1",
     ),
     "met_quality_flag": MetaData(
-        long_name="Meterological data quality flag",
+        long_name="Meteorological data quality flag",
         units="1",
         definition=DEFINITIONS_1B21["met_quality_flag"],
         comment="0=ok, 1=problem. Note: should also be set to 1\n"

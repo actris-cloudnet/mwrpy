@@ -12,6 +12,7 @@ Welcome to MWRpy's documentation!
    overview
    installation
    mwrpy_processing
+   fileformat
    guide
 
 
