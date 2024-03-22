@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.3 – 2024-03-22
+
+- Fix scan time for BLB files
+
 ## 0.8.2 – 2024-02-21
 
 - Add documentation
