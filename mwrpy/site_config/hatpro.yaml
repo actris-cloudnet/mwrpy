@@ -95,9 +95,6 @@ params:
   # integration time of measurements in seconds
   int_time: 1
 
-  # integration time for BL scans in seconds
-  scan_time: 50.
-
   # Azimuth angle is transformed to geographical coordinates (E=90 and W=270), currently only for RPG scanners.
   # If you do not want to transform the coordinates set azi_cor to -999.
   azi_cor: -999.

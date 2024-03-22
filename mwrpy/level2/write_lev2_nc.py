@@ -14,7 +14,6 @@ from mwrpy.level2.get_ret_coeff import get_mvr_coeff
 from mwrpy.level2.lev2_meta_nc import get_data_attributes
 from mwrpy.level2.lwp_offset import correct_lwp_offset
 from mwrpy.utils import (
-    add_time_bounds,
     get_ret_info,
     interpol_2d,
     interpolate_2d,
@@ -67,7 +66,7 @@ def lev2_to_nc(
     with nc.Dataset(lev1_file) as lev1:
         params["altitude"] = np.median(lev1.variables["altitude"][:])
 
-        rpg_dat, coeff, index = get_products(
+        rpg_dat, coeff, index, scan_time = get_products(
             site,
             lev1,
             data_type,
@@ -76,7 +75,7 @@ def lev2_to_nc(
             temp_file=temp_file,
             hum_file=hum_file,
         )
-        _combine_lev1(lev1, rpg_dat, index, data_type, params)
+        _combine_lev1(lev1, rpg_dat, index, data_type, scan_time)
         _del_att(global_attributes)
         hatpro = rpg_mwr.Rpg(rpg_dat)
         hatpro.data = get_data_attributes(hatpro.data, data_type, coeff)
@@ -91,7 +90,7 @@ def get_products(
     coeff_files: list | None,
     temp_file: str | None = None,
     hum_file: str | None = None,
-) -> tuple[dict, dict, np.ndarray]:
+) -> tuple[dict, dict, np.ndarray, np.ndarray]:
     """Derive specified Level 2 products."""
 
     if "elevation_angle" in lev1.variables:
@@ -99,7 +98,7 @@ def get_products(
     else:
         elevation_angle = 90 - lev1["zenith_angle"][:]
 
-    rpg_dat, coeff, index = {}, {}, np.empty(0)
+    rpg_dat, coeff, index, scan_time = {}, {}, np.empty(0), np.empty(0)
 
     if data_type in ("2I01", "2I02"):
         product = "lwp" if data_type == "2I01" else "iwv"
@@ -351,10 +350,11 @@ def get_products(
             & (lev1["pointing_flag"][:] == 1)
             & (np.arange(len(lev1["time"])) + len(coeff["AG"]) < len(lev1["time"]))
         )[0]
-        ibl, tb = (
+        ibl, tb, scan_time = (
             np.empty([0, len(coeff["AG"])], np.int32),
             np.ones((len(freq_ind), len(coeff["AG"]), 0), np.float32)
             * Fill_Value_Float,
+            np.empty(0, np.int32),
         )
 
         for ix0v in ix0:
@@ -367,6 +367,11 @@ def get_products(
                     atol=0.5,
                 )
             ):
+                scan_time = np.append(
+                    scan_time,
+                    [np.array(lev1["time"][ix1v - 1] - lev1["time"][ix0v])],
+                    axis=0,
+                )
                 ibl = np.append(ibl, [np.array(range(ix0v, ix1v))], axis=0)
                 tb = np.concatenate(
                     (
@@ -513,9 +518,9 @@ def get_products(
             rpg_dat,
             np.arange(len(tem_dat.variables["time"][:])),
             data_type,
-            params,
+            scan_time,
         )
-    return rpg_dat, coeff, index
+    return rpg_dat, coeff, index, scan_time
 
 
 def _get_qf(
@@ -540,7 +545,7 @@ def _combine_lev1(
     rpg_dat: dict,
     index: np.ndarray,
     data_type: str,
-    params: dict,
+    scan_time: np.ndarray,
 ) -> None:
     """add level1 data"""
     lev1_vars = [
@@ -558,9 +563,9 @@ def _combine_lev1(
             if ivars not in lev1.variables:
                 continue
             if (ivars == "time_bnds") & (data_type == "2P02"):
-                rpg_dat[ivars] = add_time_bounds(
-                    lev1["time"][index], params["scan_time"]
-                )
+                rpg_dat[ivars] = np.ndarray((len(index), 2))
+                rpg_dat[ivars][:, 0] = lev1["time"][index] - scan_time
+                rpg_dat[ivars][:, 1] = lev1["time"][index]
             elif (ivars == "time_bnds") & (data_type in ("2P04", "2P07", "2P08")):
                 rpg_dat[ivars] = np.ones(lev1[ivars].shape, np.int32) * Fill_Value_Int
             else:
