@@ -403,7 +403,7 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict) -> None:
             if bool(key) is True
         ]
     )
-    scan_time = np.median(seqs[1:-1, 2])
+    scan_time = np.median(seqs[:, 2])
 
     for time_ind, time_blb in enumerate(blb.data["time"]):
         seqi = np.where(
