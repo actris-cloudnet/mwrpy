@@ -10,9 +10,6 @@ import numpy as np
 from mwrpy import utils
 from mwrpy.exceptions import InvalidFileError, MissingInputData
 
-Fill_Value_Float = -999.0
-Fill_Value_Int = -99
-
 Dim = int | tuple[int, ...]
 Field = tuple[str, str] | tuple[str, str, Dim]
 
@@ -29,10 +26,11 @@ def stack_files(file_list: list[str]) -> tuple[dict, dict]:
                         and value.shape[1] != target[name].shape[1]
                         and name == "irt"
                     ):
-                        value = np.hstack(
-                            (value, np.ones((len(value), 1)) * Fill_Value_Float)
-                        )
-                        target[name] = fun((target[name], value))
+                        raise NotImplementedError("Fix this")
+                        # value = np.hstack(
+                        #    (value, np.ones((len(value), 1)) * Fill_Value_Float)
+                        # )
+                        # target[name] = fun((target[name], value))
                     else:
                         target[name] = fun((target[name], value))
             elif value.ndim > 0 and name not in target:
