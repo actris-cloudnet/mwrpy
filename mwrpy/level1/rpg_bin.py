@@ -6,6 +6,7 @@ from io import SEEK_END
 from typing import Any, BinaryIO, Literal, TypeAlias
 
 import numpy as np
+from numpy import ma
 
 from mwrpy import utils
 from mwrpy.exceptions import InvalidFileError, MissingInputData
@@ -19,6 +20,7 @@ def stack_files(file_list: list[str]) -> tuple[dict, dict]:
 
     def _stack_data(source: dict, target: dict, fun: Callable):
         for name, value in source.items():
+            value = ma.array(value)
             if value.ndim > 0 and name in target:
                 if target[name].ndim == value.ndim:
                     if (

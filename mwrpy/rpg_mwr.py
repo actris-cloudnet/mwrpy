@@ -233,10 +233,7 @@ def _write_vars2nc(nc_file: netCDF4.Dataset, mwr_variables: dict) -> None:
     """Iterates over RPG instances and write to netCDF file."""
 
     for obj in mwr_variables.values():
-        if obj.data_type == "f4":
-            fill_value = -999.0
-        else:
-            fill_value = -99
+        fill_value = netCDF4.default_fillvals[obj.data_type]
 
         size = obj.dimensions or _get_dimensions(nc_file, obj.data)
         if obj.name == "time_bnds":
@@ -249,6 +246,7 @@ def _write_vars2nc(nc_file: netCDF4.Dataset, mwr_variables: dict) -> None:
             size = "ir_wavelength"
         if obj.name == "t_amb":
             size = ("time", "t_amb_nb")
+
         nc_variable = nc_file.createVariable(
             obj.name, obj.data_type, size, zlib=True, fill_value=fill_value
         )

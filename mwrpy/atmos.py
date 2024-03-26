@@ -91,10 +91,10 @@ def calc_p_baro(
         (~ma.getmaskarray(q).any(axis=1)) & (~ma.getmaskarray(T).any(axis=1)), 0
     ] = p[(~ma.getmaskarray(q).any(axis=1)) & (~ma.getmaskarray(T).any(axis=1))]
     for ialt in np.arange(len(z) - 1) + 1:
-        p_baro[:, ialt] = p_baro[:, ialt - 1] * np.exp(
+        p_baro[:, ialt] = p_baro[:, ialt - 1] * ma.exp(
             -scipy.constants.g
             * (z[ialt] - z[ialt - 1])
-            / (con.RS * np.mean([Tv[:, ialt], Tv[:, ialt - 1]]))
+            / (con.RS * ma.mean([Tv[:, ialt], Tv[:, ialt - 1]]))
         )
 
     return p_baro

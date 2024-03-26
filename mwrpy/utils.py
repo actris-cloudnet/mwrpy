@@ -20,8 +20,6 @@ from yaml.loader import SafeLoader
 SECONDS_PER_MINUTE = 60
 SECONDS_PER_HOUR = 3600
 SECONDS_PER_DAY = 86400
-Fill_Value_Float = -999.0
-Fill_Value_Int = -99
 Epoch = tuple[int, int, int]
 
 
@@ -204,24 +202,39 @@ def interpolate_2d(
 
 
 def add_interpol1d(
-    data0: dict, data1: np.ndarray, time1: np.ndarray, output_name: str
+    data0: dict, data1: ma.MaskedArray, time1: np.ndarray, output_name: str
 ) -> None:
-    """Adds interpolated 1d field to dict
+    """Adds interpolated 1d field to dict, supporting masked arrays.
+
     Args:
         data0: Output dict.
-        data1: Input field to be added & interpolated.
+        data1: Input field to be added & interpolated. Supports masked arrays.
         time1: Time of input field.
     """
-    if data1.ndim > 1:
-        data0[output_name] = (
-            np.ones([len(data0["time"]), data1.shape[1]], np.float32) * Fill_Value_Float
-        )
-        for ndim in range(data1.shape[1]):
-            data0[output_name][:, ndim] = np.interp(
-                data0["time"], time1, data1[:, ndim]
+
+    interpolated_data: np.ndarray = np.array([])
+    n_time = len(data0["time"])
+
+    iter = data1.T if data1.ndim > 1 else [data1]
+
+    for input_data in iter:
+        valid_mask = ~ma.getmaskarray(input_data)
+        if ~valid_mask.all():
+            result = ma.masked_all(n_time)
+        else:
+            valid_data = input_data[valid_mask]
+            valid_time = time1[valid_mask]
+            interpolated_values = np.interp(data0["time"], valid_time, valid_data)
+            interpolated_mask = (
+                np.interp(data0["time"], valid_time, valid_mask.astype(float)) < 0.5
             )
-    else:
-        data0[output_name] = np.interp(data0["time"], time1, data1)
+            result = ma.masked_array(interpolated_values, mask=interpolated_mask)
+        interpolated_data = ma.append(interpolated_data, result)
+
+    if data1.ndim > 1:
+        interpolated_data = np.reshape(interpolated_data, (n_time, -1))
+
+    data0[output_name] = interpolated_data
 
 
 def seconds2date(time_in_seconds: float, epoch: Epoch = (1970, 1, 1)) -> list:
@@ -254,7 +267,7 @@ def str_to_numeric(value: str) -> int | float:
 
 def add_time_bounds(time_arr: np.ndarray, int_time: int) -> np.ndarray:
     """Adds time bounds"""
-    time_bounds = np.ones([len(time_arr), 2], np.int32) * Fill_Value_Int
+    time_bounds = np.empty((len(time_arr), 2), dtype=np.int32)
     time_bounds[:, 0] = time_arr - int_time
     time_bounds[:, 1] = time_arr
 

@@ -12,9 +12,6 @@ from mwrpy.level2.get_ret_coeff import get_mvr_coeff
 from mwrpy.level2.write_lev2_nc import retrieval_input
 from mwrpy.utils import get_coeff_list, setbit
 
-Fill_Value_Float = -999.0
-Fill_Value_Int = -99
-
 
 def apply_qc(
     site: str | None, data_in: RpgBin, params: dict, coeff_files: list | None
@@ -54,7 +51,7 @@ def apply_qc(
                 data["quality_flag_status"][:, freq], 0
             )
         else:
-            ind = np.where(data["tb"][:, freq] == Fill_Value_Float)
+            ind = np.where(ma.getmaskarray(data["tb"][:, freq]))
             data["quality_flag"][ind, freq] = setbit(data["quality_flag"][ind, freq], 0)
 
         # Bit 2: TB threshold (lower range)
@@ -126,12 +123,12 @@ def orbpos(data: dict, params: dict) -> np.ndarray:
     and returns index for observations in the direction of the sun"""
 
     sun: dict = {
-        "azimuth_angle": np.zeros(data["time"].shape) * Fill_Value_Float,
-        "elevation_angle": np.zeros(data["time"].shape) * Fill_Value_Float,
+        "azimuth_angle": ma.masked_all(data["time"].shape),
+        "elevation_angle": ma.masked_all(data["time"].shape),
     }
     moon: dict = {
-        "azimuth_angle": np.zeros(data["time"].shape) * Fill_Value_Float,
-        "elevation_angle": np.zeros(data["time"].shape) * Fill_Value_Float,
+        "azimuth_angle": ma.masked_all(data["time"].shape),
+        "elevation_angle": ma.masked_all(data["time"].shape),
     }
 
     sol = ephem.Sun()
@@ -170,7 +167,7 @@ def orbpos(data: dict, params: dict) -> np.ndarray:
 
     flag_ind = np.where(
         (
-            (data["elevation_angle"] != Fill_Value_Float)
+            (~ma.getmaskarray(data["elevation_angle"]))
             & (data["elevation_angle"] <= np.max(sun["elevation_angle"]) + 10.0)
             & (data["time"] >= sun["rise"])
             & (data["time"] <= sun["set"])
@@ -201,7 +198,7 @@ def spectral_consistency(
 
     flag_ind = np.zeros(data["tb"].shape, dtype=np.int32)
     abs_diff = ma.masked_all(data["tb"].shape, dtype=np.float32)
-    data["tb_spectrum"] = np.ones(data["tb"].shape) * np.nan
+    data["tb_spectrum"] = ma.masked_all(data["tb"].shape)
 
     c_list = get_coeff_list(site, "spc", coeff_files)
 
