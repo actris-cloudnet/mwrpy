@@ -4,7 +4,6 @@ import datetime
 import glob
 import logging
 import os
-import re
 import time
 from typing import Any, Iterator, Literal, NamedTuple
 
@@ -390,16 +389,6 @@ def update_lev1_attributes(attributes: dict, data_type: str) -> None:
     for name in list(attributes.keys()):
         if any(x in name for x in att_del) & (name[0:3] != key):
             del attributes[name]
-
-
-def get_ret_info(ret_org: str) -> np.ndarray:
-    """Returns frequencies or angles used in retrieval."""
-    ret_inf = []
-    ret_str = re.split(r"[^0-9.]", ret_org)
-    for ii in ret_str:
-        if ii != "":
-            ret_inf.append(float(ii))
-    return np.array(ret_inf, dtype=np.float32)
 
 
 def read_nc_field_name(nc_file: str, name: str) -> str:

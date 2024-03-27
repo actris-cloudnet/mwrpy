@@ -14,7 +14,6 @@ from mwrpy.level2.get_ret_coeff import get_mvr_coeff
 from mwrpy.level2.lev2_meta_nc import get_data_attributes
 from mwrpy.level2.lwp_offset import correct_lwp_offset
 from mwrpy.utils import (
-    get_ret_info,
     interpol_2d,
     interpolate_2d,
     read_config,
@@ -125,12 +124,10 @@ def get_products(
                 f"No suitable data found for processing for data type: {data_type}"
             )
 
-        coeff["retrieval_elevation_angles"] = str(
-            np.sort(np.unique(ele_retrieval(elevation_angle[index], coeff)))
+        coeff["retrieval_elevation_angles"] = _format_attribute_array(
+            ele_retrieval(elevation_angle[index], coeff)
         )
-        coeff["retrieval_frequencies"] = str(
-            np.sort(np.unique(coeff["FR"][coeff["FR"][:] > 0.0]))
-        )
+        coeff["retrieval_frequencies"] = _get_retrieval_frequencies(coeff)
 
         if coeff["RT"] < 2:
             coeff_offset = offset(elevation_angle[index])
@@ -239,12 +236,11 @@ def get_products(
             raise MissingInputData(
                 f"No suitable data found for processing for data type: {data_type}"
             )
-        coeff["retrieval_elevation_angles"] = str(
-            np.sort(np.unique(ele_retrieval(elevation_angle[index], coeff)))
+        coeff["retrieval_elevation_angles"] = _format_attribute_array(
+            ele_retrieval(elevation_angle[index], coeff)
         )
-        coeff["retrieval_frequencies"] = str(
-            np.sort(np.unique(coeff["FR"][coeff["FR"][:] > 0.0]))
-        )
+
+        coeff["retrieval_frequencies"] = _get_retrieval_frequencies(coeff)
 
         rpg_dat["height"] = coeff["AL"][:] + params["altitude"]
 
@@ -337,9 +333,7 @@ def get_products(
         _, freq_bl, _ = np.intersect1d(
             coeff["FR"], coeff["FR_BL"], assume_unique=False, return_indices=True
         )
-        coeff["retrieval_frequencies"] = str(
-            np.sort(np.unique(coeff["FR"][coeff["FR"][:] > 0.0]))
-        )
+        coeff["retrieval_frequencies"] = _get_retrieval_frequencies(coeff)
 
         ix0 = np.where(
             (elevation_angle[:] > coeff["AG"][0] - 0.5)
@@ -439,36 +433,15 @@ def get_products(
         hum_dat = load_product(hum_file)
 
         coeff, index = {}, np.empty(0, np.int32)
-        coeff["retrieval_frequencies"] = str(
-            np.unique(
-                np.sort(
-                    np.concatenate(
-                        [
-                            get_ret_info(tem_dat["temperature"].retrieval_frequencies),
-                            get_ret_info(
-                                hum_dat["absolute_humidity"].retrieval_frequencies
-                            ),
-                        ]
-                    )
-                )
-            )
+
+        coeff["retrieval_frequencies"] = _combine_array_attributes(
+            tem_dat, hum_dat, "retrieval_frequencies"
         )
-        coeff["retrieval_elevation_angles"] = str(
-            np.unique(
-                np.sort(
-                    np.concatenate(
-                        [
-                            get_ret_info(
-                                tem_dat["temperature"].retrieval_elevation_angles
-                            ),
-                            get_ret_info(
-                                hum_dat["absolute_humidity"].retrieval_elevation_angles
-                            ),
-                        ]
-                    )
-                )
-            )
+
+        coeff["retrieval_elevation_angles"] = _combine_array_attributes(
+            tem_dat, hum_dat, "retrieval_elevation_angles"
         )
+
         coeff["retrieval_type"] = "derived product"
         coeff["dependencies"] = temp_file + ", " + hum_file
         if len(hum_dat.variables["height"][:]) == len(tem_dat.variables["height"][:]):
@@ -719,3 +692,22 @@ def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
 def decimal_hour2unix(date: list, time: np.ndarray) -> np.ndarray | int:
     unix_timestamp = np.datetime64("-".join(date)).astype("datetime64[s]").astype("int")
     return (time * 60 * 60 + unix_timestamp).astype(int)
+
+
+def _get_retrieval_frequencies(coeff: dict) -> np.ndarray:
+    if isinstance(coeff["FR"], ma.MaskedArray):
+        frequencies = coeff["FR"][~coeff["FR"][:].mask]
+    else:
+        frequencies = coeff["FR"]
+    return _format_attribute_array(frequencies)
+
+
+def _combine_array_attributes(tem_dat: dict, hum_dat: dict, name: str) -> np.ndarray:
+    a = getattr(tem_dat["temperature"], name)
+    b = getattr(hum_dat["absolute_humidity"], name)
+    combined = np.hstack((a, b))
+    return _format_attribute_array(combined)
+
+
+def _format_attribute_array(array: np.ndarray | list) -> np.ndarray:
+    return np.round(np.sort(np.unique(array)), 2)

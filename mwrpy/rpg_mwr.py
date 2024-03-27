@@ -52,7 +52,7 @@ class RpgArray:
 
         for key in attributes._fields:  # To iterate namedtuple fields.
             data = getattr(attributes, key)
-            if data:
+            if data is not None:
                 setattr(self, key, data)
 
     def _init_data(self) -> np.ndarray:

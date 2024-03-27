@@ -260,8 +260,8 @@ def get_mvr_coeff(
     if str(c_list[0][-3:]).lower() == "ret":
         retrieval_type = ["linear regression", "quadratic regression", "neural network"]
         coeff["retrieval_type"] = retrieval_type[int(coeff["RT"][0])]
-        coeff["retrieval_elevation_angles"] = str(coeff["AG"])
-        coeff["retrieval_frequencies"] = str(coeff["FR"][:])
+        coeff["retrieval_elevation_angles"] = coeff["AG"]
+        coeff["retrieval_frequencies"] = coeff["FR"]
         if coeff["TS"] == 0:
             coeff["retrieval_auxiliary_input"] = "no_surface"
         else:
@@ -270,8 +270,8 @@ def get_mvr_coeff(
 
     elif str(c_list[0][-2:]).lower() == "nc":
         coeff["retrieval_type"] = c_file.regression_type
-        coeff["retrieval_elevation_angles"] = str(coeff["AG"])
-        coeff["retrieval_frequencies"] = str(c_file["freq"][:])
+        coeff["retrieval_elevation_angles"] = coeff["AG"]
+        coeff["retrieval_frequencies"] = c_file["freq"]
         coeff["retrieval_auxiliary_input"] = c_file.surface_mode
         coeff["retrieval_description"] = c_file.retrieval_version
 
