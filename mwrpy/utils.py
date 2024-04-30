@@ -209,14 +209,15 @@ def add_interpol1d(
         data0: Output dict.
         data1: Input field to be added & interpolated. Supports masked arrays.
         time1: Time of input field.
+        output_name: Name of output field.
     """
 
     interpolated_data: np.ndarray = np.array([])
     n_time = len(data0["time"])
 
-    iter = data1.T if data1.ndim > 1 else [data1]
+    itr = data1.T if data1.ndim > 1 else [data1]
 
-    for input_data in iter:
+    for input_data in itr:
         valid_mask = ~ma.getmaskarray(input_data)
         if ~valid_mask.all():
             result = ma.masked_all(n_time)
@@ -228,10 +229,13 @@ def add_interpol1d(
                 np.interp(data0["time"], valid_time, valid_mask.astype(float)) < 0.5
             )
             result = ma.masked_array(interpolated_values, mask=interpolated_mask)
-        interpolated_data = ma.append(interpolated_data, result)
-
+        interpolated_data = (
+            result
+            if len(interpolated_data) == 0
+            else ma.vstack((interpolated_data, result))
+        )
     if data1.ndim > 1:
-        interpolated_data = np.reshape(interpolated_data, (n_time, -1))
+        interpolated_data = interpolated_data.T
 
     data0[output_name] = interpolated_data
 

@@ -28,11 +28,7 @@ def stack_files(file_list: list[str]) -> tuple[dict, dict]:
                         and value.shape[1] != target[name].shape[1]
                         and name == "irt"
                     ):
-                        raise NotImplementedError("Fix this")
-                        # value = np.hstack(
-                        #    (value, np.ones((len(value), 1)) * Fill_Value_Float)
-                        # )
-                        # target[name] = fun((target[name], value))
+                        raise NotImplementedError("Inconsistent number of IRT channels")
                     else:
                         target[name] = fun((target[name], value))
             elif value.ndim > 0 and name not in target:

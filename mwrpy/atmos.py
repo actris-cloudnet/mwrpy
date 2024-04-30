@@ -94,7 +94,7 @@ def calc_p_baro(
         p_baro[:, ialt] = p_baro[:, ialt - 1] * ma.exp(
             -scipy.constants.g
             * (z[ialt] - z[ialt - 1])
-            / (con.RS * ma.mean([Tv[:, ialt], Tv[:, ialt - 1]]))
+            / (con.RS * (Tv[:, ialt] + Tv[:, ialt - 1]) / 2.0)
         )
 
     return p_baro
