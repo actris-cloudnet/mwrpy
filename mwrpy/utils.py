@@ -235,7 +235,7 @@ def add_interpol1d(
             else ma.vstack((interpolated_data, result))
         )
     if data1.ndim > 1:
-        interpolated_data = interpolated_data.T
+        interpolated_data = np.reshape(interpolated_data.T, (n_time, -1))
 
     data0[output_name] = interpolated_data
 
