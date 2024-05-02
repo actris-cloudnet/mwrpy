@@ -173,8 +173,16 @@ def orbpos(data: dict, params: dict) -> np.ndarray:
             & (data["time"] <= sun["set"])
             & (data["elevation_angle"] >= sun["elevation_angle"] - params["saf"])
             & (data["elevation_angle"] <= sun["elevation_angle"] + params["saf"])
-            & (data["azimuth_angle"] >= sun["azimuth_angle"] - params["saf"])
-            & (data["azimuth_angle"] <= sun["azimuth_angle"] + params["saf"])
+            & (
+                data["azimuth_angle"]
+                >= sun["azimuth_angle"]
+                - params["saf"] / np.cos(np.deg2rad(data["elevation_angle"]))
+            )
+            & (
+                data["azimuth_angle"]
+                <= sun["azimuth_angle"]
+                + params["saf"] / np.cos(np.deg2rad(data["elevation_angle"]))
+            )
         )
         | (
             (data["elevation_angle"] <= np.max(moon["elevation_angle"]) + 10.0)
@@ -182,8 +190,16 @@ def orbpos(data: dict, params: dict) -> np.ndarray:
             & (data["time"] <= moon["set"])
             & (data["elevation_angle"] >= moon["elevation_angle"] - params["saf"])
             & (data["elevation_angle"] <= moon["elevation_angle"] + params["saf"])
-            & (data["azimuth_angle"] >= moon["azimuth_angle"] - params["saf"])
-            & (data["azimuth_angle"] <= moon["azimuth_angle"] + params["saf"])
+            & (
+                data["azimuth_angle"]
+                >= moon["azimuth_angle"]
+                - params["saf"] / np.cos(np.deg2rad(data["elevation_angle"]))
+            )
+            & (
+                data["azimuth_angle"]
+                <= moon["azimuth_angle"]
+                + params["saf"] / np.cos(np.deg2rad(data["elevation_angle"]))
+            )
         )
     )[0]
 
