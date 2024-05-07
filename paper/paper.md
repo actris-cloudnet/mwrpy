@@ -48,7 +48,7 @@ numerical weather forecast and climate models by studying the atmospheric water 
 
 One widely used application exploiting MWR data is the synergistic algorithm Cloudnet [@IllingworthEt2007], which
 classifies hydrometeors in the atmosphere by combining several ground-based remote sensing instruments. As part of
-the European Aerosol, Clouds and Trace Gases Research Infrastructure (ACTRIS, @ACTRIS_handbook2018), the Centre for
+the European Aerosol, Clouds and Trace Gases Research Infrastructure (ACTRIS, @Laj2024), the Centre for
 Cloud Remote Sensing (CCRES) is aiming to provide continuous and long-term data of cloud properties and the
 thermodynamic state of the atmosphere, with Cloudnet being one of the key tools. For atmospheric observatories, MWRs
 are therefore mandatory to qualify as an ACTRIS-CCRES compatible station. The ACTRIS Central Facility responsible
