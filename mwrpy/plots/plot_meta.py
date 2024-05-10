@@ -209,7 +209,7 @@ ATTRIBUTES = {
         source="sen",
     ),
     "azimuth_angle": PlotMeta(
-        name="Sensor azimuth angle",
+        name="Azimuth angle",
         ylabel=_DEG,
         plot_range=(-5, 363),
         plot_type="bar",

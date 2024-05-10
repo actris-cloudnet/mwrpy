@@ -119,7 +119,7 @@ ATTRIBUTES_COM = {
         units="m",
     ),
     "azimuth_angle": MetaData(
-        long_name="Sensor azimuth angle",
+        long_name="Azimuth angle",
         standard_name="sensor_azimuth_angle",
         units="degree",
         comment="0=North, 90=East, 180=South, 270=West",
