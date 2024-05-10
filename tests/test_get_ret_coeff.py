@@ -44,6 +44,8 @@ def test_coefficients():
             "W2": ((-10.072118, -9.450926, -2.7468667), (19, 10)),
             "RM": ((0.00434408, 0.19351903, 0.041093733), (19, 1)),
             "FR_BL": ((23.04, 58.0, 41.699997), (13,)),
+            "retrieval_elevation_angles": ((90.0, 4.199999, 27.473684), (19,)),
+            "retrieval_frequencies": ((23.04, 58.0, 41.69999), (13,)),
         },
         "iwv": {
             "DY": ((1, 1, 1), (1,)),
@@ -64,6 +66,8 @@ def test_coefficients():
             "W2": ((-8.668256, 10.204778, -3.7813265), (19, 10)),
             "RM": ((0.088511630, 3.4751670360, 0.7352865), (19, 1)),
             "FR_BL": ((23.04, 58.0, 41.699997), (13,)),
+            "retrieval_elevation_angles": ((90.0, 4.199999, 27.473684), (19,)),
+            "retrieval_frequencies": ((23.04, 58.0, 41.69999), (13,)),
         },
         "tpt": {
             "DY": ((1, 1, 1), (1,)),
@@ -85,6 +89,8 @@ def test_coefficients():
             "W2": ((6.22275257, 1.43107211, -1.814291954), (93, 13, 1)),
             "RM": ((2.035391330, 3.3711481, 1.282065437), (93, 1)),
             "FR_BL": ((23.04, 58.0, 41.699997), (13,)),
+            "retrieval_elevation_angles": ((90.0, 90, 90), (1,)),
+            "retrieval_frequencies": ((23.04, 58.0, 41.69999), (13,)),
         },
         "tpb": {
             "DY": ((1, 1, 1), (1,)),
@@ -106,6 +112,8 @@ def test_coefficients():
             "W2": ((4.33258, -0.72129, -1.55458), (93, 16)),
             "RM": ((0.8922356963, 3.0863358, 1.051631445), (93, 1)),
             "FR_BL": ((23.04, 58.0, 41.699997), (13,)),
+            "retrieval_elevation_angles": ((90.0, 4.199999, 19.44), (10,)),
+            "retrieval_frequencies": ((23.04, 58.0, 41.699997), (13,)),
         },
         "hpt": {
             "DY": ((1, 1, 1), (1,)),
@@ -127,6 +135,8 @@ def test_coefficients():
             "W2": ((-6.617764472961, -5.96833944320, -4.42309951782), (93, 10, 1)),
             "RM": ((0.783515751, 0.00679313, 0.440780830021), (93, 1)),
             "FR_BL": ((23.04, 58.0, 41.699997), (13,)),
+            "retrieval_elevation_angles": ((90.0, 90, 90), (1,)),
+            "retrieval_frequencies": ((23.04, 58.0, 41.69999), (13,)),
         },
     }
 
@@ -150,11 +160,16 @@ def test_coefficients():
                 first, last, mean = item[name][0]
                 shape = item[name][1]
             # print(key, name, first, last, mean, shape)
-            _check(value, float(first), float(last), float(mean), shape=shape)
+            _check(name, value, float(first), float(last), float(mean), shape=shape)
 
 
 def _check(
-    data: np.ndarray, first: float, last: float, mean_value: float, shape: tuple
+    key: str,
+    data: np.ndarray,
+    first: float,
+    last: float,
+    mean_value: float,
+    shape: tuple,
 ):
     assert data.ndim in (1, 2, 3)
     if data.ndim == 1:
@@ -169,6 +184,9 @@ def _check(
 
     if isinstance(first_value, str):
         return
+
+    # print(key, f"{first_value}, {last_value}, {np.mean(data)}, {first}, {last}, {mean_value}, {shape}, {data.shape}")
+
     assert_array_almost_equal(first_value, first, decimal=4)
     assert_array_almost_equal(last_value, last, decimal=4)
     assert_array_almost_equal(np.mean(data), mean_value, decimal=4)

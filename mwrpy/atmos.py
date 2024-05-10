@@ -91,10 +91,10 @@ def calc_p_baro(
         (~ma.getmaskarray(q).any(axis=1)) & (~ma.getmaskarray(T).any(axis=1)), 0
     ] = p[(~ma.getmaskarray(q).any(axis=1)) & (~ma.getmaskarray(T).any(axis=1))]
     for ialt in np.arange(len(z) - 1) + 1:
-        p_baro[:, ialt] = p_baro[:, ialt - 1] * np.exp(
+        p_baro[:, ialt] = p_baro[:, ialt - 1] * ma.exp(
             -scipy.constants.g
             * (z[ialt] - z[ialt - 1])
-            / (con.RS * np.mean([Tv[:, ialt], Tv[:, ialt - 1]]))
+            / (con.RS * (Tv[:, ialt] + Tv[:, ialt - 1]) / 2.0)
         )
 
     return p_baro
@@ -179,7 +179,7 @@ def find_lwcl_free(lev1: dict) -> tuple[np.ndarray, np.ndarray]:
         tb_rat = tb_rat.rolling(
             pd.tseries.frequencies.to_offset("20min"), center=True, min_periods=100
         ).max()
-        index[tb_mx["Tb"] < np.median(tb_rat["Tb"]) * 0.1] = 0
+        index[tb_mx["Tb"] < np.nanmedian(tb_rat["Tb"]) * 0.1] = 0
 
         df = pd.DataFrame({"index": index}, index=ind)
         df = df.bfill(limit=120)

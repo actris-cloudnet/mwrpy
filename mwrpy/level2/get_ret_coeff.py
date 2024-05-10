@@ -1,11 +1,9 @@
 """Module to load in retrieval coefficient files"""
 import netCDF4 as nc
 import numpy as np
+from numpy import ma
 
 from mwrpy.utils import get_coeff_list
-
-Fill_Value_Float = -999.0
-Fill_Value_Int = -99
 
 
 def get_mvr_coeff(
@@ -55,12 +53,12 @@ def get_mvr_coeff(
         coeff["FR_BL"] = coeff["FR"]
 
     elif (str(c_list[0][-2:]).lower() == "nc") and (len(c_list) > 0):
-        coeff["RT"] = Fill_Value_Int
+        coeff["RT"] = -1
         N = len(c_list)
 
         if prefix in ("lwp", "iwv"):
-            coeff["AG"] = np.ones(N) * Fill_Value_Float
-            coeff["FR"] = np.ones([len(freq), N]) * Fill_Value_Float
+            coeff["AG"] = ma.masked_all(N)
+            coeff["FR"] = ma.masked_all([len(freq), N])
             coeff["TL"] = np.zeros([N, len(freq)])
             coeff["TQ"] = np.zeros([N, len(freq)])
             coeff["OS"] = np.zeros(N)
@@ -89,8 +87,8 @@ def get_mvr_coeff(
             c_file = nc.Dataset(c_list[0])
             n_height_grid = c_file.dimensions["n_height_grid"].size
 
-            coeff["AG"] = np.ones(N) * Fill_Value_Float
-            coeff["FR"] = np.ones([len(freq), N]) * Fill_Value_Float
+            coeff["AG"] = ma.masked_all(N)
+            coeff["FR"] = ma.masked_all([len(freq), N])
             coeff["TL"] = np.zeros([N, n_height_grid, len(freq)])
             coeff["TQ"] = np.zeros([N, n_height_grid, len(freq)])
             coeff["OS"] = np.zeros([n_height_grid, N])
@@ -145,7 +143,7 @@ def get_mvr_coeff(
                 ]
             )
 
-    if (coeff["RT"] < 2) & (len(coeff["AL"]) == 1):
+    if (coeff["RT"] < 2) and (len(coeff["AL"]) == 1):
 
         def f_offset(x):
             return np.array(
@@ -160,7 +158,7 @@ def get_mvr_coeff(
                 [coeff["TL"][(np.abs(coeff["AG"] - v)).argmin(), :] for v in x]
             )
 
-        if coeff["RT"] in (1, Fill_Value_Int):
+        if coeff["RT"] in (1, -1):
             if coeff["RT"] == 1:
                 coeff["TQ"] = coeff["TQ"][np.newaxis, :]
 
@@ -169,7 +167,7 @@ def get_mvr_coeff(
                     [coeff["TQ"][(np.abs(coeff["AG"] - v)).argmin(), :] for v in x]
                 )
 
-    elif (coeff["RT"] < 2) & (len(coeff["AL"]) > 1) & (prefix != "tpb"):
+    elif (coeff["RT"] < 2) and (len(coeff["AL"]) > 1) and (prefix != "tpb"):
 
         def f_offset(x):
             return np.array(
@@ -184,7 +182,7 @@ def get_mvr_coeff(
                 [coeff["TL"][(np.abs(coeff["AG"] - v)).argmin(), :, :] for v in x]
             )
 
-        if coeff["RT"] in (1, Fill_Value_Int):
+        if coeff["RT"] in (1, -1):
             if coeff["RT"] == 1:
                 coeff["TQ"] = coeff["TQ"][np.newaxis, :, :]
 
@@ -193,7 +191,7 @@ def get_mvr_coeff(
                     [coeff["TQ"][(np.abs(coeff["AG"] - v)).argmin(), :, :] for v in x]
                 )
 
-    elif (coeff["RT"] < 2) & (len(coeff["AL"]) > 1) & (prefix == "tpb"):
+    elif (coeff["RT"] < 2) and (len(coeff["AL"]) > 1) and (prefix == "tpb"):
 
         def f_offset(_x):
             return coeff["OS"]
@@ -262,8 +260,8 @@ def get_mvr_coeff(
     if str(c_list[0][-3:]).lower() == "ret":
         retrieval_type = ["linear regression", "quadratic regression", "neural network"]
         coeff["retrieval_type"] = retrieval_type[int(coeff["RT"][0])]
-        coeff["retrieval_elevation_angles"] = str(coeff["AG"])
-        coeff["retrieval_frequencies"] = str(coeff["FR"][:])
+        coeff["retrieval_elevation_angles"] = coeff["AG"]
+        coeff["retrieval_frequencies"] = coeff["FR"]
         if coeff["TS"] == 0:
             coeff["retrieval_auxiliary_input"] = "no_surface"
         else:
@@ -272,8 +270,8 @@ def get_mvr_coeff(
 
     elif str(c_list[0][-2:]).lower() == "nc":
         coeff["retrieval_type"] = c_file.regression_type
-        coeff["retrieval_elevation_angles"] = str(coeff["AG"])
-        coeff["retrieval_frequencies"] = str(c_file["freq"][:])
+        coeff["retrieval_elevation_angles"] = coeff["AG"]
+        coeff["retrieval_frequencies"] = c_file["freq"]
         coeff["retrieval_auxiliary_input"] = c_file.surface_mode
         coeff["retrieval_description"] = c_file.retrieval_version
 

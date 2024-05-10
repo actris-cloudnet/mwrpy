@@ -21,8 +21,6 @@ from mwrpy.utils import (
     update_lev1_attributes,
 )
 
-Fill_Value_Float = -999.0
-Fill_Value_Int = -99
 FuncType: TypeAlias = Callable[[str], np.ndarray]
 
 
@@ -151,10 +149,10 @@ def prepare_data(
                 rpg_blb = RpgBin(file_list_blb)
                 _add_blb(rpg_bin, rpg_blb, rpg_hkd, params)
 
-        if params["azi_cor"] != Fill_Value_Float:
+        if params["azi_cor"] != -999.0:
             _azi_correction(rpg_bin.data, params)
 
-        if params["const_azi"] != Fill_Value_Float:
+        if params["const_azi"] != -999.0:
             rpg_bin.data["azimuth_angle"] = (
                 rpg_bin.data["azimuth_angle"] + params["const_azi"]
             ) % 360
@@ -164,7 +162,7 @@ def prepare_data(
                 file_list_irt = get_file_list(path_to_files, "IRT")
                 if len(file_list_irt) > 0:
                     rpg_irt = RpgBin(file_list_irt)
-                    rpg_irt.data["irt"][rpg_irt.data["irt"] <= 125.5] = Fill_Value_Float
+                    rpg_irt.data["irt"][rpg_irt.data["irt"] <= 125.5] = ma.masked
                     rpg_bin.data["ir_wavelength"] = rpg_irt.header["_f"] * 1e-6
                     rpg_bin.data["ir_bandwidth"] = params["ir_bandwidth"] * 1e-6
                     rpg_bin.data["ir_beamwidth"] = params["ir_beamwidth"]
@@ -277,7 +275,7 @@ def _append_hkd(
             "latitude",
         )
     else:
-        idx = np.where(hkd.data["latitude"] != Fill_Value_Float)[0]
+        idx = np.where(~ma.getmaskarray(hkd.data["latitude"]))[0]
         add_interpol1d(
             rpg_bin.data,
             hkd.data["latitude"][idx],
@@ -292,7 +290,7 @@ def _append_hkd(
             "longitude",
         )
     else:
-        idx = np.where(hkd.data["longitude"] != Fill_Value_Float)[0]
+        idx = np.where(~ma.getmaskarray(hkd.data["longitude"]))[0]
         add_interpol1d(
             rpg_bin.data,
             hkd.data["longitude"][idx],
@@ -301,7 +299,7 @@ def _append_hkd(
         )
 
     if data_type in ("1B01", "1C01"):
-        hkd.data["temp"][hkd.data["temp"] >= 350.0] = Fill_Value_Float
+        hkd.data["temp"][hkd.data["temp"] >= 350.0] = ma.masked
         add_interpol1d(
             rpg_bin.data, hkd.data["temp"][:, 0:2], hkd.data["time"], "t_amb"
         )
@@ -356,8 +354,8 @@ def _add_bls(brt: RpgBin, bls: RpgBin, hkd: RpgBin, params: dict) -> None:
 
     bls.data["pointing_flag"] = np.ones(len(bls.data["time"]), np.int32)
     bls.data["liquid_cloud_flag"] = np.ones(len(bls.data["time"]), np.int32) * 2
-    bls.data["liquid_cloud_flag_status"] = (
-        np.ones(len(bls.data["time"]), np.int32) * Fill_Value_Int
+    bls.data["liquid_cloud_flag_status"] = ma.masked_all(
+        len(bls.data["time"]), np.int32
     )
     brt.data["time"] = np.concatenate((brt.data["time"], bls.data["time"]))
     ind = np.argsort(brt.data["time"])
@@ -507,7 +505,7 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict) -> None:
     if len(time_add) > 0:
         pointing_flag_add = np.ones(len(time_add), np.int32)
         liquid_cloud_flag_add = np.ones(len(time_add), np.int32) * 2
-        liquid_cloud_flag_status_add = np.ones(len(time_add), np.int32) * Fill_Value_Int
+        liquid_cloud_flag_status_add = ma.masked_all(len(time_add), np.int32)
         brt.data["time"] = np.concatenate((brt.data["time"], time_add))
         ind = np.argsort(brt.data["time"])
         brt.data["time"] = brt.data["time"][ind]

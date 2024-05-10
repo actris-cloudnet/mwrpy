@@ -14,14 +14,10 @@ from mwrpy.level2.get_ret_coeff import get_mvr_coeff
 from mwrpy.level2.lev2_meta_nc import get_data_attributes
 from mwrpy.level2.lwp_offset import correct_lwp_offset
 from mwrpy.utils import (
-    get_ret_info,
     interpol_2d,
     interpolate_2d,
     read_config,
 )
-
-Fill_Value_Float = -999.0
-Fill_Value_Int = -99
 
 
 def lev2_to_nc(
@@ -128,12 +124,10 @@ def get_products(
                 f"No suitable data found for processing for data type: {data_type}"
             )
 
-        coeff["retrieval_elevation_angles"] = str(
-            np.sort(np.unique(ele_retrieval(elevation_angle[index], coeff)))
+        coeff["retrieval_elevation_angles"] = _format_attribute_array(
+            ele_retrieval(elevation_angle[index], coeff)
         )
-        coeff["retrieval_frequencies"] = str(
-            np.sort(np.unique(coeff["FR"][coeff["FR"][:] > 0.0]))
-        )
+        coeff["retrieval_frequencies"] = _get_retrieval_frequencies(coeff)
 
         if coeff["RT"] < 2:
             coeff_offset = offset(elevation_angle[index])
@@ -190,14 +184,14 @@ def get_products(
                 axis=1,
             )
         )[0]  # type: ignore
-        ret_product = np.ones(len(index), np.float32) * Fill_Value_Float
+        ret_product = ma.masked_all(len(index), np.float32)
         ret_product[index_ret] = tmp_product[index_ret]
 
         if product == "lwp":
             freq_win = np.where((np.round(lev1["frequency"][:], 1) == 31.4))[0]
             rpg_dat["lwp"], rpg_dat["lwp_offset"] = (
                 ret_product,
-                np.ones(len(index)) * Fill_Value_Float,
+                ma.masked_all(len(index)),
             )
             if len(freq_win) == 1 and len(index_ret) > 0:
                 (
@@ -242,12 +236,11 @@ def get_products(
             raise MissingInputData(
                 f"No suitable data found for processing for data type: {data_type}"
             )
-        coeff["retrieval_elevation_angles"] = str(
-            np.sort(np.unique(ele_retrieval(elevation_angle[index], coeff)))
+        coeff["retrieval_elevation_angles"] = _format_attribute_array(
+            ele_retrieval(elevation_angle[index], coeff)
         )
-        coeff["retrieval_frequencies"] = str(
-            np.sort(np.unique(coeff["FR"][coeff["FR"][:] > 0.0]))
-        )
+
+        coeff["retrieval_frequencies"] = _get_retrieval_frequencies(coeff)
 
         rpg_dat["height"] = coeff["AL"][:] + params["altitude"]
 
@@ -260,7 +253,7 @@ def get_products(
                 + np.einsum("ijk,ik->ij", coeff_lin, ret_in[index, :])
                 + np.einsum("ijk,ik->ij", coeff_quad, ret_in[index, :] ** 2)
             )
-            if (coeff["RT"] == 1) & (data_type == "2P03"):
+            if (coeff["RT"] == 1) and (data_type == "2P03"):
                 tmp_dat[:, :] = tmp_dat[:, :] / 1000.0
 
         else:
@@ -313,8 +306,8 @@ def get_products(
                 axis=1,
             )
         )[0]  # type: ignore
-        rpg_dat[product] = (
-            np.ones((len(index), len(rpg_dat["height"])), np.float32) * Fill_Value_Float
+        rpg_dat[product] = ma.masked_all(
+            (len(index), len(rpg_dat["height"])), np.float32
         )
         rpg_dat[product][index_ret, :] = tmp_dat[index_ret, :]
 
@@ -340,9 +333,7 @@ def get_products(
         _, freq_bl, _ = np.intersect1d(
             coeff["FR"], coeff["FR_BL"], assume_unique=False, return_indices=True
         )
-        coeff["retrieval_frequencies"] = str(
-            np.sort(np.unique(coeff["FR"][coeff["FR"][:] > 0.0]))
-        )
+        coeff["retrieval_frequencies"] = _get_retrieval_frequencies(coeff)
 
         ix0 = np.where(
             (elevation_angle[:] > coeff["AG"][0] - 0.5)
@@ -352,8 +343,7 @@ def get_products(
         )[0]
         ibl, tb, scan_time = (
             np.empty([0, len(coeff["AG"])], np.int32),
-            np.ones((len(freq_ind), len(coeff["AG"]), 0), np.float32)
-            * Fill_Value_Float,
+            ma.masked_all((len(freq_ind), len(coeff["AG"]), 0), np.float32),
             np.empty(0, np.int32),
         )
 
@@ -443,36 +433,15 @@ def get_products(
         hum_dat = load_product(hum_file)
 
         coeff, index = {}, np.empty(0, np.int32)
-        coeff["retrieval_frequencies"] = str(
-            np.unique(
-                np.sort(
-                    np.concatenate(
-                        [
-                            get_ret_info(tem_dat["temperature"].retrieval_frequencies),
-                            get_ret_info(
-                                hum_dat["absolute_humidity"].retrieval_frequencies
-                            ),
-                        ]
-                    )
-                )
-            )
+
+        coeff["retrieval_frequencies"] = _combine_array_attributes(
+            tem_dat, hum_dat, "retrieval_frequencies"
         )
-        coeff["retrieval_elevation_angles"] = str(
-            np.unique(
-                np.sort(
-                    np.concatenate(
-                        [
-                            get_ret_info(
-                                tem_dat["temperature"].retrieval_elevation_angles
-                            ),
-                            get_ret_info(
-                                hum_dat["absolute_humidity"].retrieval_elevation_angles
-                            ),
-                        ]
-                    )
-                )
-            )
+
+        coeff["retrieval_elevation_angles"] = _combine_array_attributes(
+            tem_dat, hum_dat, "retrieval_elevation_angles"
         )
+
         coeff["retrieval_type"] = "derived product"
         coeff["dependencies"] = temp_file + ", " + hum_file
         if len(hum_dat.variables["height"][:]) == len(tem_dat.variables["height"][:]):
@@ -567,7 +536,7 @@ def _combine_lev1(
                 rpg_dat[ivars][:, 0] = lev1["time"][index] - scan_time
                 rpg_dat[ivars][:, 1] = lev1["time"][index]
             elif (ivars == "time_bnds") & (data_type in ("2P04", "2P07", "2P08")):
-                rpg_dat[ivars] = np.ones(lev1[ivars].shape, np.int32) * Fill_Value_Int
+                rpg_dat[ivars] = ma.masked_all(lev1[ivars].shape, np.int32)
             else:
                 try:
                     rpg_dat[ivars] = lev1[ivars][index]
@@ -618,7 +587,7 @@ def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
     latitude = float(ma.median(lev1["latitude"][:]))
     longitude = float(ma.median(lev1["longitude"][:]))
 
-    if coeff["RT"] == Fill_Value_Int:
+    if coeff["RT"] == -1:
         ret_in = lev1["tb"][:, :]
     elif coeff["RT"] in (0, 1):
         ret_in = lev1["tb"][:, freq_ind]
@@ -676,7 +645,7 @@ def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
                 axis=1,
             )
         if coeff.get("DY") == 1:
-            doy = np.ones((len(lev1["time"][:]), 2), np.float32) * Fill_Value_Float
+            doy = ma.masked_all((len(lev1["time"][:]), 2), np.float32)
             tf = TimezoneFinder()
             timezone_str = tf.timezone_at(
                 lng=longitude,
@@ -700,7 +669,7 @@ def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
             )
             ret_in = np.concatenate((ret_in, doy), axis=1)
         if coeff.get("SU") == 1:
-            sun = np.ones((len(lev1["time"][:]), 2), np.float32) * Fill_Value_Float
+            sun = ma.masked_all((len(lev1["time"][:]), 2), np.float32)
             tf = TimezoneFinder()
             timezone_str = tf.timezone_at(
                 lng=longitude,
@@ -723,3 +692,22 @@ def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
 def decimal_hour2unix(date: list, time: np.ndarray) -> np.ndarray | int:
     unix_timestamp = np.datetime64("-".join(date)).astype("datetime64[s]").astype("int")
     return (time * 60 * 60 + unix_timestamp).astype(int)
+
+
+def _get_retrieval_frequencies(coeff: dict) -> np.ndarray:
+    if isinstance(coeff["FR"], ma.MaskedArray):
+        frequencies = coeff["FR"][~coeff["FR"][:].mask]
+    else:
+        frequencies = coeff["FR"]
+    return _format_attribute_array(frequencies)
+
+
+def _combine_array_attributes(tem_dat: dict, hum_dat: dict, name: str) -> np.ndarray:
+    a = getattr(tem_dat["temperature"], name)
+    b = getattr(hum_dat["absolute_humidity"], name)
+    combined = np.hstack((a, b))
+    return _format_attribute_array(combined)
+
+
+def _format_attribute_array(array: np.ndarray | list) -> np.ndarray:
+    return np.round(np.sort(np.unique(array)), 2)

@@ -1,4 +1,5 @@
 import numpy as np
+from numpy import ma
 from numpy.testing import assert_array_almost_equal
 
 from mwrpy.level2.get_ret_coeff import get_mvr_coeff
@@ -51,13 +52,13 @@ class TestLWP:
                 case "DY" | "PS" | "DB" | "RB":
                     data = (1, 1, 1)
                 case "RT":
-                    data = (-99, -99, -99)
+                    data = (-1, -1, -1)
                 case "VN":
                     data = (110, 110, 110)
                 case "ND":
                     data = (9, 4, 6.5)
                 case "FR":
-                    data = (22.239999771118164, -999.0, -486.6399999346052)
+                    data = (22.239999771118164, ma.masked, 25.72000013)
                 case "AG":
                     data = (90, 90, 90)
                 case "NP":
@@ -88,6 +89,10 @@ class TestLWP:
                         -0.15209339559078217,
                         -0.15209339559078217,
                     )
+                case "retrieval_elevation_angles":
+                    data = (90, 90, 90)
+                case "retrieval_frequencies":
+                    data = (22.23999, 31.39999, 25.719999)
                 case _:
                     self._print_test_data(key)
                     raise ValueError(f"Unknown key: {key}")
@@ -117,13 +122,13 @@ class TestLWP:
                 case "RP" | "DB" | "PS" | "DY":
                     data = (1, 1, 1)
                 case "RT":
-                    data = (-99, -99, -99)
+                    data = (-1, -1, -1)
                 case "VN":
                     data = (110, 110, 110)
                 case "ND":
                     data = (9, 4, 6.5)
                 case "FR":
-                    data = (22.239999771118164, -999.0, -486.6399999346052)
+                    data = (22.239999771118164, ma.masked, 25.720000)
                 case "AG":
                     data = (90, 90, 90)
                 case "NP":
@@ -154,6 +159,10 @@ class TestLWP:
                         -0.5454273819923401,
                         -0.5454273819923401,
                     )
+                case "retrieval_elevation_angles":
+                    data = (90, 90, 90)
+                case "retrieval_frequencies":
+                    data = (22.23999, 31.39999, 25.719999)
                 case _:
                     self._print_test_data(key)
                     raise ValueError(f"Unknown key: {key}")
@@ -176,13 +185,13 @@ class TestLWP:
                 case "RP":
                     data = (4, 4, 4)
                 case "RT":
-                    data = (-99, -99, -99)
+                    data = (-1, -1, -1)
                 case "VN":
                     data = (110, 110, 110)
                 case "ND":
                     data = (12, 4, 8)
                 case "FR":
-                    data = (-999.0, 58.0, -472.05000032697404)
+                    data = (ma.masked, 58.0, 54.89999)
                 case "AG":
                     data = (90, 90, 90)
                 case "NP":
@@ -215,6 +224,10 @@ class TestLWP:
                     data = (-119.42852020263672, 1605.0447998046875, -8.820448498393214)
                 case "n_height_grid":
                     data = (43, 43, 43)
+                case "retrieval_elevation_angles":
+                    data = (90, 90, 90)
+                case "retrieval_frequencies":
+                    data = (51.2599, 58.0, 54.89999)
                 case _:
                     self._print_test_data(key)
                     raise ValueError(f"Unknown key: {key}")
@@ -237,7 +250,7 @@ class TestLWP:
                 case "RP":
                     data = (5, 5, 5)
                 case "RT":
-                    data = (-99, -99, -99)
+                    data = (-1, -1, -1)
                 case "VN":
                     data = (110, 110, 110)
                 case "ND":
@@ -286,6 +299,10 @@ class TestLWP:
                         -0.13281039893627167,
                         0.03465010225772858,
                     )
+                case "retrieval_elevation_angles":
+                    data = (5.4, 90, 32.8)
+                case "retrieval_frequencies":
+                    data = (51.25999, 58.0, 54.89999)
                 case _:
                     self._print_test_data(key)
                     raise ValueError(f"Unknown key: {key}")
@@ -308,13 +325,13 @@ class TestLWP:
                 case "RP":
                     data = (3, 3, 3)
                 case "RT":
-                    data = (-99, -99, -99)
+                    data = (-1, -1, -1)
                 case "VN":
                     data = (110, 110, 110)
                 case "ND":
                     data = (9, 4, 6.5)
                 case "FR":
-                    data = (22.239999771118164, -999.0, -486.6399999346052)
+                    data = (22.239999771118164, ma.masked, 25.720000)
                 case "AG":
                     data = (90.0, 90, 90)
                 case "NP":
@@ -351,6 +368,10 @@ class TestLWP:
                     )
                 case "n_height_grid":
                     data = (43, 43, 43)
+                case "retrieval_elevation_angles":
+                    data = (90, 90, 90)
+                case "retrieval_frequencies":
+                    data = (22.23999, 31.39999, 25.719999)
                 case _:
                     self._print_test_data(key)
                     raise ValueError(f"Unknown key: {key}")
@@ -360,7 +381,9 @@ class TestLWP:
     def _check(
         self, key: str, first: float = 0, last: float = 0, mean_value: float = 0
     ):
-        item = np.array(self.coeff[key])
+        item = self.coeff[key]
+        if not isinstance(item, np.ndarray):
+            item = np.array(item)
 
         assert item.ndim in (0, 1, 2, 3)
 
@@ -377,11 +400,18 @@ class TestLWP:
             first_value = item[0, 0, 0]
             last_value = item[-1, -1, -1]
 
-        # print(key, f"{first_value}, {last_value}, {np.mean(item)}")
+        print(key, f"{first_value}, {last_value}, {ma.mean(item)}")
 
-        assert_array_almost_equal(first_value, first, decimal=4)
-        assert_array_almost_equal(last_value, last, decimal=4)
-        assert_array_almost_equal(np.mean(item), mean_value, decimal=4)
+        if not ma.is_masked(first):
+            assert_array_almost_equal(first_value, first, decimal=4)
+        else:
+            assert ma.is_masked(first_value)
+        if not ma.is_masked(last):
+            assert_array_almost_equal(last_value, last, decimal=4)
+        else:
+            assert ma.is_masked(last_value)
+
+        assert_array_almost_equal(ma.mean(item), mean_value, decimal=4)
 
     def _print_test_data(self, key: str):
         item = np.array(self.coeff[key])
