@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.0 – 2024-05-10
+
+- Document file format
+- Adjust median calculation to be more robust
+- Use masked arrays and default netCDF fill values
+- Save array-type attributes as true arrays instead of strings
+- Improve azimuth check in sun flag
+
 ## 0.8.3 – 2024-03-22
 
 - Fix scan time for BLB files
