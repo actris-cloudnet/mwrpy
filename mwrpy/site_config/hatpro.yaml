@@ -75,8 +75,8 @@ params:
   # -------------------
 
   # path to level1 data and path for processed files
-  data_in: /tmp/data/
-  data_out: /tmp/data/
+  data_in: /data/obs/campaigns/PANAME/SIR/
+  data_out: /data/obs/campaigns/PANAME/SIR/
 
   # availability of IR
   ir_flag: True

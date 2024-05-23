@@ -133,7 +133,7 @@ def get_products(
             coeff_lin = lin(elevation_angle[index])
             coeff_quad = quad(elevation_angle[index])
             tmp_product = (
-                coeff_offset[:]
+                np.squeeze(coeff_offset[:])
                 + np.einsum("ij,ij->i", ret_in[index, :], coeff_lin)
                 + np.einsum("ij,ij->i", ret_in[index, :] ** 2, coeff_quad)
             )
@@ -390,7 +390,7 @@ def get_products(
                         tb_alg, np.squeeze(tb[freq_bl[ifq], :, :]), axis=0
                     )
 
-            rpg_dat["temperature"] = offset(0) + np.einsum(
+            rpg_dat["temperature"] = np.transpose(offset(0)) + np.einsum(
                 "jk,ij->ik", lin(0), np.transpose(tb_alg)
             )
 

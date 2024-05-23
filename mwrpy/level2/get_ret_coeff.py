@@ -30,11 +30,16 @@ def get_mvr_coeff(
         coeff = read_coeff_ascii(c_list[0])
         if "AL" not in coeff:
             coeff["AL"] = [0]
-        if prefix == "tpb":
+        if (prefix == "tpb") and (coeff["RT"] == 2):
             for key in ("W1", "W2"):
                 coeff[key] = coeff[key].squeeze(axis=2)
             for key in ("input_offset", "input_scale", "output_offset", "output_scale"):
                 coeff[key] = coeff[key].squeeze(axis=0)
+        elif (prefix == "tpb") and (coeff["RT"] < 2):
+            coeff["TL"] = np.reshape(
+                np.transpose(coeff["TL"]),
+                (len(coeff["AG"]) * len(coeff["FR"]), len(coeff["AL"])),
+            )
 
         aux = [
             "TS",
@@ -149,9 +154,6 @@ def get_mvr_coeff(
             return np.array(
                 [coeff["OS"][(np.abs(coeff["AG"] - v)).argmin()] for v in x]
             )
-
-        if coeff["RT"] in (0, 1):
-            coeff["TL"] = coeff["TL"][np.newaxis, :]
 
         def f_lin(x):
             return np.array(

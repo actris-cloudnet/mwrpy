@@ -135,7 +135,7 @@ def prepare_data(
             return_indices=True,
         )
         rpg_bin.data["status"][ind_brt, :] = hkd_sanity_check(
-            rpg_hkd.data["status"][ind_hkd], params
+            rpg_hkd.data["status"][ind_hkd], params, rpg_hkd.data["temp"][ind_hkd, 0:2]
         )
 
         file_list_bls = get_file_list(path_to_files, "BLS")
@@ -307,30 +307,47 @@ def _append_hkd(
         add_interpol1d(rpg_bin.data, hkd.data["stab"], hkd.data["time"], "t_sta")
 
 
-def hkd_sanity_check(status: np.ndarray, params: dict) -> np.ndarray:
+def hkd_sanity_check(status: np.ndarray, params: dict, t_amb: np.ndarray) -> np.ndarray:
     """Perform sanity checks for .HKD data."""
+    t_amb[t_amb >= 350.0] = ma.masked
     status_flag = np.zeros((len(status), len(params["receiver"])), np.int32)
-    for irec, nrec in enumerate(np.array(params["receiver"])):
+    for irec, nrec in enumerate(params["receiver"]):
         # status flags for individual channels
         status_flag[~isbit(status, irec + (nrec - 1) * (8 - irec)), irec] = 1
         if nrec == 1:
             # receiver 1 thermal stability & ambient target stability & noise diode
-            status_flag[
-                isbit(status, 25)
-                | isbit(status, 29)
-                | ~isbit(status, 22)
-                | (~isbit(status, 24) & ~isbit(status, 25)),
-                irec,
-            ] = 1
+            if np.all(ma.is_masked(t_amb[:, 0])) | np.all(ma.is_masked(t_amb[:, 1])):
+                status_flag[
+                    isbit(status, 25)
+                    | ~isbit(status, 22)
+                    | (~isbit(status, 24) & ~isbit(status, 25)),
+                    irec,
+                ] = 1
+            else:
+                status_flag[
+                    isbit(status, 25)
+                    | isbit(status, 29)
+                    | ~isbit(status, 22)
+                    | (~isbit(status, 24) & ~isbit(status, 25)),
+                    irec,
+                ] = 1
         if nrec == 2:
             # receiver 2 thermal stability & ambient target stability & noise diode
-            status_flag[
-                isbit(status, 27)
-                | isbit(status, 29)
-                | ~isbit(status, 23)
-                | (~isbit(status, 26) & ~isbit(status, 27)),
-                irec,
-            ] = 1
+            if np.all(ma.is_masked(t_amb[:, 0])) | np.all(ma.is_masked(t_amb[:, 1])):
+                status_flag[
+                    isbit(status, 25)
+                    | ~isbit(status, 22)
+                    | (~isbit(status, 24) & ~isbit(status, 25)),
+                    irec,
+                ] = 1
+            else:
+                status_flag[
+                    isbit(status, 27)
+                    | isbit(status, 29)
+                    | ~isbit(status, 23)
+                    | (~isbit(status, 26) & ~isbit(status, 27)),
+                    irec,
+                ] = 1
 
     return status_flag
 
@@ -346,7 +363,9 @@ def _add_bls(brt: RpgBin, bls: RpgBin, hkd: RpgBin, params: dict) -> None:
         if np.min(np.abs(hkd.data["time"] - time_bls)) <= params["int_time"] * 2:
             ind_hkd = np.argmin(np.abs(hkd.data["time"] - time_bls))
             bls.data["status"][time_ind, :] = hkd_sanity_check(
-                np.array([hkd.data["status"][ind_hkd]], np.int32), params
+                np.array([hkd.data["status"][ind_hkd]], np.int32),
+                params,
+                np.array([hkd.data["temp"][ind_hkd, 0:2]], np.int32),
             )
 
     bls.data["pointing_flag"] = np.ones(len(bls.data["time"]), np.int32)
@@ -487,6 +506,9 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict) -> None:
                     seqs[seqi, 1][0] : seqs[seqi, 1][0] + seqs[seqi, 2][0]
                 ],
                 params,
+                hkd.data["temp"][
+                    seqs[seqi, 1][0] : seqs[seqi, 1][0] + seqs[seqi, 2][0], 0:2
+                ],
             )
             blb_status_add = np.zeros(
                 (blb.header["_n_ang"], len(params["receiver"])), np.int32

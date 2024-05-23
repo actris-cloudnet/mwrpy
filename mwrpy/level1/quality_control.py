@@ -233,13 +233,9 @@ def spectral_consistency(
             factor,
         ) = get_mvr_coeff(site, "spc", data["frequency"][:], coeff_files)
         ret_in = retrieval_input(data, coeff)
-        ele_ang = 90.0
-        ele_coeff = np.where(coeff["AG"] == ele_ang)[0]
-        ele_ind = np.where(
-            (data["elevation_angle"][:] > ele_ang - 0.5)
-            & (data["elevation_angle"][:] < ele_ang + 0.5)
-            & (data["pointing_flag"][:] == 0)
-        )[0]
+        ele_ind = ele_retrieval(data["elevation_angle"][:], coeff)
+        ret_rm = rm_retrieval(data["elevation_angle"][:], coeff, data["frequency"][:])
+
         coeff_ind = np.searchsorted(coeff["AL"], data["frequency"])
         c_w1, c_w2, fac = (
             weights1(data["elevation_angle"][ele_ind]),
@@ -280,14 +276,13 @@ def spectral_consistency(
             ).mean()
             tb_mean = tb_mean.reindex(tb_df.index, method="nearest")
 
-            fact = [5.0, 7.0]  # factor for receiver retrieval uncertainty
+            fact = [5.0, 5.0]  # factor for receiver retrieval uncertainty
             # flag for individual channels based on channel retrieval uncertainty
             flag_ind[
-                (
+                np.where(
                     np.abs(tb_df["Tb"].values[:] - tb_mean["Tb"].values[:])
-                    > coeff["RM"][coeff_ind[ifreq], ele_coeff]
-                    * fact[data["receiver"][ifreq] - 1]
-                ),
+                    > ret_rm[:, coeff_ind[ifreq]] * fact[data["receiver"][ifreq] - 1]
+                )[0],
                 ifreq,
             ] = 1
             abs_diff[:, ifreq] = np.abs(
@@ -384,3 +379,29 @@ def spectral_consistency(
         ] = 1
 
     return flag_ind
+
+
+def ele_retrieval(ele_obs: np.ndarray, coeff: dict) -> np.ndarray:
+    """Extracts elevation angles used in retrieval"""
+    ele_ret = coeff["AG"]
+    if ele_ret.shape == ():
+        ele_ret = np.array([ele_ret])
+    return np.array(
+        [i for i, v in enumerate(ele_obs) if np.min(np.abs(v - ele_ret)) < 0.5]
+    )
+
+
+def rm_retrieval(ele_obs: np.ndarray, coeff: dict, freq) -> np.ndarray:
+    """Extracts elevation angles used in retrieval"""
+    ele_ret = coeff["RM"]
+    freq_ind = np.array([(np.abs(coeff["AL"] - v)).argmin() for v in freq])
+    # import pdb
+    # pdb.set_trace()
+    if ele_ret.shape == ():
+        ele_ret = np.array([ele_ret])
+    return np.array(
+        [
+            ele_ret[freq_ind, (np.abs(ele_ret[freq_ind, :] - v)).argmin()]
+            for v in ele_obs
+        ]
+    )
