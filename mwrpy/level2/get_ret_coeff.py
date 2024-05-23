@@ -161,8 +161,6 @@ def get_mvr_coeff(
             )
 
         if coeff["RT"] in (1, -1):
-            if coeff["RT"] == 1:
-                coeff["TQ"] = coeff["TQ"][np.newaxis, :]
 
             def f_quad(x):
                 return np.array(

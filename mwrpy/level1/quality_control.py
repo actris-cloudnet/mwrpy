@@ -276,12 +276,12 @@ def spectral_consistency(
             ).mean()
             tb_mean = tb_mean.reindex(tb_df.index, method="nearest")
 
-            fact = [5.0, 5.0]  # factor for receiver retrieval uncertainty
+            fact = [6.0, 3.0]  # factor for receiver retrieval uncertainty
             # flag for individual channels based on channel retrieval uncertainty
             flag_ind[
                 np.where(
                     np.abs(tb_df["Tb"].values[:] - tb_mean["Tb"].values[:])
-                    > ret_rm[:, coeff_ind[ifreq]] * fact[data["receiver"][ifreq] - 1]
+                    > ret_rm[:, ifreq] * fact[data["receiver"][ifreq] - 1]
                 )[0],
                 ifreq,
             ] = 1
@@ -393,15 +393,11 @@ def ele_retrieval(ele_obs: np.ndarray, coeff: dict) -> np.ndarray:
 
 def rm_retrieval(ele_obs: np.ndarray, coeff: dict, freq) -> np.ndarray:
     """Extracts elevation angles used in retrieval"""
-    ele_ret = coeff["RM"]
+    rm_ret = coeff["RM"]
     freq_ind = np.array([(np.abs(coeff["AL"] - v)).argmin() for v in freq])
-    # import pdb
-    # pdb.set_trace()
+    if rm_ret.shape == ():
+        rm_ret = np.array([rm_ret])
+    ele_ret = coeff["AG"]
     if ele_ret.shape == ():
         ele_ret = np.array([ele_ret])
-    return np.array(
-        [
-            ele_ret[freq_ind, (np.abs(ele_ret[freq_ind, :] - v)).argmin()]
-            for v in ele_obs
-        ]
-    )
+    return np.array([rm_ret[freq_ind, (np.abs(ele_ret - v)).argmin()] for v in ele_obs])
