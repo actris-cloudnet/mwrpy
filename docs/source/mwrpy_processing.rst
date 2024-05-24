@@ -121,7 +121,8 @@ Variables such as temperature profiles can be plotted from the newly generated f
 Command line usage
 ~~~~~~~~~~~~~~~~~~
 
-MWRpy can also be run using the command line tool `mwrpy/cli.py`:
+After defining the instrument type and site specific configuration files (including input/output data paths) in
+``mwrpy/site_config/``, MWRpy can also be run using the command line tool `mwrpy/cli.py`:
 
 .. code-block::
 
