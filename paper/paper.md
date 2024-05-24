@@ -80,7 +80,9 @@ expected to be beneficial not only for atmospheric studies, but also for improvi
 and maintenance by monitoring key parameters from the instrument and mandatory regular absolute calibrations
 (approximately every 6 months). Future developments include the support of further instrument types, if present in
 the network. Furthermore, the flexible design of the code enables updating the retrievals of meteorological
-variables, which will be derived from a common approach.
+variables, which will be derived from a common statistical approach. For that, a training data set is derived from a
+climatology of the atmospheric state (e.g. profiles from radiosondes or model reanalysis) and simulated $T_B$ coming
+from a microwave radiative transfer model (like PyRTlib, @Larosa2024).
 
 [^1]: E-PROFILE developed code for MWR processing (mwr_raw2l1, mwr_l12l2) can be found at https://github.com/MeteoSwiss
 
