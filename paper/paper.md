@@ -72,8 +72,16 @@ manufactured by Radiometer Physics GmbH (RPG, https://www.radiometer-physics.de/
 instrument type in the network. The output format, including metadata information, variable names, and file
 naming is designed to be compliant with the data structure and naming convention developed together with the
 EUMETNET Profiling Programme E-PROFILE [@Rüfenacht2021], which is establishing a MWR network with the focus on
-near-real-time data provision[^1]. In this way, [MWRpy](https://actris-cloudnet.github.io/mwrpy/index.html#)
-improves data compatibility and fosters cross network collaborations. The processing chain is replacing the mode of
+near-real-time data provision. The processing chain in E-PROFILE consists of a package to convert instrument
+generated files into a common netCDF format using the convention shared with MWRpy (mwr_raw2l1) and a second tool
+to run an optimal estimation retrieval approach for advanced products (mwr_l12l2). Both modules are designed to be
+implemented in the central data hub of E-PROFILE for operational near-real-time data processing in the network of the
+European Meteorological Services[^1]. As a research infrastructure, ACTRIS is pursuing a different approach for the
+product generation, which is based on statistical retrieval, while still allowing stations to be part in both networks.
+In this way, [MWRpy](https://actris-cloudnet.github.io/mwrpy/index.html#) improves data compatibility and fosters
+cross network collaborations.
+
+The processing chain of [MWRpy](https://actris-cloudnet.github.io/mwrpy/index.html#) is replacing the mode of
 operation in Cloudnet, which previously relied on pre-processed and non-harmonized MWR data, and therefore
 contributes to more ACTRIS data consistency. Statistical analysis of these consistent long-term data sets is
 expected to be beneficial not only for atmospheric studies, but also for improving knowledge on instrument operation
@@ -82,7 +90,11 @@ and maintenance by monitoring key parameters from the instrument and mandatory r
 the network. Furthermore, the flexible design of the code enables updating the retrievals of meteorological
 variables, which will be derived from a common statistical approach. For that, a training data set is derived from a
 climatology of the atmospheric state (e.g. profiles from radiosondes or model reanalysis) and simulated $T_B$ coming
-from a microwave radiative transfer model (like PyRTlib, @Larosa2024).
+from a microwave radiative transfer model like PyRTlib [@Larosa2024]. PyRTlib, as a Python library for
+non-scattering atmospheric microwave radiative transfer calculations, takes various input profiles to compute down-
+and upwelling $T_B$ for microwave sensors from different observational platforms using build-in atmospheric
+absorption models. This output, together with the climatology can then be used for retrieval training (not included in
+[MWRpy](https://actris-cloudnet.github.io/mwrpy/index.html#)) to update existing coefficients in the ACTRIS network.
 
 [^1]: E-PROFILE developed code for MWR processing (mwr_raw2l1, mwr_l12l2) can be found at https://github.com/MeteoSwiss
 
@@ -94,12 +106,13 @@ embedded in the Python implementation of the Cloudnet processing scheme Cloudnet
 quality control is performed on the mandatory data fields of measured $T_B$ at various frequencies and instrument
 specific housekeeping data to generate quality flags. In a next step auxiliary data (e.g. from a weather station) are
 combined to produce daily netCDF files. Subsequently advanced meteorological variables are derived by applying
-retrieval coefficients and stored as separate daily files for variables originating from elevation scans (e.g.
-temperature profiles) and all remaining measuring modes (including vertical stare for e.g. LWP). Within the Cloudnet
-processing framework the output of [MWRpy](https://actris-cloudnet.github.io/mwrpy/index.html#) is then harmonized
-and utilized by CloudnetPy, together with data streams from other ACTRIS-CCRES instruments, like cloud radar, to
-derive synergy products. All files, including calibration and retrieval information, and corresponding
-visualizations are stored in the Cloudnet data portal and accessible through an API.
+coefficients from the statistical retrieval approaches and stored as separate daily files for variables originating
+from elevation scans (e.g. temperature profiles) and all remaining measuring modes (including vertical stare for e.g.
+LWP). Within the Cloudnet processing framework the output of
+[MWRpy](https://actris-cloudnet.github.io/mwrpy/index.html#) is then harmonized and utilized by CloudnetPy, together
+with data streams from other ACTRIS-CCRES instruments, like cloud radar, to derive synergy products. All files,
+including calibration and retrieval information, and corresponding visualizations are stored in the Cloudnet data
+portal and accessible through an API.
 
 ![Flowchart of the MWRpy processing chain (including main functions), with the last two steps
 being exclusive for the CloudnetPy implementation.\label{fig:mwrpy_flow_chart}](mwrpy_flow_chart.png)
