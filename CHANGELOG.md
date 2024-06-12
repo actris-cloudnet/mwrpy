@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0 – 2024-06-12
+
+- Add JOSS paper
+
 ## 0.9.0 – 2024-05-10
 
 - Document file format
