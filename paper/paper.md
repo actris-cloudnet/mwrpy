@@ -35,7 +35,7 @@ bibliography: paper.bib
 # Summary
 
 Ground-based passive microwave radiometers (MWRs) are deployed to obtain information on the vertical structure of
-temperature and water vapor mostly in the lower troposphere. In addition, they are used to derive the total 
+temperature and water vapor mostly in the lower troposphere. In addition, they are used to derive the total
 column-integrated liquid water content of the atmosphere, referred to as liquid water path (LWP). MWRs measure radiances,
 given as brightness temperatures ($T_B$), typically in two frequency ranges along absorption features of water vapor
 and oxygen, as well as in window regions where the observations are sensitive to liquid water clouds. Profiles of
