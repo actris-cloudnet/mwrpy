@@ -57,6 +57,9 @@ extend-select = ["I"]
 [tool.setuptools.dynamic]
 version = {attr = "mwrpy.version.__version__"}
 
+[tool.setuptools.packages]
+find = {}
+
 [tool.tomlsort]
 trailing_comma_inline_array = true
 sort_inline_arrays = true
