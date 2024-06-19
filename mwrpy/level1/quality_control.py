@@ -276,12 +276,14 @@ def spectral_consistency(
             ).mean()
             tb_mean = tb_mean.reindex(tb_df.index, method="nearest")
 
-            fact = [6.0, 3.0]  # factor for receiver retrieval uncertainty
+            fact = [5.0, 5.0]  # factor for receiver retrieval uncertainty
             # flag for individual channels based on channel retrieval uncertainty
             flag_ind[
                 np.where(
                     np.abs(tb_df["Tb"].values[:] - tb_mean["Tb"].values[:])
-                    > ret_rm[:, ifreq] * fact[data["receiver"][ifreq] - 1]
+                    > ret_rm[:, ifreq]
+                    * fact[data["receiver"][ifreq] - 1]
+                    * (2.0 - np.sin(np.deg2rad(data["elevation_angle"][ele_ind])))
                 )[0],
                 ifreq,
             ] = 1

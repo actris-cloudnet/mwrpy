@@ -1,6 +1,7 @@
 """Module for writing Level 2 netCDF files."""
 
 from datetime import datetime
+from itertools import groupby
 
 import netCDF4 as nc
 import numpy as np
@@ -503,6 +504,23 @@ def _get_qf(
     rpg_dat[product + "_quality_flag"] = np.bitwise_or.reduce(
         lev1["quality_flag"][index, freq_ind], axis=1
     )
+    seqs_all = [
+        (key, len(list(val))) for key, val in groupby(lev1["pointing_flag"][:] & 1 > 0)
+    ]
+    seqs = np.array(
+        [
+            (key, sum(s[1] for s in seqs_all[:i]), length)
+            for i, (key, length) in enumerate(seqs_all)
+            if bool(key) is True
+        ]
+    )
+
+    if product == "temperature" and len(seqs) > 0:
+        for ind, val in enumerate(seqs[:, 1]):
+            scan = np.arange(val, val + seqs[ind, 2])
+            flg = np.bitwise_or.reduce(lev1["quality_flag"][scan, freq_ind], axis=1)
+            rpg_dat[product + "_quality_flag"][ind] = np.bitwise_or.reduce(flg)
+
     rpg_dat[product + "_quality_flag_status"] = lev1["quality_flag_status"][
         index, freq_ind[0]
     ]
