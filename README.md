@@ -3,6 +3,7 @@
 [![MWRpy tests](https://github.com/actris-cloudnet/mwrpy/actions/workflows/test.yml/badge.svg)](https://github.com/actris-cloudnet/mwrpy/actions/workflows/test.yml)
 [![PyPI version](https://badge.fury.io/py/mwrpy.svg)](https://badge.fury.io/py/mwrpy)
 [![DOI](https://zenodo.org/badge/619528669.svg)](https://zenodo.org/doi/10.5281/zenodo.11614185)
+[![paper](https://joss.theoj.org/papers/10.21105/joss.06733/status.svg)](https://doi.org/10.21105/joss.06733)
 
 MWRpy is a Python software to process RPG Microwave Radiometer data and is developed
 at the University of Cologne, Germany as part
@@ -19,6 +20,13 @@ developed in the [EUMETNET Profiling Programme E-PROFILE](https://www.eumetnet.e
 MWRpy documentation: <https://actris-cloudnet.github.io/mwrpy/>
 
 ![MWRpy example output](https://atmos.meteo.uni-koeln.de/~hatpro/quicklooks/obs/site/jue/tophat/actris/level2/2022/10/29/20221029_juelich_temperature.png)
+
+## Citing
+
+If you wish to acknowledge MWRpy in your publication, please cite:
+
+> Marke et al., (2024). MWRpy: A Python package for processing microwave radiometer data. Journal of Open Source
+> Software, 9(98), 6733, https://doi.org/10.21105/joss.06733
 
 ## Installation
 

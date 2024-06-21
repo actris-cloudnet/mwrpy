@@ -1,0 +1,67 @@
+cff-version: "1.2.0"
+authors:
+  - family-names: Marke
+    given-names: Tobias
+    orcid: "https://orcid.org/0000-0001-7804-9056"
+  - family-names: Löhnert
+    given-names: Ulrich
+    orcid: "https://orcid.org/0000-0002-9023-0269"
+  - family-names: Tukiainen
+    given-names: Simo
+    orcid: "https://orcid.org/0000-0002-0651-4622"
+  - family-names: Siipola
+    given-names: Tuomas
+    orcid: "https://orcid.org/0009-0004-7757-0893"
+  - family-names: Pospichal
+    given-names: Bernhard
+    orcid: "https://orcid.org/0000-0001-9517-8300"
+contact:
+  - family-names: Marke
+    given-names: Tobias
+    orcid: "https://orcid.org/0000-0001-7804-9056"
+doi: 10.5281/zenodo.11614185
+repository-code: "https://github.com/actris-cloudnet/mwrpy"
+abstract: >-
+  MWRpy is a Python code to process Microwave Radiometer observations. The software produces files for quality
+  controlled brightness temperatures, vertical profiles of atmospheric temperature and humidity, and the total
+  column-integrated water vapor and cloud liquid water.
+keywords:
+  - Python
+  - meteorology
+  - remote sensing
+  - microwave radiometer
+license: MIT
+message: If you use this software, please cite our article in the
+  Journal of Open Source Software.
+preferred-citation:
+  authors:
+    - family-names: Marke
+      given-names: Tobias
+      orcid: "https://orcid.org/0000-0001-7804-9056"
+    - family-names: Löhnert
+      given-names: Ulrich
+      orcid: "https://orcid.org/0000-0002-9023-0269"
+    - family-names: Tukiainen
+      given-names: Simo
+      orcid: "https://orcid.org/0000-0002-0651-4622"
+    - family-names: Siipola
+      given-names: Tuomas
+      orcid: "https://orcid.org/0009-0004-7757-0893"
+    - family-names: Pospichal
+      given-names: Bernhard
+      orcid: "https://orcid.org/0000-0001-9517-8300"
+  date-published: 2024-06-20
+  doi: 10.21105/joss.06733
+  issn: 2475-9066
+  issue: 98
+  journal: Journal of Open Source Software
+  publisher:
+    name: Open Journals
+  start: 6733
+  title: "MWRpy: A Python package for processing microwave radiometer
+    data"
+  type: article
+  url: "https://joss.theoj.org/papers/10.21105/joss.06733"
+  volume: 9
+title: "MWRpy: A Python package for processing microwave radiometer
+  data"
