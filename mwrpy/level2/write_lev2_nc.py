@@ -516,10 +516,12 @@ def _get_qf(
     )
 
     if product == "temperature" and len(seqs) > 0:
-        for ind, val in enumerate(seqs[:, 1]):
-            scan = np.arange(val, val + seqs[ind, 2])
-            flg = np.bitwise_or.reduce(lev1["quality_flag"][scan, freq_ind], axis=1)
-            rpg_dat[product + "_quality_flag"][ind] = np.bitwise_or.reduce(flg)
+        i_scn = np.where(seqs[:, 2] == int(np.round(np.median(seqs[:, 2]))))[0]
+        if len(i_scn) == len(rpg_dat[product + "_quality_flag"][:]):
+            for ind, val in enumerate(i_scn):
+                scan = np.arange(seqs[val, 1], seqs[val, 1] + seqs[val, 2])
+                flg = np.bitwise_or.reduce(lev1["quality_flag"][scan, freq_ind], axis=1)
+                rpg_dat[product + "_quality_flag"][ind] = np.bitwise_or.reduce(flg)
 
     rpg_dat[product + "_quality_flag_status"] = lev1["quality_flag_status"][
         index, freq_ind[0]

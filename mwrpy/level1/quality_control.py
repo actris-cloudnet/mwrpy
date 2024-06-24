@@ -375,7 +375,9 @@ def spectral_consistency(
     for _, rec in enumerate(data["receiver_nb"]):
         flag_ind[
             np.ix_(
-                ma.mean(abs_diff[:, data["receiver"] == rec], axis=1) > th_rec[rec - 1],
+                ma.mean(abs_diff[:, data["receiver"] == rec], axis=1)
+                > th_rec[rec - 1]
+                * (2.0 - np.sin(np.deg2rad(data["elevation_angle"][:]))),
                 data["receiver"] == rec,
             )
         ] = 1

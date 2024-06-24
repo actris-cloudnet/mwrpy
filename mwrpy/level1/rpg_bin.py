@@ -27,9 +27,11 @@ def stack_files(file_list: list[str]) -> tuple[dict, dict]:
                     if (
                         value.ndim > 1
                         and value.shape[1] != target[name].shape[1]
-                        and name == "irt"
+                        and name in ("irt", "tb")
                     ):
-                        raise NotImplementedError("Inconsistent number of IRT channels")
+                        raise NotImplementedError(
+                            "Inconsistent number of " + name + " channels"
+                        )
                     else:
                         target[name] = fun((target[name], value))
             elif value.ndim > 0 and name not in target:
