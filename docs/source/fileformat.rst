@@ -5,7 +5,7 @@ All MWRpy files use ``NETCDF4_CLASSIC`` data model, i.e., ``HDF5`` file format.
 
 
 MWR-1C01 file
-............
+.............
 
 **Dimensions**
 
