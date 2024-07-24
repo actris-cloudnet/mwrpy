@@ -1,4 +1,5 @@
-"""Module for plotting"""
+"""Module for plotting."""
+
 import glob
 import locale
 from datetime import date, datetime
@@ -90,6 +91,7 @@ def generate_figure(
     title: bool = True,
 ) -> tuple[Dimensions, str] | None:
     """Generates a mwrpy figure.
+
     Args:
         nc_file (str): Input file.
         field_names (list): Variable names to be plotted.
@@ -105,14 +107,15 @@ def generate_figure(
             Overrides the *save_path* option. Default is None.
         sub_title (bool, optional): Add subtitle to image. Default is True.
         title (bool, optional): Add title to image. Default is True.
+
     Returns:
         Dimensions of the generated figure in pixels.
         File name of the generated figure.
+
     Examples:
         >>> from mwrpy.plots import generate_figure
         >>> generate_figure('lev2_file.nc', ['lwp'])
     """
-
     valid_fields, valid_names = _find_valid_fields(nc_file, field_names)
     if len(valid_fields) > 0:
         fig, axes = _initialize_figure(len(valid_fields), dpi)
@@ -166,8 +169,7 @@ def _mark_gaps(
     max_allowed_gap: float = 1,
     mask_edge: int = 0,
 ) -> tuple:
-    """Mark gaps in time and data"""
-
+    """Mark gaps in time and data."""
     assert time[0] >= 0
     assert time[-1] <= 24
     max_gap = max_allowed_gap / 60
@@ -344,6 +346,7 @@ def _screen_high_altitudes(data_field: ndarray, ax_values: tuple, max_y: int) ->
     """Removes altitudes from 2D data that are not visible in the figure.
     Bug in pcolorfast causing effect to axis not noticing limitation while
     saving fig. This fixes that bug till pcolorfast does fixing themselves.
+
     Args:
         data_field (ndarray): 2D data array.
         ax_values (tuple): Time and height 1D arrays.
@@ -421,6 +424,7 @@ def _create_save_name(
 
 def _plot_segment_data(ax, data: ma.MaskedArray, name: str, axes: tuple, nc_file: str):
     """Plots categorical 2D variable.
+
     Args:
         ax (obj): Axes object of subplot (1,2,3,.. [1,1,],[1,2]... etc.)
         data (ndarray): 2D data array.
@@ -459,6 +463,7 @@ def _plot_segment_data(ax, data: ma.MaskedArray, name: str, axes: tuple, nc_file
 def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_file: str):
     """Plots continuous 2D variable.
     Creates only one plot, so can be used both one plot and subplot type of figs.
+
     Args:
         ax (obj): Axes object of subplot (1,2,3,.. [1,1,],[1,2]... etc.)
         data_in (ndarray): 2D data array.
@@ -661,7 +666,6 @@ def _plot_instrument_data(
 
 def _plot_hkd(ax, data_in: ndarray, name: str, time: ndarray):
     """Plot for housekeeping data."""
-
     time = _nan_time_gaps(time)
     if name == "t_amb":
         data_in[data_in == -999.0] = np.nan
@@ -769,7 +773,6 @@ def _plot_hkd(ax, data_in: ndarray, name: str, time: ndarray):
 
 def _plot_sen(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
     """Plot for azimuth and elevation angles."""
-
     variables = ATTRIBUTES[name]
     pointing_flag = read_nc_fields(nc_file, "pointing_flag")
     quality_flag = read_nc_fields(nc_file, "quality_flag")
@@ -825,7 +828,6 @@ def _plot_sen(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
 
 def _plot_irt(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
     """Plot for infrared temperatures."""
-
     variables = ATTRIBUTES[name]
     assert variables.plot_range is not None
     vmin, vmax = variables.plot_range
@@ -858,7 +860,6 @@ def _plot_irt(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
 
 def _plot_mqf(ax, data_in: ma.MaskedArray, time: ndarray, nc_file: str):
     """Plot for quality flags of meteorological sensors."""
-
     qf = _get_bit_flag(data_in, np.arange(6))
     _plot_segment_data(
         ax,
@@ -875,7 +876,6 @@ def _plot_mqf(ax, data_in: ma.MaskedArray, time: ndarray, nc_file: str):
 
 def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
     """Plot for Level 1 quality flags."""
-
     site = _read_location(nc_file)
     params = read_config(site, "params")
 
@@ -1518,7 +1518,6 @@ def _calculate_ticks(x, yl, yl2):
 
 def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
     """Plot for integrated quantities (LWP, IWV)."""
-
     flag = _get_ret_flag(nc_file, time, name)
     data0, time0 = data_in[flag == 0], time[flag == 0]
     if len(data0) == 0:

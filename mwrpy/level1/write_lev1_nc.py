@@ -1,4 +1,5 @@
-"""Module for writing Level 1 netCDF files"""
+"""Module for writing Level 1 netCDF files."""
+
 import logging
 from collections.abc import Callable
 from itertools import groupby
@@ -43,7 +44,6 @@ def lev1_to_nc(
         coeff_files: List of coefficient files.
         instrument_config: Dictionary containing information about the instrument.
     """
-
     if site is None:
         assert coeff_files is not None
         assert instrument_config is not None
@@ -84,8 +84,7 @@ def prepare_data(
     data_type: str,
     params: dict,
 ) -> RpgBin:
-    """Load and prepare data for netCDF writing"""
-
+    """Load and prepare data for netCDF writing."""
     if data_type in ("1B01", "1C01"):
         brt_files = get_file_list(path_to_files, "BRT")
         if len(brt_files) == 0:
@@ -263,8 +262,7 @@ def prepare_data(
 def _append_hkd(
     file_list_hkd: list, rpg_bin: RpgBin, data_type: str, params: dict
 ) -> None:
-    """Append hkd data on same time grid and perform TB sanity check"""
-
+    """Append hkd data on same time grid and perform TB sanity check."""
     hkd = RpgBin(file_list_hkd)
 
     if "latitude" not in hkd.data:
@@ -310,7 +308,7 @@ def _append_hkd(
 
 
 def hkd_sanity_check(status: np.ndarray, params: dict) -> np.ndarray:
-    """Perform sanity checks for .HKD data"""
+    """Perform sanity checks for .HKD data."""
     status_flag = np.zeros((len(status), len(params["receiver"])), np.int32)
     for irec, nrec in enumerate(np.array(params["receiver"])):
         # status flags for individual channels
@@ -338,8 +336,7 @@ def hkd_sanity_check(status: np.ndarray, params: dict) -> np.ndarray:
 
 
 def _add_bls(brt: RpgBin, bls: RpgBin, hkd: RpgBin, params: dict) -> None:
-    """Add BLS boundary-layer scans using a linear time axis"""
-
+    """Add BLS boundary-layer scans using a linear time axis."""
     bls.data["time_bnds"] = add_time_bounds(bls.data["time"] + 1, params["int_time"])
     bls.data["status"] = np.zeros(
         (len(bls.data["time"]), len(params["receiver"])), np.int32
@@ -382,8 +379,7 @@ def _add_bls(brt: RpgBin, bls: RpgBin, hkd: RpgBin, params: dict) -> None:
 
 
 def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict) -> None:
-    """Add BLB boundary-layer scans using a linear time axis"""
-
+    """Add BLB boundary-layer scans using a linear time axis."""
     time_bnds_add: np.ndarray = np.empty([0], dtype=np.int32)
     time_add: np.ndarray = np.empty([0], dtype=np.int32)
     elevation_angle_add: np.ndarray = np.empty([0], dtype=np.int32)
@@ -532,7 +528,7 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict) -> None:
 
 
 def _azi_correction(brt: dict, params: dict) -> None:
-    """Azimuth correction (transform to "geographical" coordinates)"""
+    """Azimuth correction (transform to "geographical" coordinates)."""
     ind180 = np.where((brt["azimuth_angle"][:] >= 0) & (brt["azimuth_angle"][:] <= 180))
     ind360 = np.where(
         (brt["azimuth_angle"][:] > 180) & (brt["azimuth_angle"][:] <= 360)

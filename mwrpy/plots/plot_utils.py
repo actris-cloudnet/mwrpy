@@ -1,4 +1,5 @@
-"""Module containing additional helper functions for plotting"""
+"""Module containing additional helper functions for plotting."""
+
 import locale
 from datetime import datetime, timezone
 
@@ -63,7 +64,7 @@ def _get_freq_flag(data: ndarray, bits: ndarray) -> ndarray:
 
 
 def _get_bit_flag(data: ndarray, bits: ndarray) -> ndarray:
-    """Returns array of flag values for each bit"""
+    """Returns array of flag values for each bit."""
     flag = np.ones((len(data), len(bits))) * np.nan
     for i, bit in enumerate(bits):
         flag[isbit(data, bit), i] = i
@@ -73,7 +74,7 @@ def _get_bit_flag(data: ndarray, bits: ndarray) -> ndarray:
 def _get_unmasked_values(
     data: ma.MaskedArray, time: ndarray
 ) -> tuple[ndarray, ndarray]:
-    """Returns unmasked time and data"""
+    """Returns unmasked time and data."""
     if ma.is_masked(data) is False:
         return data, time
     good_values = ~data.mask
@@ -91,7 +92,8 @@ def _nan_time_gaps(time: ndarray, tgap: float = 5.0 / 60.0) -> ndarray:
 
 def _gap_array(time: ndarray, case_date, tgap: float = 5.0 / 60.0) -> ndarray:
     """Returns edges of time gaps bigger than 5min (default).
-    End of gap for current day is current time."""
+    End of gap for current day is current time.
+    """
     locale.setlocale(locale.LC_TIME, "en_US.UTF-8")
     dtnow = datetime.now(tz=timezone.utc)
     day_e = 24.0
@@ -138,8 +140,7 @@ def _read_location(nc_file: str) -> str:
 def heatmap(
     data, row_labels, col_labels, ax=None, cbar_kw=None, cbarlabel="", **kwargs
 ):
-    """
-    Create a heatmap from a numpy array and two lists of labels.
+    """Create a heatmap from a numpy array and two lists of labels.
 
     Parameters
     ----------
@@ -159,7 +160,6 @@ def heatmap(
     **kwargs
         All other arguments are forwarded to `imshow`.
     """
-
     if cbar_kw is None:
         cbar_kw = {}
 
@@ -193,8 +193,7 @@ def annotate_heatmap(
     threshold=None,
     **textkw,
 ):
-    """
-    A function to annotate a heatmap.
+    """A function to annotate a heatmap.
 
     Parameters
     ----------
@@ -217,7 +216,6 @@ def annotate_heatmap(
         All other arguments are forwarded to each call to `text` used to create
         the text labels.
     """
-
     if not isinstance(data, (list, np.ndarray)):
         data = im.get_array()
 

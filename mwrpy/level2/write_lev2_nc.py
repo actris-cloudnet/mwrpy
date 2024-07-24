@@ -1,4 +1,5 @@
-"""Module for writing Level 2 netCDF files"""
+"""Module for writing Level 2 netCDF files."""
+
 from datetime import datetime
 
 import netCDF4 as nc
@@ -43,7 +44,6 @@ def lev2_to_nc(
         coeff_files: List of coefficient files.
 
     """
-
     if data_type not in (
         "2P01",
         "2P02",
@@ -88,7 +88,6 @@ def get_products(
     hum_file: str | None = None,
 ) -> tuple[dict, dict, np.ndarray, np.ndarray]:
     """Derive specified Level 2 products."""
-
     if "elevation_angle" in lev1.variables:
         elevation_angle = lev1["elevation_angle"][:]
     else:
@@ -516,7 +515,7 @@ def _combine_lev1(
     data_type: str,
     scan_time: np.ndarray,
 ) -> None:
-    """add level1 data"""
+    """Add level1 data."""
     lev1_vars = [
         "time",
         "time_bnds",
@@ -545,7 +544,7 @@ def _combine_lev1(
 
 
 def _del_att(global_attributes: dict) -> None:
-    """Remove lev1 only attributes"""
+    """Remove lev1 only attributes."""
     att_del = ["ir_instrument", "met_instrument", "_accuracy"]
     att_names = global_attributes.keys()
     for name in list(att_names):
@@ -554,13 +553,13 @@ def _del_att(global_attributes: dict) -> None:
 
 
 def load_product(filename: str):
-    """Load existing lev2 file for deriving other products"""
+    """Load existing lev2 file for deriving other products."""
     file = nc.Dataset(filename)
     return file
 
 
 def ele_retrieval(ele_obs: np.ndarray, coeff: dict) -> np.ndarray:
-    """Extracts elevation angles used in retrieval"""
+    """Extracts elevation angles used in retrieval."""
     ele_ret = coeff["AG"]
     if ele_ret.shape == ():
         ele_ret = np.array([ele_ret])
@@ -568,8 +567,7 @@ def ele_retrieval(ele_obs: np.ndarray, coeff: dict) -> np.ndarray:
 
 
 def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
-    """Get retrieval input"""
-
+    """Get retrieval input."""
     time_median = ma.median(lev1["time"][:])
     if time_median < 24:
         assert isinstance(lev1, nc.Dataset)

@@ -1,4 +1,5 @@
-"""This module contains all functions to read in RPG MWR binary files"""
+"""This module contains all functions to read in RPG MWR binary files."""
+
 import datetime
 import logging
 from collections.abc import Callable
@@ -63,7 +64,7 @@ def stack_files(file_list: list[str]) -> tuple[dict, dict]:
 
 
 class RpgBin:
-    """Class for RPG binary files"""
+    """Class for RPG binary files."""
 
     def __init__(self, file_list: list[str]):
         self.header, self.raw_data = stack_files(file_list)
@@ -417,16 +418,16 @@ def _check_eof(file: BinaryIO):
 def _decode_angles(
     x: np.ndarray, method: Literal[1, 2]
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Decode elevation and azimuth angles.
+    """Decode elevation and azimuth angles.
+
     >>> _decode_angles(np.array([1267438.5]), method=1)
     (array([138.5]), array([267.4]))
     >>> _decode_angles(np.array([1453031045, -900001232]), method=2)
     (array([145.3, -90. ]), array([310.45,  12.32]))
+
     Based on `interpret_angle` from mwr_raw2l1 licensed under BSD 3-Clause:
     https://github.com/MeteoSwiss/mwr_raw2l1/blob/0738490d22f77138cdf9329bf102f319c78be584/mwr_raw2l1/readers/reader_rpg_helpers.py#L30
     """
-
     if method == 1:
         # Description in the manual is quite unclear so here's an improved one:
         # Ang=sign(El)*(|El|+1000*Az), -90°<=El<100°, 0°<=Az<360°. If El>=100°

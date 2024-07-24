@@ -1,4 +1,5 @@
 """Module for atmsopheric functions."""
+
 import metpy.calc as mpcalc
 import numpy as np
 import pandas as pd
@@ -13,17 +14,17 @@ HPA_TO_P = 100
 
 
 def spec_heat(T: np.ndarray) -> np.ndarray:
-    """Specific heat for evaporation (J/kg)"""
+    """Specific heat for evaporation (J/kg)."""
     return con.LATENT_HEAT - 2420.0 * (T - con.T0)
 
 
 def vap_pres(q: np.ndarray, T: np.ndarray) -> np.ndarray:
-    """Water vapor pressure (Pa)"""
+    """Water vapor pressure (Pa)."""
     return q * con.RW * T
 
 
 def t_dew_rh(T: np.ndarray, rh: np.ndarray) -> np.ndarray:
-    """Dew point temperature (K) from relative humidity ()"""
+    """Dew point temperature (K) from relative humidity ()."""
     return (
         mpcalc.dewpoint_from_relative_humidity(
             masked_array(T, data_units="K"), masked_array(rh, data_units="")
@@ -33,7 +34,7 @@ def t_dew_rh(T: np.ndarray, rh: np.ndarray) -> np.ndarray:
 
 
 def pot_tem(T: np.ndarray, q: np.ndarray, p: np.ndarray, z: np.ndarray) -> np.ndarray:
-    """Potential temperature (K)"""
+    """Potential temperature (K)."""
     p_baro = calc_p_baro(T, q, p, z)
     return mpcalc.potential_temperature(
         masked_array(p_baro, data_units="Pa"), masked_array(T, data_units="K")
@@ -43,7 +44,7 @@ def pot_tem(T: np.ndarray, q: np.ndarray, p: np.ndarray, z: np.ndarray) -> np.nd
 def eq_pot_tem(
     T: np.ndarray, q: np.ndarray, p: np.ndarray, z: np.ndarray
 ) -> np.ndarray:
-    """Equivalent potential temperature (K)"""
+    """Equivalent potential temperature (K)."""
     e = vap_pres(q, T)
     p_baro = calc_p_baro(T, q, p, z)
     Theta = pot_tem(T, q, p, z)
@@ -56,13 +57,13 @@ def eq_pot_tem(
 
 
 def rel_hum(T: np.ndarray, q: np.ndarray) -> np.ndarray:
-    """Relative humidity ()"""
+    """Relative humidity ()."""
     return vap_pres(q, T) / calc_saturation_vapor_pressure(T)
 
 
 def rh_err(T: np.ndarray, q: np.ndarray, dT: np.ndarray, dq: np.ndarray) -> np.ndarray:
     """Calculates relative humidity error propagation
-    from absolute humidity and temperature ()
+    from absolute humidity and temperature ().
     """
     es = calc_saturation_vapor_pressure(T)
     drh_dq = con.RW * T / es
@@ -74,7 +75,7 @@ def rh_err(T: np.ndarray, q: np.ndarray, dT: np.ndarray, dq: np.ndarray) -> np.n
 
 
 def abs_hum(T: np.ndarray, rh: np.ndarray) -> np.ndarray:
-    "Absolute humidity (kg/m^3)"
+    """Absolute humidity (kg/m^3)."""
     es = calc_saturation_vapor_pressure(T)
     return (rh * es) / (con.RW * T)
 
@@ -82,14 +83,14 @@ def abs_hum(T: np.ndarray, rh: np.ndarray) -> np.ndarray:
 def calc_p_baro(
     T: np.ndarray, q: np.ndarray, p: np.ndarray, z: np.ndarray
 ) -> np.ndarray:
-    """Calculate pressure (Pa) in each level using barometric height formula"""
+    """Calculate pressure (Pa) in each level using barometric height formula."""
     Tv = mpcalc.virtual_temperature(
         masked_array(T, data_units="K"), masked_array(q, data_units="")
     ).magnitude
     p_baro = ma.masked_all(T.shape)
-    p_baro[
-        (~ma.getmaskarray(q).any(axis=1)) & (~ma.getmaskarray(T).any(axis=1)), 0
-    ] = p[(~ma.getmaskarray(q).any(axis=1)) & (~ma.getmaskarray(T).any(axis=1))]
+    p_baro[(~ma.getmaskarray(q).any(axis=1)) & (~ma.getmaskarray(T).any(axis=1)), 0] = (
+        p[(~ma.getmaskarray(q).any(axis=1)) & (~ma.getmaskarray(T).any(axis=1))]
+    )
     for ialt in np.arange(len(z) - 1) + 1:
         p_baro[:, ialt] = p_baro[:, ialt - 1] * ma.exp(
             -scipy.constants.g
@@ -102,8 +103,10 @@ def calc_p_baro(
 
 def calc_saturation_vapor_pressure(temperature: np.ndarray) -> np.ndarray:
     """Goff-Gratch formula for saturation vapor pressure (Pa) over water adopted by WMO.
+
     Args:
         temperature: Temperature (K).
+
     Returns:
         Saturation vapor pressure (Pa).
     """
@@ -127,7 +130,7 @@ def c2k(T: np.ndarray) -> np.ndarray:
 
 
 def dir_avg(time: np.ndarray, spd: np.ndarray, drc: np.ndarray, win: float = 0.5):
-    """Computes average wind direction (DEG) for a certain window length"""
+    """Computes average wind direction (DEG) for a certain window length."""
     width = int(ma.round(win / ma.median(ma.diff(ma.masked_invalid(time)))))
     if (width % 2) != 0:
         width = width + 1
@@ -139,7 +142,7 @@ def dir_avg(time: np.ndarray, spd: np.ndarray, drc: np.ndarray, win: float = 0.5
 
 
 def winddir(spd: np.ndarray, drc: np.ndarray):
-    """Computes mean wind direction (deg)"""
+    """Computes mean wind direction (deg)."""
     ve = -np.mean(spd * np.sin(np.deg2rad(drc)))
     vn = -np.mean(spd * np.cos(np.deg2rad(drc)))
     vdir = np.rad2deg(np.arctan2(ve, vn))
@@ -154,17 +157,17 @@ def winddir(spd: np.ndarray, drc: np.ndarray):
 
 def find_lwcl_free(lev1: dict) -> tuple[np.ndarray, np.ndarray]:
     """Identifying liquid water cloud free periods using 31.4 GHz TB variability.
-    Uses water vapor channel as proxy for a humidity dependent threshold."""
-
+    Uses water vapor channel as proxy for a humidity dependent threshold.
+    """
     index = np.ones(len(lev1["time"]), dtype=np.int32)
     status = np.ones(len(lev1["time"]), dtype=np.int32)
     freq_31 = np.where(np.round(lev1["frequency"][:], 1) == 31.4)[0]
     freq_22 = np.where(np.round(lev1["frequency"][:], 1) == 22.2)[0]
     if len(freq_31) == 1 and len(freq_22) == 1:
         tb = np.squeeze(lev1["tb"][:, freq_31])
-        tb[
-            (lev1["pointing_flag"][:] == 1) | (lev1["elevation_angle"][:] < 89.0)
-        ] = np.nan
+        tb[(lev1["pointing_flag"][:] == 1) | (lev1["elevation_angle"][:] < 89.0)] = (
+            np.nan
+        )
         ind = utils.time_to_datetime_index(lev1["time"][:])
         tb_df = pd.DataFrame({"Tb": tb}, index=ind)
         tb_std = tb_df.rolling(

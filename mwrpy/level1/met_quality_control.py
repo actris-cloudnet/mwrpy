@@ -1,4 +1,5 @@
-"""Module for meteorological sensor quality control"""
+"""Module for meteorological sensor quality control."""
+
 import metpy.calc as mpcalc
 import numpy as np
 from metpy.units import masked_array
@@ -8,6 +9,7 @@ from mwrpy.utils import setbit
 
 def apply_met_qc(data: dict, params: dict) -> None:
     """This function performs quality control of meteorological sensor data.
+
     Args:
         data: Level 1 data.
         params: Site specific parameters.
@@ -23,7 +25,6 @@ def apply_met_qc(data: dict, params: dict) -> None:
         apply_met_qc('lev1_data', 'params')
 
     """
-
     data["met_quality_flag"] = np.zeros(len(data["time"]), dtype=np.int32)
     var_name = [
         "air_temperature",

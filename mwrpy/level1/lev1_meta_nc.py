@@ -1,4 +1,5 @@
-"""Module for Level 1 Metadata"""
+"""Module for Level 1 Metadata."""
+
 from collections.abc import Callable
 from typing import TypeAlias
 
@@ -7,6 +8,7 @@ from mwrpy.utils import MetaData
 
 def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
     """Adds Metadata for RPG MWR Level 1 variables for NetCDF file writing.
+
     Args:
         rpg_variables: RpgArray instances.
         data_type: Data type of the netCDF file.
@@ -21,7 +23,6 @@ def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
         from level1.lev1_meta_nc import get_data_attributes
         att = get_data_attributes('data','data_type')
     """
-
     if data_type not in (
         "1B01",
         "1B11",

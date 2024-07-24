@@ -1,4 +1,5 @@
-"""Module to load in retrieval coefficient files"""
+"""Module to load in retrieval coefficient files."""
+
 import netCDF4 as nc
 import numpy as np
 from numpy import ma
@@ -21,7 +22,6 @@ def get_mvr_coeff(
         >>> from mwrpy.level2.get_ret_coeff import get_mvr_coeff
         >>> get_mvr_coeff('site_name', 'lwp', np.array([22, 31.4]))
     """
-
     c_list = get_coeff_list(site, prefix, coeff_files)
 
     coeff: dict = {}

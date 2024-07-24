@@ -1,4 +1,5 @@
 """Quality control for level1 data."""
+
 import datetime
 
 import ephem
@@ -17,6 +18,7 @@ def apply_qc(
     site: str | None, data_in: RpgBin, params: dict, coeff_files: list | None
 ) -> None:
     """This function performs the quality control of level 1 data.
+
     Args:
         site: Name of site.
         data_in: Level 1 data.
@@ -120,8 +122,8 @@ def apply_qc(
 
 def orbpos(data: dict, params: dict) -> np.ndarray:
     """Calculates sun & moon elevation/azimuth angles
-    and returns index for observations in the direction of the sun"""
-
+    and returns index for observations in the direction of the sun.
+    """
     sun: dict = {
         "azimuth_angle": ma.masked_all(data["time"].shape),
         "elevation_angle": ma.masked_all(data["time"].shape),
@@ -210,8 +212,8 @@ def spectral_consistency(
     data: dict, site: str | None, coeff_files: list | None
 ) -> np.ndarray:
     """Applies spectral consistency coefficients for given frequency index,
-    writes 2S02 product and returns indices to be flagged"""
-
+    writes 2S02 product and returns indices to be flagged.
+    """
     flag_ind = np.zeros(data["tb"].shape, dtype=np.int32)
     abs_diff = ma.masked_all(data["tb"].shape, dtype=np.float32)
     data["tb_spectrum"] = ma.masked_all(data["tb"].shape)

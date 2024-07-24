@@ -1,4 +1,5 @@
-"""Module for LWP offset correction"""
+"""Module for LWP offset correction."""
+
 import numpy as np
 import pandas as pd
 
@@ -10,14 +11,13 @@ def correct_lwp_offset(
 ) -> tuple[np.ndarray, np.ndarray]:
     """This function corrects Lwp offset using the
     2min Lwp standard deviation and the water vapor
-    channel as proxy for a humidity dependent threshold
+    channel as proxy for a humidity dependent threshold.
 
     Args:
         lev1: Level 1 data.
         lwp_org: Lwp array.
         index: Index to use.
     """
-
     if "elevation_angle" in lev1:
         elevation_angle = lev1["elevation_angle"][:]
     else:
@@ -46,9 +46,9 @@ def correct_lwp_offset(
         pd.tseries.frequencies.to_offset("20min"), center=True, min_periods=100
     ).max()
 
-    lwp[
-        (lwcl_i != 0) | (lwp > 0.06) | (lwp_max["Lwp"] > (tb_max["Tb"] * 0.0025))
-    ] = np.nan
+    lwp[(lwcl_i != 0) | (lwp > 0.06) | (lwp_max["Lwp"] > (tb_max["Tb"] * 0.0025))] = (
+        np.nan
+    )
     lwp_df = pd.DataFrame({"Lwp": lwp}, index=ind)
     lwp_offset = lwp_df.rolling(
         pd.tseries.frequencies.to_offset("20min"), center=True, min_periods=100

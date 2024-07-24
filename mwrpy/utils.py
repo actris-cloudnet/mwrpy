@@ -37,10 +37,13 @@ class MetaData(NamedTuple):
 
 def seconds2hours(time_in_seconds: np.ndarray) -> np.ndarray:
     """Converts seconds since some epoch to fraction hour.
+
     Args:
         time_in_seconds: 1-D array of seconds since some epoch that starts on midnight.
+
     Returns:
         Time as fraction hour.
+
     Notes:
         Excludes leap seconds.
     """
@@ -52,16 +55,17 @@ def seconds2hours(time_in_seconds: np.ndarray) -> np.ndarray:
 
 
 def epoch2unix(epoch_time, time_ref, epoch: Epoch = (2001, 1, 1)):
-    """Converts seconds since (2001,1,1,0,0,0) to unix time in UTC.
+    """Converts seconds since some epoch to Unix time in UTC.
 
     Args:
-        epoch_time (ndarray): 1-D array of seconds since (2001,1,1,0,0,0)
+        epoch_time: 1-D array of seconds since the given epoch.
+        time_ref: HATPRO time reference (1: UTC, 0: Local Time)
+        epoch: Epoch of the input time. Default is (2001,1,1,0,0,0).
 
     Returns:
         ndarray: Unix time in seconds since (1970,1,1,0,0,0).
 
     """
-
     delta = (
         datetime.datetime(*epoch) - datetime.datetime(1970, 1, 1, 0, 0, 0)
     ).total_seconds()
@@ -78,7 +82,9 @@ def epoch2unix(epoch_time, time_ref, epoch: Epoch = (2001, 1, 1)):
 
 def isscalar(array: Any) -> bool:
     """Tests if input is scalar.
+
     By "scalar" we mean that array has a single value.
+
     Examples:
         >>> isscalar(1)
             True
@@ -89,7 +95,6 @@ def isscalar(array: Any) -> bool:
         >>> isscalar(np.array([1]))
             True
     """
-
     arr = ma.array(array)
     if not hasattr(arr, "__len__") or arr.shape == () or len(arr) == 1:
         return True
@@ -98,19 +103,24 @@ def isscalar(array: Any) -> bool:
 
 def isbit(array: np.ndarray, nth_bit: int) -> np.ndarray:
     """Tests if nth bit (0,1,2..) is set.
+
     Args:
         array: Integer array.
         nth_bit: Investigated bit.
+
     Returns:
         Boolean array denoting values where nth_bit is set.
+
     Raises:
         ValueError: negative bit as input.
+
     Examples:
         >>> isbit(np.array([4, 5]), 1)
             array([False, False])
         >>> isbit(np.array([4, 5]), 2)
             array([ True,  True])
-    See also:
+
+    See Also:
         utils.setbit()
     """
     if nth_bit < 0:
@@ -121,22 +131,26 @@ def isbit(array: np.ndarray, nth_bit: int) -> np.ndarray:
 
 def setbit(array: np.ndarray, nth_bit: int) -> np.ndarray:
     """Sets nth bit (0, 1, 2..) on number.
+
     Args:
         array: Integer array.
         nth_bit: Bit to be set.
+
     Returns:
         Integer where nth bit is set.
+
     Raises:
         ValueError: negative bit as input.
+
     Examples:
         >>> setbit(np.array([0, 1]), 1)
             array([2, 3])
         >>> setbit(np.array([0, 1]), 2)
             array([4, 5])
-    See also:
+
+    See Also:
         utils.isbit()
     """
-
     if nth_bit < 0:
         raise ValueError("Negative bit number")
     mask = 1 << nth_bit
@@ -150,12 +164,15 @@ def interpol_2d(
     x_new: np.ndarray,
 ) -> ma.MaskedArray:
     """Interpolates 2-D data in one dimension.
+
     Args:
         x_in: 1-D array with shape (n,).
         array: 2-D input data with shape (n, m).
         x_new: 1-D target vector with shape (N,).
+
     Returns:
         array: Interpolated data with shape (N, m).
+
     Notes:
         0-values are masked in the returned array.
     """
@@ -211,7 +228,6 @@ def add_interpol1d(
         time1: Time of input field.
         output_name: Name of output field.
     """
-
     interpolated_data: np.ndarray = np.array([])
     n_time = len(data0["time"])
 
@@ -242,13 +258,14 @@ def add_interpol1d(
 
 def seconds2date(time_in_seconds: float, epoch: Epoch = (1970, 1, 1)) -> list:
     """Converts seconds since some epoch to datetime (UTC).
+
     Args:
         time_in_seconds: Seconds since some epoch.
         epoch: Epoch, default is (1970, 1, 1) (UTC).
+
     Returns:
         [year, month, day, hours, minutes, seconds] formatted as '05' etc (UTC).
     """
-
     epoch_in_seconds = datetime.datetime.timestamp(
         datetime.datetime(*epoch, tzinfo=datetime.timezone.utc)
     )
@@ -269,7 +286,7 @@ def str_to_numeric(value: str) -> int | float:
 
 
 def add_time_bounds(time_arr: np.ndarray, int_time: int) -> np.ndarray:
-    """Adds time bounds"""
+    """Adds time bounds."""
     time_bounds = np.empty((len(time_arr), 2), dtype=np.int32)
     time_bounds[:, 0] = time_arr - int_time
     time_bounds[:, 1] = time_arr
@@ -278,8 +295,7 @@ def add_time_bounds(time_arr: np.ndarray, int_time: int) -> np.ndarray:
 
 
 def get_coeff_list(site: str | None, prefix: str, coeff_files: list | None) -> list:
-    """Returns list of .nc coefficient file(s)"""
-
+    """Returns list of .nc coefficient file(s)."""
     if coeff_files is not None:
         c_list = []
         for file in coeff_files:
@@ -352,8 +368,7 @@ def _read_site_config_yaml(site: str) -> dict:
 
 
 def update_lev1_attributes(attributes: dict, data_type: str) -> None:
-    """Removes attributes that are not needed for specified Level 1 data type"""
-
+    """Removes attributes that are not needed for specified Level 1 data type."""
     if data_type == "1B01":
         att_del = ["ir_instrument", "met_instrument", "_accuracy"]
         key = " "
@@ -397,9 +412,11 @@ def update_lev1_attributes(attributes: dict, data_type: str) -> None:
 
 def read_nc_field_name(nc_file: str, name: str) -> str:
     """Reads selected variable name from a netCDF file.
+
     Args:
         nc_file: netCDF file name.
         name: Variable to be read, e.g. 'temperature'.
+
     Returns:
         str
     """
@@ -410,9 +427,11 @@ def read_nc_field_name(nc_file: str, name: str) -> str:
 
 def read_nc_fields(nc_file: str, name: str) -> np.ndarray:
     """Reads selected variables from a netCDF file.
+
     Args:
         nc_file: netCDF file name.
         name: Variable to be read, e.g. 'lwp'.
+
     Returns:
         np.ndarray
     """
@@ -423,6 +442,7 @@ def read_nc_fields(nc_file: str, name: str) -> np.ndarray:
 
 def append_data(data_in: dict, key: str, array: ma.MaskedArray) -> dict:
     """Appends data to a dictionary field (creates the field if not yet present).
+
     Args:
         data_in: Dictionary where data will be appended.
         key: Key of the field.
@@ -490,9 +510,11 @@ def get_time() -> str:
 
 def get_date_from_past(n: int, reference_date: str | None = None) -> str:
     """Return date N-days ago.
+
     Args:
         n: Number of days to skip (can be negative, when it means the future).
         reference_date: Date as "YYYY-MM-DD". Default is the current date.
+
     Returns:
         str: Date as "YYYY-MM-DD".
     """

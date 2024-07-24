@@ -1,4 +1,5 @@
-"""RpgArray Class"""
+"""RpgArray Class."""
+
 from datetime import datetime, timezone
 
 import netCDF4
@@ -11,11 +12,13 @@ from mwrpy.utils import MetaData
 
 class RpgArray:
     """Stores netCDF4 variables, numpy arrays and scalars as RpgArrays.
+
     Args:
         variable: The netCDF4 :class:`Variable` instance,
         numpy array (masked or regular), or scalar (float, int).
         name: Name of the variable.
         units_from_user: Units of the variable.
+
     Attributes:
         name (str): Name of the variable.
         data (ndarray): The actual data.
@@ -40,7 +43,6 @@ class RpgArray:
 
     def fetch_attributes(self) -> list:
         """Returns list of user-defined attributes."""
-
         attributes = []
         for attr in self.__dict__:
             if attr not in ("name", "data", "data_type", "variable", "dimensions"):
@@ -49,7 +51,6 @@ class RpgArray:
 
     def set_attributes(self, attributes: MetaData) -> None:
         """Overwrites existing instance attributes."""
-
         for key in attributes._fields:  # To iterate namedtuple fields.
             data = getattr(attributes, key)
             if data is not None:
@@ -105,7 +106,7 @@ class Rpg:
         return datetime.utcfromtimestamp(time_median).strftime("%Y-%m-%d")
 
     def find_valid_times(self):
-        """Sorts timestamps and finds valid times"""
+        """Sorts timestamps and finds valid times."""
         # sort timestamps
         time = self.data["time"].data[:]
         ind = time.argsort()
@@ -139,7 +140,6 @@ class Rpg:
 
 def save_rpg(rpg: Rpg, output_file: str, att: dict, data_type: str) -> None:
     """Saves the RPG MWR file."""
-
     if data_type == "1B01":
         dims = {
             "time": len(rpg.data["time"][:]),
@@ -201,13 +201,13 @@ def init_file(
     file_name: str, dimensions: dict, rpg_arrays: dict, att_global: dict
 ) -> netCDF4.Dataset:
     """Initializes an RPG MWR file for writing.
+
     Args:
         file_name: File name to be generated.
         dimensions: Dictionary containing dimension for this file.
         rpg_arrays: Dictionary containing :class:`RpgArray` instances.
         att_global: Dictionary containing site specific global attributes
     """
-
     nc_file = netCDF4.Dataset(file_name, "w", format="NETCDF4_CLASSIC")
     for key, dimension in dimensions.items():
         nc_file.createDimension(key, dimension)
@@ -231,7 +231,6 @@ def _get_dimensions(nc_file: netCDF4.Dataset, data: np.ndarray) -> tuple | tuple
 
 def _write_vars2nc(nc_file: netCDF4.Dataset, mwr_variables: dict) -> None:
     """Iterates over RPG instances and write to netCDF file."""
-
     for obj in mwr_variables.values():
         fill_value = netCDF4.default_fillvals[obj.data_type]
 
