@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import netCDF4
 import numpy as np
 from matplotlib import rcParams
+from matplotlib.axes import Axes
 from matplotlib.colors import BoundaryNorm, Colormap, ListedColormap
 from matplotlib.patches import Patch
 from matplotlib.ticker import (
@@ -322,8 +323,7 @@ def _initialize_figure(n_subplots: int, dpi) -> tuple:
         n_subplots, figsize=(16, 4 + (n_subplots - 1) * 4.8), dpi=dpi, facecolor="white"
     )
     fig.subplots_adjust(left=0.06, right=0.73)
-    if n_subplots == 1:
-        axes = [axes]
+    axes_list = [axes] if isinstance(axes, Axes) else axes.tolist()
     return fig, axes
 
 
@@ -888,6 +888,7 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
     fig, axs = plt.subplots(
         nsub, 1, figsize=(12.52, 16), dpi=120, facecolor="w", height_ratios=h_ratio
     )
+    assert not isinstance(axs, Axes)
     frequency = read_nc_fields(nc_file, "frequency")
 
     qf = _get_bit_flag(data_in[:, 0], np.array([5, 6]))
@@ -1025,6 +1026,7 @@ def _plot_tb(
         sharex="col",
         dpi=120,
     )
+    assert not isinstance(axs, Axes)
     fig.subplots_adjust(hspace=0.035, wspace=0.15)
     if pointing == 0:
         ylabel = "Brightness Temperature (single pointing) [K]"
