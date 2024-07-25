@@ -31,7 +31,7 @@ params:
   # Beam width (3 dB) of the microwave radiometer
   beam_width: 2.
 
-  # offset correction for TBs, i.e. adjustement of observation to nominal frequency:
+  # offset correction for TBs, i.e. adjustment of observation to nominal frequency:
   # Note: RPG offers a frequency shift within the radiometer software.
   # This shift will modify the TBs calculated with the RPG software.
   # Original TBs CANNOT be reconstructed, unless you have recorded the voltages & calibration parameters and possess adequate software routines to perform a re-calibration.
@@ -130,7 +130,7 @@ global_specs:
   # E-PROFILE instrument identifier. “A” if there is only one instrument on the station. Additional instruments are identified with the letters B, C, etc.
   instrument_id:
 
-  # WIGOS Station identifier acording to WIGOS convention
+  # WIGOS Station identifier according to WIGOS convention
   wigos_station_id:
 
   # Department responsible for the instrument

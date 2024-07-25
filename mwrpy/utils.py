@@ -463,14 +463,14 @@ def convolve2DFFT(slab, kernel, max_missing=0.1):
     """2D convolution using fft.
     <slab>: 2d array, with optional mask.
     <kernel>: 2d array, convolution kernel.
-    <max_missing>: real, max tolerable percentage of missings within any
+    <max_missing>: real, max tolerable percentage of missing within any
                    convolution window.
                    E.g. if <max_missing> is 0.5, when over 50% of values
                    within a given element are missing, the center will be
                    set as missing (<res>=0, <resmask>=1). If only 40% is
                    missing, center value will be computed using the remaining
                    60% data in the element.
-                   NOTE that out-of-bound grids are counted as missings, this
+                   NOTE that out-of-bound grids are counted as missing, this
                    is different from convolve2D(), where the number of valid
                    values at edges drops as the kernel approaches the edge.
     Return <result>: 2d convolution.
@@ -479,7 +479,7 @@ def convolve2DFFT(slab, kernel, max_missing=0.1):
     assert np.ndim(kernel) == 2, "<kernel> needs to be 2D."
     assert kernel.shape[0] <= slab.shape[0], "<kernel> size needs to <= <slab> size."
     assert kernel.shape[1] <= slab.shape[1], "<kernel> size needs to <= <slab> size."
-    # --------------Get mask for missings--------------
+    # --------------Get mask for missing--------------
     slab[slab == 0.0] = np.nan
     slabcount = 1 - np.isnan(slab)
     # this is to set np.nan to a float, this won't affect the result as

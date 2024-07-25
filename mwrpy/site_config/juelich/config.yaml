@@ -35,7 +35,7 @@ global_specs:
   # E-PROFILE instrument identifier. “A” if there is only one instrument on the station. Additional instruments are identified with the letters B, C, etc.
   instrument_id:
 
-  # WIGOS Station identifier acording to WIGOS convention
+  # WIGOS Station identifier according to WIGOS convention
   wigos_station_id: 0-276-0-10508
 
   # Department responsible for the instrument

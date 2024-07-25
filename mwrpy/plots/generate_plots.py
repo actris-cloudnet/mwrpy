@@ -1000,7 +1000,7 @@ def _plot_tb(
     pointing: int,
     name: str,
 ):
-    """Plot for microwave brigthness temperatures."""
+    """Plot for microwave brightness temperatures."""
     site = _read_location(nc_file)
     params = read_config(site, "params")
     frequency = read_nc_fields(nc_file, "frequency")
