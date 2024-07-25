@@ -171,7 +171,7 @@ def find_lwcl_free(lev1: dict) -> tuple[np.ndarray, np.ndarray]:
         ind = utils.time_to_datetime_index(lev1["time"][:])
         tb_df = pd.DataFrame({"Tb": tb}, index=ind)
         tb_std = tb_df.rolling(
-            pd.tseries.frequencies.to_offset("2min"), center=True, min_periods=10
+            pd.tseries.frequencies.to_offset("2min"), center=True, min_periods=60
         ).std()
         tb_mx = tb_std.rolling(
             pd.tseries.frequencies.to_offset("20min"), center=True, min_periods=100

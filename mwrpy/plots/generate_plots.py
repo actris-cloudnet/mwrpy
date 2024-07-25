@@ -324,7 +324,7 @@ def _initialize_figure(n_subplots: int, dpi) -> tuple:
     )
     fig.subplots_adjust(left=0.06, right=0.73)
     axes_list = [axes] if isinstance(axes, Axes) else axes.tolist()
-    return fig, axes
+    return fig, axes_list
 
 
 def _read_ax_values(full_path: str) -> tuple[ndarray, ndarray]:
@@ -540,7 +540,7 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
     if variables.cbar_ext in ("neither", "max"):
         data[data < vmin] = vmin
 
-    if np.ma.median(np.diff(axes[0][:])) < 5 / 60:
+    if np.ma.median(np.diff(axes[0][:])) < 6 / 60:
         data = _calculate_rolling_mean(axes[0], data, win=15 / 60)
         time, data = _mark_gaps(axes[0][:], ma.MaskedArray(data), 35, 10)
     else:
@@ -569,18 +569,18 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
         flag = _get_ret_flag(tem_file, axes[0], "temperature")
     else:
         flag = _get_ret_flag(tem_file, axes[0], name)
-
-    if np.ma.median(np.diff(axes[0][:])) < 5 / 60:
+    if np.ma.median(np.diff(axes[0][:])) < 6 / 60:
         flag = _calculate_rolling_mean(axes[0], flag, win=15 / 60)
         data_in[(flag > 0) | (hum_flag > 0), :] = np.nan
         data = _calculate_rolling_mean(axes[0], data_in, win=15 / 60)
         time, data = _mark_gaps(axes[0][:], ma.MaskedArray(data), 35, 10)
     else:
         data_in[(flag > 0) | (hum_flag > 0), :] = np.nan
+        val, cnt = np.unique(np.round(np.diff(axes[0][:]), 2), return_counts=True)
         time, data = _mark_gaps(
             axes[0][:],
             ma.MaskedArray(data_in),
-            np.ma.median(np.diff(axes[0][:])) * 60.0 * 2,
+            np.max(val[cnt > 10]) * 60.0 * 2,
             0,
         )
 
@@ -767,7 +767,7 @@ def _plot_hkd(ax, data_in: ndarray, name: str, time: ndarray):
         _set_ax(ax, vmax, "Mean absolute difference (K)", vmin)
         leg = ax.legend(loc="upper right")
 
-    for legobj in leg.legendHandles:
+    for legobj in leg.legend_handles:
         legobj.set_linewidth(2.0)
 
 
@@ -779,7 +779,6 @@ def _plot_sen(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
     qf = _get_freq_flag(quality_flag, np.array([6]))
     assert variables.plot_range is not None
     vmin, vmax = variables.plot_range
-    time = _nan_time_gaps(time, 15.0 / 60.0)
     time1 = time[(pointing_flag == 1)]
     time1 = _nan_time_gaps(time1, 15.0 / 60.0)
     ax.plot(
@@ -792,7 +791,11 @@ def _plot_sen(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
     )
     if name == "elevation_angle":
         time1 = time[(pointing_flag == 1) & (data_in > 0.0)]
-        time1 = _nan_time_gaps(time1, 15.0 / 60.0)
+        val, cnt = np.unique(np.round(np.diff(time1), 2), return_counts=True)
+        if len(val) > 0:
+            time1 = _nan_time_gaps(time1, np.max(val[cnt > 10]) * 2)
+        else:
+            time1 = _nan_time_gaps(time1, np.median(np.diff(time1)) * 2)
         ax.plot(
             time1,
             data_in[(pointing_flag == 1) & (data_in > 0.0)],
