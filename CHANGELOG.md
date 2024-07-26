@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1 – 2024-07-26
+
+- Fix NumPy 2.0 issues
+
 ## 1.0.0 – 2024-06-12
 
 - Add JOSS paper
