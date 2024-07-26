@@ -11,6 +11,7 @@ from matplotlib import rcParams
 from matplotlib.axes import Axes
 from matplotlib.colors import BoundaryNorm, Colormap, ListedColormap
 from matplotlib.patches import Patch
+from matplotlib.pyplot import Figure
 from matplotlib.ticker import (
     FixedLocator,
     FormatStrFormatter,
@@ -317,7 +318,7 @@ def _pointing_filter(
     return data_field
 
 
-def _initialize_figure(n_subplots: int, dpi) -> tuple:
+def _initialize_figure(n_subplots: int, dpi) -> tuple[Figure, list[Axes]]:
     """Creates an empty figure according to the number of subplots."""
     fig, axes = plt.subplots(
         n_subplots, figsize=(16, 4 + (n_subplots - 1) * 4.8), dpi=dpi, facecolor="white"
