@@ -29,7 +29,7 @@ def correct_lwp_offset(
     lwp[elevation_angle[index] < 89.0] = np.nan
     lwp_df = pd.DataFrame({"Lwp": lwp}, index=ind)
     lwp_std = lwp_df.rolling(
-        pd.tseries.frequencies.to_offset("2min"), center=True, min_periods=60
+        pd.tseries.frequencies.to_offset("2min"), center=True, min_periods=40
     ).std()
     lwp_max = lwp_std.rolling(
         pd.tseries.frequencies.to_offset("20min"), center=True, min_periods=100
