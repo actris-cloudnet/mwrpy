@@ -383,7 +383,7 @@ class TestLWP:
     ):
         item = self.coeff[key]
         if not isinstance(item, np.ndarray):
-            item = np.array(item)
+            item = np.ndarray(item)
 
         assert item.ndim in (0, 1, 2, 3)
 

@@ -397,7 +397,7 @@ def get_products(
         else:
             ret_in = retrieval_input(lev1, coeff)
             ret_array = np.reshape(
-                tb, (len(coeff["AG"]) * len(freq_ind), len(ibl)), "F"
+                tb, (len(coeff["AG"]) * len(freq_ind), len(ibl)), order="F"
             )
             ret_array = np.concatenate((np.ones((1, len(ibl)), np.float32), ret_array))
             for i_add in range(ret_in.shape[1] - len(coeff["FR"]) - 1, 0, -1):
