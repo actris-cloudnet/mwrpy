@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.2 – 2024-08-26
+
+- Relax min periods for standard deviation
+
 ## 1.0.1 – 2024-07-26
 
 - Fix NumPy 2.0 issues
