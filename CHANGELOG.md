@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.4 – 2024-08-30
+
+- Handle missing MET files
+
 ## 1.0.3 – 2024-08-30
 
 - Handle missing HKD files
