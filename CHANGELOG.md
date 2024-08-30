@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.3 – 2024-08-30
+
+- Handle missing HKD files
+
 ## 1.0.2 – 2024-08-26
 
 - Relax min periods for standard deviation
