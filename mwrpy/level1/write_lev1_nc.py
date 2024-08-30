@@ -193,6 +193,8 @@ def prepare_data(
             ) = atmos.find_lwcl_free(rpg_bin.data)
 
             file_list_met = get_file_list(path_to_files, "MET")
+            if len(file_list_met) == 0:
+                raise MissingInputData("No MET files found")
             rpg_met = RpgBin(file_list_met)
             add_interpol1d(
                 rpg_bin.data,
