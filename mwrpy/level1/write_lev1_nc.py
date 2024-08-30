@@ -9,6 +9,7 @@ import numpy as np
 from numpy import ma
 
 from mwrpy import atmos, rpg_mwr
+from mwrpy.exceptions import MissingInputData
 from mwrpy.level1.lev1_meta_nc import get_data_attributes
 from mwrpy.level1.met_quality_control import apply_met_qc
 from mwrpy.level1.quality_control import apply_qc
@@ -43,6 +44,9 @@ def lev1_to_nc(
         output_file: Output file name.
         coeff_files: List of coefficient files.
         instrument_config: Dictionary containing information about the instrument.
+
+    Raises:
+        MissingInputData: if required input file is missing.
     """
     if site is None:
         assert coeff_files is not None
@@ -88,7 +92,7 @@ def prepare_data(
     if data_type in ("1B01", "1C01"):
         brt_files = get_file_list(path_to_files, "BRT")
         if len(brt_files) == 0:
-            raise FileNotFoundError("No BRT files found")
+            raise MissingInputData("No BRT files found")
         rpg_bin = RpgBin(brt_files)
         ind_bandwidth = np.argsort(params["bandwidth"])
         rpg_bin.data["tb"] = rpg_bin.data["tb"][:, ind_bandwidth]
@@ -123,6 +127,8 @@ def prepare_data(
             )
 
         file_list_hkd = get_file_list(path_to_files, "HKD")
+        if len(file_list_hkd) == 0:
+            raise MissingInputData("No HKD files found")
         rpg_hkd = RpgBin(file_list_hkd)
 
         rpg_bin.data["status"] = np.zeros(
@@ -250,7 +256,6 @@ def prepare_data(
             ["Data type " + data_type + " not supported for file writing."]
         )
 
-    file_list_hkd = get_file_list(path_to_files, "HKD")
     _append_hkd(file_list_hkd, rpg_bin, data_type, params)
     rpg_bin.data["altitude"] = (
         np.ones(len(rpg_bin.data["time"]), np.float32) * params["altitude"]
