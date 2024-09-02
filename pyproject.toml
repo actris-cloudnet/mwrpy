@@ -14,7 +14,6 @@ classifiers = [
   "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-  "ephem",
   "matplotlib",
   "metpy",
   "netCDF4",
@@ -22,6 +21,7 @@ dependencies = [
   "pytz",
   "pyyaml",
   "scipy",
+  "suncalc",
   "timezonefinder",
 ]
 dynamic = ["version"]
@@ -40,7 +40,7 @@ Changelog = "https://github.com/actris-cloudnet/mwrpy/blob/main/CHANGELOG.md"
 check_untyped_defs = true
 
 [[tool.mypy.overrides]]
-module = ["ephem.*", "matplotlib.*", "metpy.*", "mpl_toolkits.*", "netCDF4.*", "pandas.*", "scipy.*"]
+module = ["matplotlib.*", "metpy.*", "mpl_toolkits.*", "netCDF4.*", "pandas.*", "scipy.*", "suncalc.*"]
 ignore_missing_imports = true
 
 [tool.release-version]
