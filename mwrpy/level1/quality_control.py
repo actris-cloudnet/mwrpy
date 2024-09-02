@@ -2,10 +2,10 @@
 
 import datetime
 
-import ephem
 import netCDF4 as nc
 import numpy as np
 import pandas as pd
+import suncalc
 from numpy import ma
 
 from mwrpy.level1.rpg_bin import RpgBin
@@ -99,34 +99,24 @@ def orbpos(data: dict, params: dict) -> np.ndarray:
     """Calculates sun & moon elevation/azimuth angles
     and returns index for observations in the direction of the sun.
     """
-    sun: dict = {
-        "azimuth_angle": ma.masked_all(data["time"].shape),
-        "elevation_angle": ma.masked_all(data["time"].shape),
+    time = np.array(
+        [
+            datetime.datetime.fromtimestamp(t, tz=datetime.timezone.utc)
+            for t in data["time"]
+        ]
+    )
+    lat = data["latitude"]
+    lng = data["longitude"]
+    sol = suncalc.get_position(time, lat=lat, lng=lng)
+    lun = suncalc.suncalc.getMoonPosition(time, lat=lat, lng=lng)
+    sun = {
+        "azimuth_angle": np.rad2deg(sol["azimuth"]) + 180,
+        "elevation_angle": np.rad2deg(sol["altitude"]),
     }
-    moon: dict = {
-        "azimuth_angle": ma.masked_all(data["time"].shape),
-        "elevation_angle": ma.masked_all(data["time"].shape),
+    moon = {
+        "azimuth_angle": np.rad2deg(lun["azimuth"]) + 180,
+        "elevation_angle": np.rad2deg(lun["altitude"]),
     }
-
-    sol = ephem.Sun()
-    lun = ephem.Moon()
-    obs_loc = ephem.Observer()
-
-    for ind, time in enumerate(data["time"]):
-        obs_loc.lat, obs_loc.lon = (
-            str(data["latitude"][ind]),
-            str(data["longitude"][ind]),
-        )
-        obs_loc.elevation = data["altitude"][ind]
-        obs_loc.date = datetime.datetime.utcfromtimestamp(time).strftime(
-            "%Y/%m/%d %H:%M:%S"
-        )
-        sol.compute(obs_loc)
-        sun["elevation_angle"][ind] = np.rad2deg(sol.alt)
-        sun["azimuth_angle"][ind] = np.rad2deg(sol.az)
-        lun.compute(obs_loc)
-        moon["elevation_angle"][ind] = np.rad2deg(lun.alt)
-        moon["azimuth_angle"][ind] = np.rad2deg(lun.az)
 
     sun["rise"], moon["rise"] = data["time"][0], data["time"][0]
     sun["set"], moon["set"] = (
