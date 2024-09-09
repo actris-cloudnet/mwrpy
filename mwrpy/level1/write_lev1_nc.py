@@ -342,20 +342,25 @@ def hkd_sanity_check(status: np.ndarray, params: dict) -> np.ndarray:
     return status_flag
 
 
+def _find_closest_ind(a, b, threshold):
+    """Find indices of the closest values in two arrays within a threshold."""
+    closest_ind = np.argmin(np.abs(a - b[:, np.newaxis]), axis=0)
+    below_threshold = np.abs(b[closest_ind] - a) <= threshold
+    return np.where(below_threshold)[0], closest_ind[below_threshold]
+
+
 def _add_bls(brt: RpgBin, bls: RpgBin, hkd: RpgBin, params: dict) -> None:
     """Add BLS boundary-layer scans using a linear time axis."""
     bls.data["time_bnds"] = add_time_bounds(bls.data["time"] + 1, params["int_time"])
     bls.data["status"] = np.zeros(
         (len(bls.data["time"]), len(params["receiver"])), np.int32
     )
-
-    for time_ind, time_bls in enumerate(bls.data["time"]):
-        if np.min(np.abs(hkd.data["time"] - time_bls)) <= params["int_time"] * 2:
-            ind_hkd = np.argmin(np.abs(hkd.data["time"] - time_bls))
-            bls.data["status"][time_ind, :] = hkd_sanity_check(
-                np.array([hkd.data["status"][ind_hkd]], np.int32), params
-            )
-
+    time_ind, ind_hkd = _find_closest_ind(
+        bls.data["time"], hkd.data["time"], params["int_time"] * 2
+    )
+    bls.data["status"][time_ind, :] = hkd_sanity_check(
+        hkd.data["status"][ind_hkd], params
+    )
     bls.data["pointing_flag"] = np.ones(len(bls.data["time"]), np.int32)
     bls.data["liquid_cloud_flag"] = np.ones(len(bls.data["time"]), np.int32) * 2
     bls.data["liquid_cloud_flag_status"] = ma.masked_all(
