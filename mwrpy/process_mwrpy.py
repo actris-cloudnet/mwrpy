@@ -3,6 +3,7 @@
 import datetime
 import logging
 import os
+import time
 
 from mwrpy.level1.write_lev1_nc import lev1_to_nc
 from mwrpy.level2.lev2_collocated import generate_lev2_multi, generate_lev2_single
@@ -56,7 +57,10 @@ def main(args):
                 continue
             if args.command != "plot":
                 logging.info(f"Processing {product} product, {args.site} {date}")
+                start = time.process_time()
                 process_product(product, date, args.site)
+                elapsed_time = time.process_time() - start
+                logging.info(f"Processing took {elapsed_time:.1f} seconds")
             logging.info(f"Plotting {product} product, {args.site} {date}")
             try:
                 plot_product(product, date, args.site)
