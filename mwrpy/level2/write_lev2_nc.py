@@ -563,7 +563,8 @@ def ele_retrieval(ele_obs: np.ndarray, coeff: dict) -> np.ndarray:
     ele_ret = coeff["AG"]
     if ele_ret.shape == ():
         ele_ret = np.array([ele_ret])
-    return np.array([ele_ret[(np.abs(ele_ret - v)).argmin()] for v in ele_obs])
+    ind = np.argmin(np.abs(ele_obs - ele_ret[:, np.newaxis]), axis=0)
+    return ele_ret[ind]
 
 
 def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
