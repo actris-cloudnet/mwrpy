@@ -65,6 +65,11 @@ def _parse_args(args):
         metavar="YYYY-MM-DD",
         help="Single date to be processed.",
     )
+    group.add_argument(
+        "--no-plot",
+        action="store_true",
+        help="Process without plotting.",
+    )
     return parser.parse_args(args)
 
 
