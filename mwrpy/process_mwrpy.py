@@ -61,11 +61,12 @@ def main(args):
                 process_product(product, date, args.site)
                 elapsed_time = time.process_time() - start
                 logging.info(f"Processing took {elapsed_time:.1f} seconds")
-            logging.info(f"Plotting {product} product, {args.site} {date}")
-            try:
-                plot_product(product, date, args.site)
-            except TypeError as err:
-                logging.error(err)
+            if not args.no_plot:
+                logging.info(f"Plotting {product} product, {args.site} {date}")
+                try:
+                    plot_product(product, date, args.site)
+                except TypeError as err:
+                    logging.error(err)
 
 
 def process_product(prod: str, date: datetime.date, site: str):
