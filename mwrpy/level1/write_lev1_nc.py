@@ -239,11 +239,11 @@ def prepare_data(
         file_list_met = get_file_list(path_to_files, "MET")
         rpg_bin = RpgBin(file_list_met)
         if "wind_speed" in rpg_bin.data:
-            rpg_bin.data["wind_speed"] = rpg_bin.data["wind_speed"] / 3.6
-        if "wind_direction" in rpg_bin.data:
-            rpg_bin.data["wind_direction"] = rpg_bin.data["wind_direction"]
+            rpg_bin.data["wind_speed"] /= 3.6
+        if "air_pressure" in rpg_bin.data:
+            rpg_bin.data["air_pressure"] *= 100
         if "rainfall_rate" in rpg_bin.data:
-            rpg_bin.data["rainfall_rate"] = rpg_bin.data["rainfall_rate"] / 1000 / 3600
+            rpg_bin.data["rainfall_rate"] /= 3.6e6
 
     else:
         raise RuntimeError(
