@@ -231,8 +231,9 @@ def prepare_data(
     elif data_type == "1B11":
         file_list_irt = get_file_list(path_to_files, "IRT")
         rpg_bin = RpgBin(file_list_irt)
-        rpg_bin.data["ir_wavelength"] = rpg_bin.header["_f"]
-        rpg_bin.data["ir_bandwidth"] = params["ir_bandwidth"]
+        rpg_bin.data["irt"][rpg_bin.data["irt"] <= 125.5] = ma.masked
+        rpg_bin.data["ir_wavelength"] = rpg_bin.header["_f"] * 1e-6
+        rpg_bin.data["ir_bandwidth"] = params["ir_bandwidth"] * 1e-6
         rpg_bin.data["ir_beamwidth"] = params["ir_beamwidth"]
 
     elif data_type == "1B21":

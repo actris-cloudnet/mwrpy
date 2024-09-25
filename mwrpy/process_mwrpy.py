@@ -19,6 +19,9 @@ from mwrpy.utils import (
 )
 
 PRODUCT_NAME = {
+    "1B01": "",
+    "1B11": "",
+    "1B21": "",
     "1C01": "",
     "2I01": "lwp",
     "2I02": "iwv",
