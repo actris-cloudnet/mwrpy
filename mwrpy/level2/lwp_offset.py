@@ -23,8 +23,8 @@ def correct_lwp_offset(
     else:
         elevation_angle = 90 - lev1["zenith_angle"][:]
 
-    lwcl_i = lev1["liquid_cloud_flag"][index]
-    ind = utils.time_to_datetime_index(lev1["time"][index])
+    lwcl_i = lev1["liquid_cloud_flag"][:][index]
+    ind = utils.time_to_datetime_index(lev1["time"][:][index])
     lwp = np.copy(lwp_org)
     lwp[elevation_angle[index] < 89.0] = np.nan
     lwp_df = pd.DataFrame({"Lwp": lwp}, index=ind)
@@ -36,8 +36,8 @@ def correct_lwp_offset(
     ).max()
     freq_31 = np.where(np.round(lev1["frequency"][:].data, 1) == 31.4)[0]
     freq_22 = np.where(np.round(lev1["frequency"][:].data, 1) == 22.2)[0]
-    tb = lev1["tb"][index, :]
-    tb[lev1["elevation_angle"][index] < 89.0] = np.nan
+    tb = lev1["tb"][:][index, :]
+    tb[elevation_angle[index] < 89.0] = np.nan
     tb_rat = pd.DataFrame(
         {"Tb": np.squeeze(tb[:, freq_22] / tb[:, freq_31])},
         index=ind,

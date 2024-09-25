@@ -501,11 +501,11 @@ def _get_qf(
         return_indices=True,
     )
     rpg_dat[product + "_quality_flag"] = np.bitwise_or.reduce(
-        lev1["quality_flag"][index, freq_ind], axis=1
+        lev1["quality_flag"][:, freq_ind][index], axis=1
     )
     rpg_dat[product + "_quality_flag_status"] = lev1["quality_flag_status"][
-        index, freq_ind[0]
-    ]
+        :, freq_ind[0]
+    ][index]
 
 
 def _combine_lev1(
@@ -530,15 +530,16 @@ def _combine_lev1(
         for ivars in lev1_vars:
             if ivars not in lev1.variables:
                 continue
-            if (ivars == "time_bnds") & (data_type == "2P02"):
+            if ivars == "time_bnds" and data_type == "2P02":
+                time = lev1["time"][:][index]
                 rpg_dat[ivars] = np.ndarray((len(index), 2))
-                rpg_dat[ivars][:, 0] = lev1["time"][index] - scan_time
-                rpg_dat[ivars][:, 1] = lev1["time"][index]
-            elif (ivars == "time_bnds") & (data_type in ("2P04", "2P07", "2P08")):
+                rpg_dat[ivars][:, 0] = time - scan_time
+                rpg_dat[ivars][:, 1] = time
+            elif ivars == "time_bnds" and data_type in ("2P04", "2P07", "2P08"):
                 rpg_dat[ivars] = ma.masked_all(lev1[ivars].shape, np.int32)
             else:
                 try:
-                    rpg_dat[ivars] = lev1[ivars][index]
+                    rpg_dat[ivars] = lev1[ivars][:][index]
                 except IndexError:
                     rpg_dat[ivars] = lev1[ivars][:]
 
