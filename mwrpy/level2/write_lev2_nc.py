@@ -348,25 +348,29 @@ def get_products(
         )
 
         for ix0v in ix0:
-            ix1v = ix0v + len(coeff["AG"])
-
-            if (ix1v < len(lev1["time"])) & (
-                np.allclose(
-                    elevation_angle[ix0v:ix1v],
-                    coeff["AG"],
-                    atol=0.5,
-                )
-            ):
+            ix1v = ix0v + len(coeff["AG"]) + 10
+            ind_multi = np.where(lev1["pointing_flag"][ix0v:ix1v] == 1)[0]
+            _, ind_ang, _ = np.intersect1d(
+                elevation_angle[ix0v + ind_multi], coeff["AG"], return_indices=True
+            )
+            if ix1v < len(lev1["time"]) and len(ind_ang) == len(coeff["AG"]):
                 scan_time = np.append(
                     scan_time,
-                    [np.array(lev1["time"][ix1v - 1] - lev1["time"][ix0v])],
+                    [
+                        np.array(
+                            lev1["time"][ix0v + ind_ang[0]]
+                            - lev1["time"][ix0v + ind_ang[-1]]
+                        )
+                    ],
                     axis=0,
                 )
-                ibl = np.append(ibl, [np.array(range(ix0v, ix1v))], axis=0)
+                ibl = np.append(ibl, [ix0v + np.flip(ind_ang)], axis=0)
                 tb = np.concatenate(
                     (
                         tb,
-                        np.expand_dims(lev1["tb"][ix0v:ix1v, freq_ind].T, 2),
+                        np.expand_dims(
+                            lev1["tb"][ix0v + np.flip(ind_ang), freq_ind].T, 2
+                        ),
                     ),
                     axis=2,
                 )
