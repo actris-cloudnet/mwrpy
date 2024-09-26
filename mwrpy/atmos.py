@@ -87,17 +87,11 @@ def calc_p_baro(
     Tv = mpcalc.virtual_temperature(
         masked_array(T, data_units="K"), masked_array(q, data_units="")
     ).magnitude
-    p_baro = ma.masked_all(T.shape)
-    p_baro[(~ma.getmaskarray(q).any(axis=1)) & (~ma.getmaskarray(T).any(axis=1)), 0] = (
-        p[(~ma.getmaskarray(q).any(axis=1)) & (~ma.getmaskarray(T).any(axis=1))]
-    )
-    for ialt in np.arange(len(z) - 1) + 1:
-        p_baro[:, ialt] = p_baro[:, ialt - 1] * ma.exp(
-            -scipy.constants.g
-            * (z[ialt] - z[ialt - 1])
-            / (con.RS * (Tv[:, ialt] + Tv[:, ialt - 1]) / 2.0)
-        )
-
+    Tv_half = (Tv[:, :-1] + Tv[:, 1:]) / 2
+    dz = np.diff(z)
+    dp = ma.exp(-scipy.constants.g * dz / (con.RS * Tv_half))
+    tmp = np.insert(dp, 0, p, axis=1)
+    p_baro = np.cumprod(tmp, axis=1)
     return p_baro
 
 
