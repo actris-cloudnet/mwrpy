@@ -3,6 +3,7 @@
 import datetime
 import logging
 import os
+import time
 
 import matplotlib.pyplot as plt
 
@@ -61,13 +62,17 @@ def main(args):
                 continue
             if args.command != "plot":
                 logging.info(f"Processing {product} product, {args.site} {date}")
+                start = time.process_time()
                 process_product(product, date, args.site)
-            logging.info(f"Plotting {product} product, {args.site} {date}")
-            try:
-                plot_product(product, date, args.site)
-            except TypeError as err:
-                logging.error(err)
-            plt.close()
+                elapsed_time = time.process_time() - start
+                logging.info(f"Processing took {elapsed_time:.1f} seconds")
+            if not args.no_plot:
+                logging.info(f"Plotting {product} product, {args.site} {date}")
+                try:
+                    plot_product(product, date, args.site)
+                except TypeError as err:
+                    logging.error(err)
+                plt.close()
 
 
 def process_product(prod: str, date: datetime.date, site: str):

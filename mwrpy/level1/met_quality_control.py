@@ -36,26 +36,14 @@ def apply_met_qc(data: dict, params: dict) -> None:
     ]
 
     for bit, name in enumerate(var_name):
-        if name in data:
-            if name == "air_pressure":
-                threshold_low = (
-                    mpcalc.height_to_pressure_std(
-                        masked_array(params["altitude"], data_units="m")
-                    ).magnitude
-                    * 100.0
-                    - 10000.0
-                )
-                threshold_high = (
-                    mpcalc.height_to_pressure_std(
-                        masked_array(params["altitude"], data_units="m")
-                    ).magnitude
-                    * 100.0
-                    + 10000.0
-                )
-            else:
-                threshold_low = params["met_thresholds"][bit][0]
-                threshold_high = params["met_thresholds"][bit][1]
-            ind = np.where(
-                (data[name][:] < threshold_low) | (data[name][:] > threshold_high)
-            )
-            data["met_quality_flag"][ind] = setbit(data["met_quality_flag"][ind], bit)
+        if name not in data:
+            continue
+        if name == "air_pressure":
+            altitude = masked_array(params["altitude"], data_units="m")
+            pressure = mpcalc.height_to_pressure_std(altitude).to("pascal").magnitude
+            threshold_low = pressure - 10000
+            threshold_high = pressure + 10000
+        else:
+            threshold_low, threshold_high = params["met_thresholds"][bit]
+        ind = (data[name][:] < threshold_low) | (data[name][:] > threshold_high)
+        data["met_quality_flag"][ind] = setbit(data["met_quality_flag"][ind], bit)

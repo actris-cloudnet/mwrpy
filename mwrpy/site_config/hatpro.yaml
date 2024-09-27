@@ -57,7 +57,7 @@ params:
   # thresholds for met quality flags
   # air_temperature [K]
   # relative_humidity [1]
-  # air_pressure [hPa]
+  # air_pressure [Pa] (unused, determined automatically from altitude)
   # rainfall_rate [mm/h]
   # wind_direction [°]
   # wind_speed [m/s]

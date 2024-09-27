@@ -1,0 +1,5 @@
+[default]
+extend-ignore-identifiers-re = ["ND"]
+
+[files]
+extend-exclude = ["mwrpy/site_config/", "tests/data/"]

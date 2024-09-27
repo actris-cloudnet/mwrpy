@@ -111,11 +111,13 @@ class RpgBin:
 
         # find valid date
         time = self.data["time"]
-        ind = np.zeros(len(time), dtype=np.int32)
-        for i, t in enumerate(time):
-            if "-".join(utils.seconds2date(t)[:3]) == self.date:
-                ind[i] = 1
-        self._screen(np.where(ind == 1)[0])
+        date = datetime.date.fromisoformat(self.date)
+        midnight = datetime.time(0, 0, 0, 0, datetime.timezone.utc)
+        min_ts = datetime.datetime.combine(date, midnight).timestamp()
+        max_ts = datetime.datetime.combine(
+            date + datetime.timedelta(days=1), midnight
+        ).timestamp()
+        self._screen((time >= min_ts) & (time < max_ts))
 
     def _screen(self, ind: np.ndarray):
         if len(ind) < 1:

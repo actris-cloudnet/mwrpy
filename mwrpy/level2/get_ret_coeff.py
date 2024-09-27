@@ -3,6 +3,7 @@
 import netCDF4 as nc
 import numpy as np
 from numpy import ma
+from numpy.testing import assert_array_equal
 
 from mwrpy.utils import get_coeff_list
 
@@ -151,45 +152,39 @@ def get_mvr_coeff(
     if (coeff["RT"] < 2) and (len(coeff["AL"]) == 1):
 
         def f_offset(x):
-            return np.array(
-                [coeff["OS"][(np.abs(coeff["AG"] - v)).argmin()] for v in x]
-            )
+            ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
+            return coeff["OS"][ind]
 
         def f_lin(x):
-            return np.array(
-                [coeff["TL"][(np.abs(coeff["AG"] - v)).argmin(), :] for v in x]
-            )
+            ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
+            return coeff["TL"][ind]
 
         if coeff["RT"] in (1, -1):
 
             def f_quad(x):
-                return np.array(
-                    [coeff["TQ"][(np.abs(coeff["AG"] - v)).argmin(), :] for v in x]
-                )
+                ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
+                return coeff["TQ"][ind]
 
     elif (coeff["RT"] < 2) and (len(coeff["AL"]) > 1) and (prefix != "tpb"):
 
         def f_offset(x):
-            return np.array(
-                [coeff["OS"][:, (np.abs(coeff["AG"] - v)).argmin()] for v in x]
-            )
+            ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
+            return coeff["OS"][:, ind].T
 
         if coeff["RT"] in (0, 1):
             coeff["TL"] = coeff["TL"][np.newaxis, :, :]
 
         def f_lin(x):
-            return np.array(
-                [coeff["TL"][(np.abs(coeff["AG"] - v)).argmin(), :, :] for v in x]
-            )
+            ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
+            return coeff["TL"][ind]
 
         if coeff["RT"] in (1, -1):
             if coeff["RT"] == 1:
                 coeff["TQ"] = coeff["TQ"][np.newaxis, :, :]
 
             def f_quad(x):
-                return np.array(
-                    [coeff["TQ"][(np.abs(coeff["AG"] - v)).argmin(), :, :] for v in x]
-                )
+                ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
+                return coeff["TQ"][ind]
 
     elif (coeff["RT"] < 2) and (len(coeff["AL"]) > 1) and (prefix == "tpb"):
 
@@ -205,57 +200,40 @@ def get_mvr_coeff(
     elif coeff["RT"] == 2:
 
         def input_scale(x):
-            return np.array(
-                [coeff["input_scale"][(np.abs(coeff["AG"] - v)).argmin(), :] for v in x]
-            )
+            ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
+            return coeff["input_scale"][ind]
 
         def input_offset(x):
-            return np.array(
-                [
-                    coeff["input_offset"][(np.abs(coeff["AG"] - v)).argmin(), :]
-                    for v in x
-                ]
-            )
+            ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
+            return coeff["input_offset"][ind]
 
         def output_scale(x):
-            return np.array(
-                [
-                    coeff["output_scale"][(np.abs(coeff["AG"] - v)).argmin(), :]
-                    for v in x
-                ]
-            )
+            ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
+            return coeff["output_scale"][ind]
 
         def output_offset(x):
-            return np.array(
-                [
-                    coeff["output_offset"][(np.abs(coeff["AG"] - v)).argmin(), :]
-                    for v in x
-                ]
-            )
+            ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
+            return coeff["output_offset"][ind]
 
         def weights1(x):
-            return np.array(
-                [coeff["W1"][:, :, (np.abs(coeff["AG"] - v)).argmin()] for v in x]
-            )
+            ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
+            return np.transpose(coeff["W1"][:, :, ind], (2, 0, 1))
 
         if len(coeff["AL"]) > 1:
 
             def weights2(x):
-                return np.array(
-                    [coeff["W2"][:, :, (np.abs(coeff["AG"] - v)).argmin()] for v in x]
-                )
+                ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
+                return np.transpose(coeff["W2"][:, :, ind], (2, 0, 1))
 
         else:
 
             def weights2(x):
-                return np.array(
-                    [coeff["W2"][(np.abs(coeff["AG"] - v)).argmin(), :] for v in x]
-                )
+                ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
+                return coeff["W2"][ind]
 
         def factor(x):
-            return np.array(
-                [coeff["NP"][(np.abs(coeff["AG"] - v)).argmin()] for v in x]
-            )
+            ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
+            return coeff["NP"][ind]
 
     if str(c_list[0][-3:]).lower() == "ret":
         retrieval_type = ["linear regression", "quadratic regression", "neural network"]

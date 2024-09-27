@@ -402,7 +402,7 @@ def get_products(
         else:
             ret_in = retrieval_input(lev1, coeff)
             ret_array = np.reshape(
-                tb, (len(coeff["AG"]) * len(freq_ind), len(ibl)), "F"
+                tb, (len(coeff["AG"]) * len(freq_ind), len(ibl)), order="F"
             )
             ret_array = np.concatenate((np.ones((1, len(ibl)), np.float32), ret_array))
             for i_add in range(ret_in.shape[1] - len(coeff["FR"]) - 1, 0, -1):
@@ -506,7 +506,7 @@ def _get_qf(
         return_indices=True,
     )
     rpg_dat[product + "_quality_flag"] = np.bitwise_or.reduce(
-        lev1["quality_flag"][index, freq_ind], axis=1
+        lev1["quality_flag"][:, freq_ind][index], axis=1
     )
     seqs_all = [
         (key, len(list(val))) for key, val in groupby(lev1["pointing_flag"][:] & 1 > 0)
@@ -528,8 +528,8 @@ def _get_qf(
                 rpg_dat[product + "_quality_flag"][ind] = np.bitwise_or.reduce(flg)
 
     rpg_dat[product + "_quality_flag_status"] = lev1["quality_flag_status"][
-        index, freq_ind[0]
-    ]
+        :, freq_ind[0]
+    ][index]
 
 
 def _combine_lev1(
@@ -554,15 +554,16 @@ def _combine_lev1(
         for ivars in lev1_vars:
             if ivars not in lev1.variables:
                 continue
-            if (ivars == "time_bnds") & (data_type == "2P02"):
+            if ivars == "time_bnds" and data_type == "2P02":
+                time = lev1["time"][:][index]
                 rpg_dat[ivars] = np.ndarray((len(index), 2))
-                rpg_dat[ivars][:, 0] = lev1["time"][index] - scan_time
-                rpg_dat[ivars][:, 1] = lev1["time"][index]
-            elif (ivars == "time_bnds") & (data_type in ("2P04", "2P07", "2P08")):
+                rpg_dat[ivars][:, 0] = time - scan_time
+                rpg_dat[ivars][:, 1] = time
+            elif ivars == "time_bnds" and data_type in ("2P04", "2P07", "2P08"):
                 rpg_dat[ivars] = ma.masked_all(lev1[ivars].shape, np.int32)
             else:
                 try:
-                    rpg_dat[ivars] = lev1[ivars][index]
+                    rpg_dat[ivars] = lev1[ivars][:][index]
                 except IndexError:
                     rpg_dat[ivars] = lev1[ivars][:]
 
@@ -587,7 +588,8 @@ def ele_retrieval(ele_obs: np.ndarray, coeff: dict) -> np.ndarray:
     ele_ret = coeff["AG"]
     if ele_ret.shape == ():
         ele_ret = np.array([ele_ret])
-    return np.array([ele_ret[(np.abs(ele_ret - v)).argmin()] for v in ele_obs])
+    ind = np.argmin(np.abs(ele_obs - ele_ret[:, np.newaxis]), axis=0)
+    return ele_ret[ind]
 
 
 def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:

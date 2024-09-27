@@ -2,10 +2,10 @@
 
 import datetime
 
-import ephem
 import netCDF4 as nc
 import numpy as np
 import pandas as pd
+import suncalc
 from numpy import ma
 
 from mwrpy.level1.rpg_bin import RpgBin
@@ -41,117 +41,82 @@ def apply_qc(
     data["quality_flag"] = np.zeros(data["tb"].shape, dtype=np.int32)
     data["quality_flag_status"] = np.zeros(data["tb"].shape, dtype=np.int32)
 
-    if params["flag_status"][3] == 0:
-        ind_bit4 = spectral_consistency(data, site, coeff_files)
-    ind_bit6 = np.where(data["rain"] == 1)
-    ind_bit7 = orbpos(data, params)
+    # Bit 1: Missing TB-value
+    if params["flag_status"][0] == 1:
+        data["quality_flag_status"] = setbit(data["quality_flag_status"], 0)
+    else:
+        ind = ma.getmaskarray(data["tb"])
+        data["quality_flag"][ind] = setbit(data["quality_flag"][ind], 0)
 
-    for freq, _ in enumerate(data["frequency"]):
-        # Bit 1: Missing TB-value
-        if params["flag_status"][0] == 1:
-            data["quality_flag_status"][:, freq] = setbit(
-                data["quality_flag_status"][:, freq], 0
-            )
-        else:
-            ind = np.where(ma.getmaskarray(data["tb"][:, freq]))
-            data["quality_flag"][ind, freq] = setbit(data["quality_flag"][ind, freq], 0)
+    # Bit 2: TB threshold (lower range)
+    if params["flag_status"][1] == 1:
+        data["quality_flag_status"] = setbit(data["quality_flag_status"], 1)
+    else:
+        ind = data["tb"] < params["TB_threshold"][0]
+        data["quality_flag"][ind] = setbit(data["quality_flag"][ind], 1)
 
-        # Bit 2: TB threshold (lower range)
-        if params["flag_status"][1] == 1:
-            data["quality_flag_status"][:, freq] = setbit(
-                data["quality_flag_status"][:, freq], 1
-            )
-        else:
-            ind = np.where(data["tb"][:, freq] < params["TB_threshold"][0])
-            data["quality_flag"][ind, freq] = setbit(data["quality_flag"][ind, freq], 1)
+    # Bit 3: TB threshold (upper range)
+    if params["flag_status"][2] == 1:
+        data["quality_flag_status"] = setbit(data["quality_flag_status"], 2)
+    else:
+        ind = data["tb"] > params["TB_threshold"][1]
+        data["quality_flag"][ind] = setbit(data["quality_flag"][ind], 2)
 
-        # Bit 3: TB threshold (upper range)
-        if params["flag_status"][2] == 1:
-            data["quality_flag_status"][:, freq] = setbit(
-                data["quality_flag_status"][:, freq], 2
-            )
-        else:
-            ind = np.where(data["tb"][:, freq] > params["TB_threshold"][1])
-            data["quality_flag"][ind, freq] = setbit(data["quality_flag"][ind, freq], 2)
+    # Bit 4: Spectral consistency threshold
+    if params["flag_status"][3] == 1:
+        data["quality_flag_status"] = setbit(data["quality_flag_status"], 3)
+    else:
+        ind = spectral_consistency(data, site, coeff_files)
+        data["quality_flag"][ind] = setbit(data["quality_flag"][ind], 3)
 
-        # Bit 4: Spectral consistency threshold
-        if params["flag_status"][3] == 1:
-            data["quality_flag_status"][:, freq] = setbit(
-                data["quality_flag_status"][:, freq], 3
-            )
-        else:
-            ind = np.where(ind_bit4[:, freq] == 1)
-            data["quality_flag"][ind, freq] = setbit(data["quality_flag"][ind, freq], 3)
+    # Bit 5: Receiver sanity
+    if params["flag_status"][4] == 1:
+        data["quality_flag_status"] = setbit(data["quality_flag_status"], 4)
+    else:
+        ind = data["status"] == 1
+        data["quality_flag"][ind] = setbit(data["quality_flag"][ind], 4)
 
-        # Bit 5: Receiver sanity
-        if params["flag_status"][4] == 1:
-            data["quality_flag_status"][:, freq] = setbit(
-                data["quality_flag_status"][:, freq], 4
-            )
-        else:
-            ind = np.where(data["status"][:, freq] == 1)
-            data["quality_flag"][ind, freq] = setbit(data["quality_flag"][ind, freq], 4)
+    # Bit 6: Rain flag
+    if params["flag_status"][5] == 1:
+        data["quality_flag_status"] = setbit(data["quality_flag_status"], 5)
+    else:
+        ind = data["rain"] == 1
+        data["quality_flag"][ind] = setbit(data["quality_flag"][ind], 5)
 
-        # Bit 6: Rain flag
-        if params["flag_status"][5] == 1:
-            data["quality_flag_status"][:, freq] = setbit(
-                data["quality_flag_status"][:, freq], 5
-            )
-        else:
-            data["quality_flag"][ind_bit6, freq] = setbit(
-                data["quality_flag"][ind_bit6, freq], 5
-            )
+    # Bit 7: Solar/Lunar flag
+    if params["flag_status"][6] == 1:
+        data["quality_flag_status"] = setbit(data["quality_flag_status"], 6)
+    else:
+        ind = orbpos(data, params)
+        data["quality_flag"][ind] = setbit(data["quality_flag"][ind], 6)
 
-        # Bit 7: Solar/Lunar flag
-        if params["flag_status"][6] == 1:
-            data["quality_flag_status"][:, freq] = setbit(
-                data["quality_flag_status"][:, freq], 6
-            )
-        else:
-            data["quality_flag"][ind_bit7, freq] = setbit(
-                data["quality_flag"][ind_bit7, freq], 6
-            )
-
-        # Bit 8: TB offset threshold
-        if params["flag_status"][7] == 1:
-            data["quality_flag_status"][:, freq] = setbit(
-                data["quality_flag_status"][:, freq], 7
-            )
-        # else:
+    # Bit 8: TB offset threshold
+    if params["flag_status"][7] == 1:
+        data["quality_flag_status"] = setbit(data["quality_flag_status"], 7)
 
 
 def orbpos(data: dict, params: dict) -> np.ndarray:
     """Calculates sun & moon elevation/azimuth angles
     and returns index for observations in the direction of the sun.
     """
-    sun: dict = {
-        "azimuth_angle": ma.masked_all(data["time"].shape),
-        "elevation_angle": ma.masked_all(data["time"].shape),
+    time = np.array(
+        [
+            datetime.datetime.fromtimestamp(t, tz=datetime.timezone.utc)
+            for t in data["time"]
+        ]
+    )
+    lat = data["latitude"]
+    lng = data["longitude"]
+    sol = suncalc.get_position(time, lat=lat, lng=lng)
+    lun = suncalc.suncalc.getMoonPosition(time, lat=lat, lng=lng)
+    sun = {
+        "azimuth_angle": np.rad2deg(sol["azimuth"]) + 180,
+        "elevation_angle": np.rad2deg(sol["altitude"]),
     }
-    moon: dict = {
-        "azimuth_angle": ma.masked_all(data["time"].shape),
-        "elevation_angle": ma.masked_all(data["time"].shape),
+    moon = {
+        "azimuth_angle": np.rad2deg(lun["azimuth"]) + 180,
+        "elevation_angle": np.rad2deg(lun["altitude"]),
     }
-
-    sol = ephem.Sun()
-    lun = ephem.Moon()
-    obs_loc = ephem.Observer()
-
-    for ind, time in enumerate(data["time"]):
-        obs_loc.lat, obs_loc.lon = (
-            str(data["latitude"][ind]),
-            str(data["longitude"][ind]),
-        )
-        obs_loc.elevation = data["altitude"][ind]
-        obs_loc.date = datetime.datetime.utcfromtimestamp(time).strftime(
-            "%Y/%m/%d %H:%M:%S"
-        )
-        sol.compute(obs_loc)
-        sun["elevation_angle"][ind] = np.rad2deg(sol.alt)
-        sun["azimuth_angle"][ind] = np.rad2deg(sol.az)
-        lun.compute(obs_loc)
-        moon["elevation_angle"][ind] = np.rad2deg(lun.alt)
-        moon["azimuth_angle"][ind] = np.rad2deg(lun.az)
 
     sun["rise"], moon["rise"] = data["time"][0], data["time"][0]
     sun["set"], moon["set"] = (
@@ -167,43 +132,40 @@ def orbpos(data: dict, params: dict) -> np.ndarray:
         moon["rise"] = data["time"][i_moon[0]]
         moon["set"] = data["time"][i_moon[-1]]
 
-    flag_ind = np.where(
-        (
-            (~ma.getmaskarray(data["elevation_angle"]))
-            & (data["elevation_angle"] <= np.max(sun["elevation_angle"]) + 10.0)
-            & (data["time"] >= sun["rise"])
-            & (data["time"] <= sun["set"])
-            & (data["elevation_angle"] >= sun["elevation_angle"] - params["saf"])
-            & (data["elevation_angle"] <= sun["elevation_angle"] + params["saf"])
-            & (
-                data["azimuth_angle"]
-                >= sun["azimuth_angle"]
-                - params["saf"] / np.cos(np.deg2rad(data["elevation_angle"]))
-            )
-            & (
-                data["azimuth_angle"]
-                <= sun["azimuth_angle"]
-                + params["saf"] / np.cos(np.deg2rad(data["elevation_angle"]))
-            )
+    flag_ind = (
+        (~ma.getmaskarray(data["elevation_angle"]))
+        & (data["elevation_angle"] <= np.max(sun["elevation_angle"]) + 10.0)
+        & (data["time"] >= sun["rise"])
+        & (data["time"] <= sun["set"])
+        & (data["elevation_angle"] >= sun["elevation_angle"] - params["saf"])
+        & (data["elevation_angle"] <= sun["elevation_angle"] + params["saf"])
+        & (
+            data["azimuth_angle"]
+            >= sun["azimuth_angle"]
+            - params["saf"] / np.cos(np.deg2rad(data["elevation_angle"]))
         )
-        | (
-            (data["elevation_angle"] <= np.max(moon["elevation_angle"]) + 10.0)
-            & (data["time"] >= moon["rise"])
-            & (data["time"] <= moon["set"])
-            & (data["elevation_angle"] >= moon["elevation_angle"] - params["saf"])
-            & (data["elevation_angle"] <= moon["elevation_angle"] + params["saf"])
-            & (
-                data["azimuth_angle"]
-                >= moon["azimuth_angle"]
-                - params["saf"] / np.cos(np.deg2rad(data["elevation_angle"]))
-            )
-            & (
-                data["azimuth_angle"]
-                <= moon["azimuth_angle"]
-                + params["saf"] / np.cos(np.deg2rad(data["elevation_angle"]))
-            )
+        & (
+            data["azimuth_angle"]
+            <= sun["azimuth_angle"]
+            + params["saf"] / np.cos(np.deg2rad(data["elevation_angle"]))
         )
-    )[0]
+    ) | (
+        (data["elevation_angle"] <= np.max(moon["elevation_angle"]) + 10.0)
+        & (data["time"] >= moon["rise"])
+        & (data["time"] <= moon["set"])
+        & (data["elevation_angle"] >= moon["elevation_angle"] - params["saf"])
+        & (data["elevation_angle"] <= moon["elevation_angle"] + params["saf"])
+        & (
+            data["azimuth_angle"]
+            >= moon["azimuth_angle"]
+            - params["saf"] / np.cos(np.deg2rad(data["elevation_angle"]))
+        )
+        & (
+            data["azimuth_angle"]
+            <= moon["azimuth_angle"]
+            + params["saf"] / np.cos(np.deg2rad(data["elevation_angle"]))
+        )
+    )
 
     return flag_ind
 
@@ -214,7 +176,7 @@ def spectral_consistency(
     """Applies spectral consistency coefficients for given frequency index,
     writes 2S02 product and returns indices to be flagged.
     """
-    flag_ind = np.zeros(data["tb"].shape, dtype=np.int32)
+    flag_ind = np.zeros(data["tb"].shape, dtype=np.bool_)
     abs_diff = ma.masked_all(data["tb"].shape, dtype=np.float32)
     data["tb_spectrum"] = ma.masked_all(data["tb"].shape)
 
@@ -286,7 +248,7 @@ def spectral_consistency(
                     * (2.0 - np.sin(np.deg2rad(data["elevation_angle"][ele_ind])))
                 )[0],
                 ifreq,
-            ] = 1
+            ] = True
             abs_diff[:, ifreq] = np.abs(
                 data["tb"][:, ifreq] - data["tb_spectrum"][:, ifreq]
             )
@@ -364,7 +326,7 @@ def spectral_consistency(
                             )
                         ],
                         ifreq,
-                    ] = 1
+                    ] = True
 
             abs_diff[:, ifreq] = ma.masked_invalid(
                 np.abs(data["tb"][:, ifreq] - data["tb_spectrum"][:, ifreq])
@@ -380,13 +342,13 @@ def spectral_consistency(
                 * (2.0 - np.sin(np.deg2rad(data["elevation_angle"][:]))),
                 data["receiver"] == rec,
             )
-        ] = 1
+        ] = True
 
     return flag_ind
 
 
 def ele_retrieval(ele_obs: np.ndarray, coeff: dict) -> np.ndarray:
-    """Extracts elevation angles used in retrieval"""
+    """Extracts elevation angles used in retrieval."""
     ele_ret = coeff["AG"]
     if ele_ret.shape == ():
         ele_ret = np.array([ele_ret])
@@ -396,7 +358,7 @@ def ele_retrieval(ele_obs: np.ndarray, coeff: dict) -> np.ndarray:
 
 
 def rm_retrieval(ele_obs: np.ndarray, coeff: dict, freq) -> np.ndarray:
-    """Extracts elevation angles used in retrieval"""
+    """Extracts retrieval uncertainty."""
     rm_ret = coeff["RM"]
     freq_ind = np.array([(np.abs(coeff["AL"] - v)).argmin() for v in freq])
     if rm_ret.shape == ():
