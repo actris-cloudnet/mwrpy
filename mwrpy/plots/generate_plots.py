@@ -184,10 +184,10 @@ def _mark_gaps(
     data_new = ma.copy(data)
     time_new = np.copy(time)
     gap_indices = np.where(np.diff(time) > max_gap)[0]
-    for ia in range(mask_edge):
-        gap_indices = np.unique(
-            np.sort(np.append(gap_indices, [gap_indices - ia, gap_indices + ia]))
-        )
+    # for ia in range(mask_edge):
+    #     gap_indices = np.unique(
+    #         np.sort(np.append(gap_indices, [gap_indices - ia, gap_indices + ia]))
+    #     )
     if data.ndim == 2:
         temp_array = np.zeros((2, data.shape[1]))
         temp_mask = np.ones((2, data.shape[1]))
