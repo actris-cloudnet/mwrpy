@@ -83,6 +83,7 @@ Commands:
 | :-------- | :----------------------------------------- |
 | `process` | Process data and generate plots (default). |
 | `plot`    | Only generate plots.                       |
+| `no-plot` | Only generate products.                    |
 
 ### Data types
 

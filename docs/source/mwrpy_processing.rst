@@ -172,6 +172,8 @@ After defining the instrument type and site specific configuration files (includ
      - Process data and generate plots (default).
    * - `plot`
      - Only generate plots.
+   * - `no-plot`
+     - Only generate products.
 
 Data Types
 ~~~~~~~~~~
