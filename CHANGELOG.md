@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.5 – 2024-09-30
+
+- Optimize processing
+- Add `--no-plot` option
+
 ## 1.0.4 – 2024-08-30
 
 - Handle missing MET files
