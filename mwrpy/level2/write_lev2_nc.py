@@ -203,7 +203,7 @@ def get_products(
         else:
             rpg_dat["iwv"] = ret_product
 
-        _get_qf(rpg_dat, lev1, coeff, index, product)
+        _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
 
     elif data_type in ("2P01", "2P03"):
         if data_type == "2P01":
@@ -288,8 +288,6 @@ def get_products(
             if product == "absolute_humidity":
                 tmp_dat = tmp_dat / 1000.0
 
-        _get_qf(rpg_dat, lev1, coeff, index, product)
-
         index_ret = np.where(
             np.any(
                 np.abs(
@@ -310,6 +308,8 @@ def get_products(
             (len(index), len(rpg_dat["height"])), np.float32
         )
         rpg_dat[product][index_ret, :] = tmp_dat[index_ret, :]
+
+        _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
 
     elif data_type == "2P02":
         coeff = get_mvr_coeff(site, "tpb", lev1["frequency"][:], coeff_files)
@@ -428,7 +428,7 @@ def get_products(
                 + coeff["output_offset"][:, np.newaxis]
             )
 
-        _get_qf(rpg_dat, lev1, coeff, index, "temperature")
+        _get_qf(rpg_dat, lev1, coeff, index, np.array(range(len(index))), "temperature")
 
     elif data_type in ("2P04", "2P07", "2P08"):
         assert temp_file is not None
@@ -497,16 +497,24 @@ def get_products(
 
 
 def _get_qf(
-    rpg_dat: dict, lev1: nc.Dataset, coeff: dict, index: np.ndarray, product: str
+    rpg_dat: dict,
+    lev1: nc.Dataset,
+    coeff: dict,
+    index: np.ndarray,
+    index_ret: np.ndarray,
+    product: str,
 ) -> None:
+    rpg_dat[product + "_quality_flag"] = ma.masked_all((len(index)), np.int32)
+    rpg_dat[product + "_quality_flag_status"] = ma.masked_all((len(index)), np.int32)
+
     _, freq_ind, _ = np.intersect1d(
         lev1["frequency"][:],
         coeff["FR"][:],
         assume_unique=False,
         return_indices=True,
     )
-    rpg_dat[product + "_quality_flag"] = np.bitwise_or.reduce(
-        lev1["quality_flag"][:, freq_ind][index], axis=1
+    rpg_dat[product + "_quality_flag"][index_ret] = np.bitwise_or.reduce(
+        lev1["quality_flag"][:, freq_ind][index[index_ret]], axis=1
     )
     seqs_all = [
         (key, len(list(val))) for key, val in groupby(lev1["pointing_flag"][:] & 1 > 0)
@@ -527,9 +535,9 @@ def _get_qf(
                 flg = np.bitwise_or.reduce(lev1["quality_flag"][scan, freq_ind], axis=1)
                 rpg_dat[product + "_quality_flag"][ind] = np.bitwise_or.reduce(flg)
 
-    rpg_dat[product + "_quality_flag_status"] = lev1["quality_flag_status"][
+    rpg_dat[product + "_quality_flag_status"][index_ret] = lev1["quality_flag_status"][
         :, freq_ind[0]
-    ][index]
+    ][index[index_ret]]
 
 
 def _combine_lev1(
@@ -588,7 +596,7 @@ def ele_retrieval(ele_obs: np.ndarray, coeff: dict) -> np.ndarray:
     ele_ret = coeff["AG"]
     if ele_ret.shape == ():
         ele_ret = np.array([ele_ret])
-    ind = np.argmin(np.abs(ele_obs - ele_ret[:, np.newaxis]), axis=0)
+    ind = np.argwhere(np.abs(ele_obs - ele_ret[:, np.newaxis]) < 0.5)[:, 0]
     return ele_ret[ind]
 
 

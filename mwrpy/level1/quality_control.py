@@ -238,14 +238,16 @@ def spectral_consistency(
             ).mean()
             tb_mean = tb_mean.reindex(tb_df.index, method="nearest")
 
-            fact = [5.0, 5.0]  # factor for receiver retrieval uncertainty
+            fact = [2.0, 2.5]  # factor for receiver retrieval uncertainty
             # flag for individual channels based on channel retrieval uncertainty
+            sin_ele = np.sin(np.deg2rad(data["elevation_angle"][ele_ind]))
             flag_ind[
                 np.where(
                     np.abs(tb_df["Tb"].values[:] - tb_mean["Tb"].values[:])
                     > ret_rm[:, ifreq]
                     * fact[data["receiver"][ifreq] - 1]
-                    * (2.0 - np.sin(np.deg2rad(data["elevation_angle"][ele_ind])))
+                    * 3.0
+                    / sin_ele
                 )[0],
                 ifreq,
             ] = True
@@ -332,14 +334,12 @@ def spectral_consistency(
                 np.abs(data["tb"][:, ifreq] - data["tb_spectrum"][:, ifreq])
             )
 
-    th_rec = [1.5, 2.0]  # threshold for receiver mean absolute difference
     # receiver flag based on mean absolute difference
+    sin_ele = np.sin(np.deg2rad(data["elevation_angle"][:]))
     for _, rec in enumerate(data["receiver_nb"]):
         flag_ind[
             np.ix_(
-                ma.mean(abs_diff[:, data["receiver"] == rec], axis=1)
-                > th_rec[rec - 1]
-                * (2.0 - np.sin(np.deg2rad(data["elevation_angle"][:]))),
+                ma.mean(abs_diff[:, data["receiver"] == rec], axis=1) > 1.5 / sin_ele,
                 data["receiver"] == rec,
             )
         ] = True
@@ -366,4 +366,5 @@ def rm_retrieval(ele_obs: np.ndarray, coeff: dict, freq) -> np.ndarray:
     ele_ret = coeff["AG"]
     if ele_ret.shape == ():
         ele_ret = np.array([ele_ret])
-    return np.array([rm_ret[freq_ind, (np.abs(ele_ret - v)).argmin()] for v in ele_obs])
+    # ind = np.argwhere(np.abs(ele_obs - ele_ret[:, np.newaxis]) < 0.5)[:, 0]
+    return np.array([rm_ret[freq_ind, np.abs(v - ele_ret) < 0.5] for v in ele_obs])
