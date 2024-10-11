@@ -21,6 +21,7 @@ PRODUCT_NAME = {
     "1C01": "",
     "2I01": "lwp",
     "2I02": "iwv",
+    "2I06": "stability",
     "2P01": "temperature",
     "2P02": "temperature",
     "2P03": "absolute_humidity",
@@ -30,6 +31,7 @@ PRODUCT_NAME = {
     "single": [
         "lwp",
         "iwv",
+        "stability",
         "temperature",
         "absolute_humidity",
         "relative_humidity",
@@ -61,12 +63,12 @@ def main(args):
                 process_product(product, date, args.site)
                 elapsed_time = time.process_time() - start
                 logging.info(f"Processing took {elapsed_time:.1f} seconds")
-            if not args.no_plot:
+            if args.command != "no-plot":
                 logging.info(f"Plotting {product} product, {args.site} {date}")
-                try:
-                    plot_product(product, date, args.site)
-                except TypeError as err:
-                    logging.error(err)
+                # try:
+                plot_product(product, date, args.site)
+                # except TypeError as err:
+                #     logging.error(err)
 
 
 def process_product(prod: str, date: datetime.date, site: str):
@@ -150,12 +152,27 @@ def plot_product(prod: str, date, site: str):
                 91.0,
             )
         )
+        if prod == "2I06":
+            f_names = list(
+                [
+                    "lifted_index",
+                    "ko_index",
+                    "total_totals",
+                    "k_index",
+                    "showalter_index",
+                    "cape",
+                ]
+            )
+        else:
+            f_names = list(str([PRODUCT_NAME[prod]]))
+        title = False if prod == "2I06" else True
         generate_figure(
             filename,
-            [PRODUCT_NAME[prod]],
+            f_names,
             ele_range=elevation,
             save_path=output_dir,
             image_name=str(PRODUCT_NAME[prod]),
+            title=title,
         )
 
     elif os.path.isfile(filename) and (prod in ("single", "multi")):
@@ -171,13 +188,32 @@ def plot_product(prod: str, date, site: str):
                     91.0,
                 )
             )
-            generate_figure(
-                filename,
-                [var_name],
-                ele_range=elevation,
-                save_path=output_dir,
-                image_name=var_name,
-            )
+            f_names = [
+                "lifted_index",
+                "ko_index",
+                "total_totals",
+                "k_index",
+                "showalter_index",
+                "cape",
+            ]
+            if var_name == "stability":
+                keymap = {
+                    var_name: f_names,
+                }
+            else:
+                keymap = {
+                    var_name: [var_name],
+                }
+            title = False if var_name in f_names else True
+            for key, variables in keymap.items():
+                generate_figure(
+                    filename,
+                    variables,
+                    ele_range=elevation,
+                    save_path=output_dir,
+                    image_name=key,
+                    title=title,
+                )
 
 
 def _get_raw_file_path(date_in: datetime.date, site: str) -> str:

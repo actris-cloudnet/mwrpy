@@ -253,7 +253,7 @@ def _set_labels(fig, ax, nc_file: str, sub_title: bool = True) -> date:
     return case_date
 
 
-def _set_title(ax, field_name: str, nc_file, identifier: str = " from actris_mwr_pro"):
+def _set_title(ax, field_name: str, nc_file, identifier: str = " from MWRpy"):
     """Sets title of plot."""
     if ATTRIBUTES[field_name].name:
         ax.set_title(f"{ATTRIBUTES[field_name].name}{identifier}", fontsize=14)
@@ -646,6 +646,8 @@ def _plot_instrument_data(
     """Calls plotting function for specified product."""
     if product == "int":
         _plot_int(ax, data, name, time, nc_file)
+    elif product == "sta":
+        _plot_sta(ax, data, name, time, nc_file)
     elif product in ("met", "met2"):
         _plot_met(ax, data, name, time, nc_file)
     elif product == "tb":
@@ -1537,6 +1539,70 @@ def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
         vmax = np.min([np.nanmax(data0) + 0.05, vmax])
         vmin = np.max([np.nanmin(data0) - 0.05, vmin])
     _set_ax(ax, vmax, ATTRIBUTES[name].ylabel, min_y=vmin)
+
+    flag_tmp = _calculate_rolling_mean(time, flag, win=1 / 60)
+    data_f = np.zeros((len(flag_tmp), 10), np.float32)
+    data_f[flag_tmp > 0, :] = 1.0
+    cmap = ListedColormap([_COLORS["lightgray"], _COLORS["gray"]])
+    norm = BoundaryNorm([0, 1, 2], cmap.N)
+    ax.pcolormesh(
+        time,
+        np.linspace(vmin, vmax, 10),
+        data_f.T,
+        cmap=cmap,
+        norm=norm,
+    )
+
+    case_date = _read_date(nc_file)
+    gtim = _gap_array(time, case_date, 15.0 / 60.0)
+    if len(gtim) > 0:
+        time_i, data_g = (
+            np.linspace(time[0], time[-1], len(time)),
+            np.zeros((len(time), 10), np.float32),
+        )
+        for ig, _ in enumerate(gtim[:, 0]):
+            xind = np.where((time_i >= gtim[ig, 0]) & (time_i <= gtim[ig, 1]))
+            data_g[xind, :] = 1.0
+
+        _plot_segment_data(
+            ax,
+            ma.MaskedArray(data_g),
+            "tb_missing",
+            (time_i, np.linspace(vmin, vmax, 10)),
+            nc_file,
+        )
+
+    ax.plot(time, data_in, ".", color="royalblue", markersize=1)
+    ax.axhline(linewidth=0.8, color="k")
+    rolling_mean = _calculate_rolling_mean(time0, data0)
+    time0 = _nan_time_gaps(time0)
+    ax.plot(
+        time0,
+        rolling_mean,
+        color="sienna",
+        linewidth=2.0,
+    )
+    ax.plot(
+        time0,
+        rolling_mean,
+        color="wheat",
+        linewidth=0.6,
+    )
+
+
+def _plot_sta(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
+    """Plot for stability indices."""
+    flag = _get_ret_flag(nc_file, time, "stability")
+    data0, time0 = data_in[flag == 0], time[flag == 0]
+    if len(data0) == 0:
+        data0, time0 = data_in, time
+    plot_range = ATTRIBUTES[name].plot_range
+    assert plot_range is not None
+    vmin, vmax = plot_range
+    vmax = np.min([np.nanmax(data0) + 0.05, vmax])
+    vmin = np.max([np.nanmin(data0) - 0.05, vmin])
+    _set_ax(ax, vmax, ATTRIBUTES[name].ylabel, min_y=vmin)
+    _set_title(ax, name, nc_file, "")
 
     flag_tmp = _calculate_rolling_mean(time, flag, win=1 / 60)
     data_f = np.zeros((len(flag_tmp), 10), np.float32)
