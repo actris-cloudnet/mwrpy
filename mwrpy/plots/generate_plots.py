@@ -506,9 +506,9 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
     if name == "relative_humidity":
         assert isinstance(data_in, ma.MaskedArray)
         data[data_in.mask] = np.nan
-        data[data > 1.0] = 1.0
+        data[data > 1.0] = 1.001
         data[data < 0.0] = 0.0
-        data_in[data_in > 1.0] = 1.0
+        data_in[data_in > 1.0] = 1.001
         data_in[data_in < 0.0] = 0.0
         data *= 100.0
         data_in *= 100.0
