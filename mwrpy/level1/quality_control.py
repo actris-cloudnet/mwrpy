@@ -63,7 +63,7 @@ def apply_qc(
         data["quality_flag"][ind] = setbit(data["quality_flag"][ind], 2)
 
     # Bit 4: Spectral consistency threshold
-    if params["flag_status"][3] == 1:
+    if params["flag_status"][3] == 1 or "air_pressure" not in data:
         data["quality_flag_status"] = setbit(data["quality_flag_status"], 3)
     else:
         ind = spectral_consistency(data, site, coeff_files)
