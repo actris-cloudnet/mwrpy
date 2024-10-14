@@ -5,6 +5,8 @@ import logging
 import os
 import time
 
+import matplotlib.pyplot as plt
+
 from mwrpy.level1.write_lev1_nc import lev1_to_nc
 from mwrpy.level2.lev2_collocated import generate_lev2_multi, generate_lev2_single
 from mwrpy.level2.write_lev2_nc import lev2_to_nc
@@ -18,6 +20,9 @@ from mwrpy.utils import (
 )
 
 PRODUCT_NAME = {
+    "1B01": "",
+    "1B11": "",
+    "1B21": "",
     "1C01": "",
     "2I01": "lwp",
     "2I02": "iwv",
@@ -67,6 +72,7 @@ def main(args):
                     plot_product(product, date, args.site)
                 except TypeError as err:
                     logging.error(err)
+                plt.close()
 
 
 def process_product(prod: str, date: datetime.date, site: str):

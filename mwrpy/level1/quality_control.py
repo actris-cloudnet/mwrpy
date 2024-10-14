@@ -63,7 +63,7 @@ def apply_qc(
         data["quality_flag"][ind] = setbit(data["quality_flag"][ind], 2)
 
     # Bit 4: Spectral consistency threshold
-    if params["flag_status"][3] == 1:
+    if params["flag_status"][3] == 1 or "air_pressure" not in data:
         data["quality_flag_status"] = setbit(data["quality_flag_status"], 3)
     else:
         ind = spectral_consistency(data, site, coeff_files)
@@ -195,13 +195,9 @@ def spectral_consistency(
             factor,
         ) = get_mvr_coeff(site, "spc", data["frequency"][:], coeff_files)
         ret_in = retrieval_input(data, coeff)
-        ele_ang = 90.0
-        ele_coeff = np.where(coeff["AG"] == ele_ang)[0]
-        ele_ind = np.where(
-            (data["elevation_angle"][:] > ele_ang - 0.5)
-            & (data["elevation_angle"][:] < ele_ang + 0.5)
-            & (data["pointing_flag"][:] == 0)
-        )[0]
+        ele_ind = ele_retrieval(data["elevation_angle"][:], coeff)
+        ret_rm = rm_retrieval(data["elevation_angle"][:], coeff, data["frequency"][:])
+
         coeff_ind = np.searchsorted(coeff["AL"], data["frequency"])
         c_w1, c_w2, fac = (
             weights1(data["elevation_angle"][ele_ind]),
@@ -242,14 +238,14 @@ def spectral_consistency(
             ).mean()
             tb_mean = tb_mean.reindex(tb_df.index, method="nearest")
 
-            fact = [5.0, 7.0]  # factor for receiver retrieval uncertainty
+            fact = [6.0, 7.5]  # factor for receiver retrieval uncertainty
             # flag for individual channels based on channel retrieval uncertainty
+            sin_ele = np.sin(np.deg2rad(data["elevation_angle"][ele_ind]))
             flag_ind[
-                (
+                np.where(
                     np.abs(tb_df["Tb"].values[:] - tb_mean["Tb"].values[:])
-                    > coeff["RM"][coeff_ind[ifreq], ele_coeff]
-                    * fact[data["receiver"][ifreq] - 1]
-                ),
+                    > ret_rm[:, ifreq] * fact[data["receiver"][ifreq] - 1] / sin_ele
+                )[0],
                 ifreq,
             ] = True
             abs_diff[:, ifreq] = np.abs(
@@ -335,14 +331,37 @@ def spectral_consistency(
                 np.abs(data["tb"][:, ifreq] - data["tb_spectrum"][:, ifreq])
             )
 
-    th_rec = [1.5, 2.0]  # threshold for receiver mean absolute difference
     # receiver flag based on mean absolute difference
+    sin_ele = np.sin(np.deg2rad(data["elevation_angle"][:]))
     for _, rec in enumerate(data["receiver_nb"]):
         flag_ind[
             np.ix_(
-                ma.mean(abs_diff[:, data["receiver"] == rec], axis=1) > th_rec[rec - 1],
+                ma.mean(abs_diff[:, data["receiver"] == rec], axis=1) > 1.5 / sin_ele,
                 data["receiver"] == rec,
             )
         ] = True
 
     return flag_ind
+
+
+def ele_retrieval(ele_obs: np.ndarray, coeff: dict) -> np.ndarray:
+    """Extracts elevation angles used in retrieval."""
+    ele_ret = coeff["AG"]
+    if ele_ret.shape == ():
+        ele_ret = np.array([ele_ret])
+    return np.array(
+        [i for i, v in enumerate(ele_obs) if np.min(np.abs(v - ele_ret)) < 0.5]
+    )
+
+
+def rm_retrieval(ele_obs: np.ndarray, coeff: dict, freq) -> np.ndarray:
+    """Extracts retrieval uncertainty."""
+    rm_ret = coeff["RM"]
+    freq_ind = np.array([(np.abs(coeff["AL"] - v)).argmin() for v in freq])
+    if rm_ret.shape == ():
+        rm_ret = np.array([rm_ret])
+    ele_ret = coeff["AG"]
+    if ele_ret.shape == ():
+        ele_ret = np.array([ele_ret])
+    # ind = np.argwhere(np.abs(ele_obs - ele_ret[:, np.newaxis]) < 0.5)[:, 0]
+    return np.array([rm_ret[freq_ind, np.abs(v - ele_ret) < 0.5] for v in ele_obs])

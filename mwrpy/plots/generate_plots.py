@@ -184,10 +184,10 @@ def _mark_gaps(
     data_new = ma.copy(data)
     time_new = np.copy(time)
     gap_indices = np.where(np.diff(time) > max_gap)[0]
-    for ia in range(mask_edge):
-        gap_indices = np.unique(
-            np.sort(np.append(gap_indices, [gap_indices - ia, gap_indices + ia]))
-        )
+    # for ia in range(mask_edge):
+    #     gap_indices = np.unique(
+    #         np.sort(np.append(gap_indices, [gap_indices - ia, gap_indices + ia]))
+    #     )
     if data.ndim == 2:
         temp_array = np.zeros((2, data.shape[1]))
         temp_mask = np.ones((2, data.shape[1]))
@@ -476,6 +476,7 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
     variables = ATTRIBUTES[name]
     nbin = 7
     nlev1 = 31
+    avg_time = 15 / 60
     if ATTRIBUTES[name].nlev:
         nlev = ATTRIBUTES[name].nlev
     else:
@@ -505,9 +506,9 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
     if name == "relative_humidity":
         assert isinstance(data_in, ma.MaskedArray)
         data[data_in.mask] = np.nan
-        data[data > 1.0] = 1.0
+        data[data > 1.0] = 1.001
         data[data < 0.0] = 0.0
-        data_in[data_in > 1.0] = 1.0
+        data_in[data_in > 1.0] = 1.001
         data_in[data_in < 0.0] = 0.0
         data *= 100.0
         data_in *= 100.0
@@ -524,7 +525,7 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
     ):
         hum_time = seconds2hours(read_nc_fields(hum_file, "time"))
         hum_flag = _get_ret_flag(hum_file, hum_time, "absolute_humidity")
-        hum_flag = _calculate_rolling_mean(hum_time, hum_flag, win=15 / 60)
+        hum_flag = _calculate_rolling_mean(hum_time, hum_flag, win=avg_time)
         hum_flag = np.interp(axes[0], hum_time, hum_flag)
     else:
         hum_flag = np.zeros(len(axes[0]), np.int32)
@@ -541,8 +542,8 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
     if variables.cbar_ext in ("neither", "max"):
         data[data < vmin] = vmin
 
-    if np.ma.median(np.diff(axes[0][:])) < 6 / 60:
-        data = _calculate_rolling_mean(axes[0], data, win=15 / 60)
+    if np.ma.median(np.diff(axes[0][:])) < avg_time:
+        data = _calculate_rolling_mean(axes[0], data, win=avg_time)
         time, data = _mark_gaps(axes[0][:], ma.MaskedArray(data), 35, 10)
     else:
         time, data = _mark_gaps(
@@ -570,10 +571,10 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
         flag = _get_ret_flag(tem_file, axes[0], "temperature")
     else:
         flag = _get_ret_flag(tem_file, axes[0], name)
-    if np.ma.median(np.diff(axes[0][:])) < 6 / 60:
-        flag = _calculate_rolling_mean(axes[0], flag, win=15 / 60)
+    if np.ma.median(np.diff(axes[0][:])) < avg_time:
+        flag = _calculate_rolling_mean(axes[0], flag, win=avg_time)
         data_in[(flag > 0) | (hum_flag > 0), :] = np.nan
-        data = _calculate_rolling_mean(axes[0], data_in, win=15 / 60)
+        data = _calculate_rolling_mean(axes[0], data_in, win=avg_time)
         time, data = _mark_gaps(axes[0][:], ma.MaskedArray(data), 35, 10)
     else:
         data_in[(flag > 0) | (hum_flag > 0), :] = np.nan

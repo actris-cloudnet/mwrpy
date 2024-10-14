@@ -31,11 +31,16 @@ def get_mvr_coeff(
         coeff = read_coeff_ascii(c_list[0])
         if "AL" not in coeff:
             coeff["AL"] = [0]
-        if prefix == "tpb":
+        if (prefix == "tpb") and (coeff["RT"] == 2):
             for key in ("W1", "W2"):
                 coeff[key] = coeff[key].squeeze(axis=2)
             for key in ("input_offset", "input_scale", "output_offset", "output_scale"):
                 coeff[key] = coeff[key].squeeze(axis=0)
+        elif (prefix == "tpb") and (coeff["RT"] < 2):
+            coeff["TL"] = np.reshape(
+                np.transpose(coeff["TL"]),
+                (len(coeff["AG"]) * len(coeff["FR"]), len(coeff["AL"])),
+            )
 
         aux = [
             "TS",
@@ -150,16 +155,11 @@ def get_mvr_coeff(
             ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
             return coeff["OS"][ind]
 
-        if coeff["RT"] in (0, 1):
-            coeff["TL"] = coeff["TL"][np.newaxis, :]
-
         def f_lin(x):
             ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
             return coeff["TL"][ind]
 
         if coeff["RT"] in (1, -1):
-            if coeff["RT"] == 1:
-                coeff["TQ"] = coeff["TQ"][np.newaxis, :]
 
             def f_quad(x):
                 ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)

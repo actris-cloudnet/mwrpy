@@ -46,9 +46,11 @@ def correct_lwp_offset(
         pd.tseries.frequencies.to_offset("20min"), center=True, min_periods=100
     ).max()
 
-    lwp[(lwcl_i != 0) | (lwp > 0.06) | (lwp_max["Lwp"] > (tb_max["Tb"] * 0.0025))] = (
-        np.nan
-    )
+    lwp[
+        ((lwcl_i != 0) & (lwp_max["Lwp"] > (tb_max["Tb"] * 0.0025 / 1.5)))
+        | (lwp > 0.06)
+        | (lwp_max["Lwp"] > (tb_max["Tb"] * 0.0025))
+    ] = np.nan
     lwp_df = pd.DataFrame({"Lwp": lwp}, index=ind)
     lwp_offset = lwp_df.rolling(
         pd.tseries.frequencies.to_offset("20min"), center=True, min_periods=100
