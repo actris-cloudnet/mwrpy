@@ -180,7 +180,9 @@ def spectral_consistency(
     abs_diff = ma.masked_all(data["tb"].shape, dtype=np.float32)
     data["tb_spectrum"] = ma.masked_all(data["tb"].shape)
 
-    c_list = get_coeff_list(site, "spc", coeff_files)
+    c_list = get_coeff_list(site, "ins", coeff_files)
+    if len(c_list) == 0:
+        c_list = get_coeff_list(site, "spc", coeff_files)
 
     if len(c_list) > 0:
         # pylint: disable=unbalanced-tuple-unpacking
