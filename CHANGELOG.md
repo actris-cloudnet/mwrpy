@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.6 – 2024-10-15
+
+- Add support for off-zenith SPC/INS files
+- Improve off-zenith quality flags and add to plots
+- Make 1B21 product units consistent
+- Allow missing retrieval angles in `multi_pointing` temperature product
+- Fix LWP offset correction and scan flagging
+- Add average time to 2D plots
+
 ## 1.0.5 – 2024-09-30
 
 - Optimize processing
