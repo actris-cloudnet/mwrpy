@@ -196,7 +196,9 @@ def spectral_consistency(
         ) = get_mvr_coeff(site, "spc", data["frequency"][:], coeff_files)
         ret_in = retrieval_input(data, coeff)
         ele_ind = ele_retrieval(data["elevation_angle"][:], coeff)
-        ret_rm = rm_retrieval(data["elevation_angle"][:], coeff, data["frequency"][:])
+        ret_rm = rm_retrieval(
+            data["elevation_angle"][ele_ind], coeff, data["frequency"][:]
+        )
 
         coeff_ind = np.searchsorted(coeff["AL"], data["frequency"])
         c_w1, c_w2, fac = (
@@ -230,8 +232,12 @@ def spectral_consistency(
 
         for ifreq, _ in enumerate(data["frequency"]):
             tb_df = pd.DataFrame(
-                {"Tb": (data["tb"][:, ifreq] - data["tb_spectrum"][:, ifreq])},
-                index=pd.to_datetime(data["time"][:], unit="s"),
+                {
+                    "Tb": (
+                        data["tb"][ele_ind, ifreq] - data["tb_spectrum"][ele_ind, ifreq]
+                    )
+                },
+                index=pd.to_datetime(data["time"][ele_ind], unit="s"),
             )
             tb_mean = tb_df.resample(
                 "20min", origin="start", closed="left", label="left", offset="10min"
@@ -363,5 +369,4 @@ def rm_retrieval(ele_obs: np.ndarray, coeff: dict, freq) -> np.ndarray:
     ele_ret = coeff["AG"]
     if ele_ret.shape == ():
         ele_ret = np.array([ele_ret])
-    # ind = np.argwhere(np.abs(ele_obs - ele_ret[:, np.newaxis]) < 0.5)[:, 0]
-    return np.array([rm_ret[freq_ind, np.abs(v - ele_ret) < 0.5] for v in ele_obs])
+    return np.array([rm_ret[freq_ind, np.argmin(np.abs(v - ele_ret))] for v in ele_obs])
