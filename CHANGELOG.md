@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.7 – 2024-10-17
+
+- Fix indexing in retrieval uncertainty
+
 ## 1.0.6 – 2024-10-15
 
 - Add support for off-zenith SPC/INS files
