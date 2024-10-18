@@ -220,10 +220,10 @@ def get_products(
 
         else:
             product_list = (
-                "lifted_index",
+                "k_index",
                 "ko_index",
                 "total_totals",
-                "k_index",
+                "lifted_index",
                 "showalter_index",
                 "cape",
             )

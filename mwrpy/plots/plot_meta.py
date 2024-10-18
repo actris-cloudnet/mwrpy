@@ -19,6 +19,7 @@ class PlotMeta(NamedTuple):
 
 
 _K = "K"
+_JKG = "J kg$^{-1}$"
 _KGM2 = "kg m$^{-2}$"
 _GM2 = "g m$^{-2}$"
 _KGM3 = "kg m$^{-3}$"
@@ -260,15 +261,15 @@ ATTRIBUTES = {
     ),
     "lifted_index": PlotMeta(
         name="Lifted index",
-        ylabel="",
-        plot_range=(0, 100),
+        ylabel=_K,
+        plot_range=(-100, 100),
         plot_type="bar",
         source="sta",
         ele=(89.0, 91.0),
     ),
     "ko_index": PlotMeta(
         name="KO index",
-        ylabel="",
+        ylabel=_K,
         plot_range=(-100, 100),
         plot_type="bar",
         source="sta",
@@ -276,23 +277,23 @@ ATTRIBUTES = {
     ),
     "total_totals": PlotMeta(
         name="Total totals",
-        ylabel="",
-        plot_range=(0, 100),
+        ylabel=_K,
+        plot_range=(-100, 100),
         plot_type="bar",
         source="sta",
         ele=(89.0, 91.0),
     ),
     "k_index": PlotMeta(
         name="K index",
-        ylabel="",
-        plot_range=(0, 100),
+        ylabel=_K,
+        plot_range=(-100, 100),
         plot_type="bar",
         source="sta",
         ele=(89.0, 91.0),
     ),
     "showalter_index": PlotMeta(
         name="Showalter index",
-        ylabel="",
+        ylabel=_K,
         plot_range=(-100, 100),
         plot_type="bar",
         source="sta",
@@ -300,8 +301,8 @@ ATTRIBUTES = {
     ),
     "cape": PlotMeta(
         name="CAPE",
-        ylabel="",
-        plot_range=(-100, 1000),
+        ylabel=_JKG,
+        plot_range=(-5000, 5000),
         plot_type="bar",
         source="sta",
         ele=(89.0, 91.0),

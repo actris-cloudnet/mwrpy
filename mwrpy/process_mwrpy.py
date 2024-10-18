@@ -65,10 +65,10 @@ def main(args):
                 logging.info(f"Processing took {elapsed_time:.1f} seconds")
             if args.command != "no-plot":
                 logging.info(f"Plotting {product} product, {args.site} {date}")
-                # try:
-                plot_product(product, date, args.site)
-                # except TypeError as err:
-                #     logging.error(err)
+                try:
+                    plot_product(product, date, args.site)
+                except TypeError as err:
+                    logging.error(err)
 
 
 def process_product(prod: str, date: datetime.date, site: str):
@@ -109,6 +109,8 @@ def process_product(prod: str, date: datetime.date, site: str):
 
 def plot_product(prod: str, date, site: str):
     filename = _get_filename(prod, date, site)
+    if not os.path.isfile(filename):
+        logging.warning("Nothing to plot for product " + prod)
     output_dir = f"{os.path.dirname(filename)}/"
 
     if os.path.isfile(filename) and prod[0] == "1":
@@ -155,12 +157,12 @@ def plot_product(prod: str, date, site: str):
         if prod == "2I06":
             f_names = list(
                 [
-                    "lifted_index",
-                    "ko_index",
-                    "total_totals",
-                    "k_index",
-                    "showalter_index",
                     "cape",
+                    "k_index",
+                    "total_totals",
+                    "lifted_index",
+                    "showalter_index",
+                    "ko_index",
                 ]
             )
         else:
@@ -189,12 +191,12 @@ def plot_product(prod: str, date, site: str):
                 )
             )
             f_names = [
-                "lifted_index",
-                "ko_index",
-                "total_totals",
-                "k_index",
-                "showalter_index",
                 "cape",
+                "k_index",
+                "total_totals",
+                "lifted_index",
+                "showalter_index",
+                "ko_index",
             ]
             if var_name == "stability":
                 keymap = {
