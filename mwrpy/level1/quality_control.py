@@ -239,7 +239,15 @@ def spectral_consistency(
                 {"Tb": (data["tb"][:, ifreq] - data["tb_spectrum"][:, ifreq])},
                 index=pd.to_datetime(data["time"][:], unit="s"),
             )
-            tb_mean = tb_df.resample(
+            tb_z = pd.DataFrame(
+                {
+                    "Tb": (
+                        data["tb"][ele_ind, ifreq] - data["tb_spectrum"][ele_ind, ifreq]
+                    ),
+                },
+                index=pd.to_datetime(data["time"][ele_ind], unit="s"),
+            )
+            tb_mean = tb_z.resample(
                 "20min", origin="start", closed="left", label="left", offset="10min"
             ).mean()
             tb_mean = tb_mean.reindex(tb_df.index, method="nearest")
