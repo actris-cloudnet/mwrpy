@@ -165,17 +165,22 @@ def plot_product(prod: str, date, site: str):
                     "ko_index",
                 ]
             )
+            generate_figure(
+                filename,
+                f_names,
+                ele_range=elevation,
+                save_path=output_dir,
+                image_name=str(PRODUCT_NAME[prod]),
+                title=False,
+            )
         else:
-            f_names = list(str([PRODUCT_NAME[prod]]))
-        title = False if prod == "2I06" else True
-        generate_figure(
-            filename,
-            f_names,
-            ele_range=elevation,
-            save_path=output_dir,
-            image_name=str(PRODUCT_NAME[prod]),
-            title=title,
-        )
+            generate_figure(
+                filename,
+                [PRODUCT_NAME[prod]],
+                ele_range=elevation,
+                save_path=output_dir,
+                image_name=str(PRODUCT_NAME[prod]),
+            )
 
     elif os.path.isfile(filename) and (prod in ("single", "multi")):
         for var_name in PRODUCT_NAME[prod]:
