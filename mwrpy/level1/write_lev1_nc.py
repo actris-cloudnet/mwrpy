@@ -141,7 +141,7 @@ def prepare_data(
             return_indices=True,
         )
         rpg_bin.data["status"][ind_brt, :] = hkd_sanity_check(
-            rpg_hkd.data["status"][ind_hkd], params
+            rpg_hkd.data["status"][ind_hkd], params, rpg_hkd.data["temp"][ind_hkd, 0:2]
         )
 
         file_list_bls = get_file_list(path_to_files, "BLS")
@@ -239,25 +239,27 @@ def prepare_data(
     elif data_type == "1B11":
         file_list_irt = get_file_list(path_to_files, "IRT")
         rpg_bin = RpgBin(file_list_irt)
-        rpg_bin.data["ir_wavelength"] = rpg_bin.header["_f"]
-        rpg_bin.data["ir_bandwidth"] = params["ir_bandwidth"]
+        rpg_bin.data["irt"][rpg_bin.data["irt"] <= 125.5] = ma.masked
+        rpg_bin.data["ir_wavelength"] = rpg_bin.header["_f"] * 1e-6
+        rpg_bin.data["ir_bandwidth"] = params["ir_bandwidth"] * 1e-6
         rpg_bin.data["ir_beamwidth"] = params["ir_beamwidth"]
 
     elif data_type == "1B21":
         file_list_met = get_file_list(path_to_files, "MET")
         rpg_bin = RpgBin(file_list_met)
         if "wind_speed" in rpg_bin.data:
-            rpg_bin.data["wind_speed"] = rpg_bin.data["wind_speed"] / 3.6
-        if "wind_direction" in rpg_bin.data:
-            rpg_bin.data["wind_direction"] = rpg_bin.data["wind_direction"]
+            rpg_bin.data["wind_speed"] /= 3.6
+        if "air_pressure" in rpg_bin.data:
+            rpg_bin.data["air_pressure"] *= 100
         if "rainfall_rate" in rpg_bin.data:
-            rpg_bin.data["rainfall_rate"] = rpg_bin.data["rainfall_rate"] / 1000 / 3600
+            rpg_bin.data["rainfall_rate"] /= 3.6e6
 
     else:
         raise RuntimeError(
             ["Data type " + data_type + " not supported for file writing."]
         )
 
+    file_list_hkd = get_file_list(path_to_files, "HKD")
     _append_hkd(file_list_hkd, rpg_bin, data_type, params)
     rpg_bin.data["altitude"] = (
         np.ones(len(rpg_bin.data["time"]), np.float32) * params["altitude"]
@@ -314,30 +316,47 @@ def _append_hkd(
         add_interpol1d(rpg_bin.data, hkd.data["stab"], hkd.data["time"], "t_sta")
 
 
-def hkd_sanity_check(status: np.ndarray, params: dict) -> np.ndarray:
+def hkd_sanity_check(status: np.ndarray, params: dict, t_amb: np.ndarray) -> np.ndarray:
     """Perform sanity checks for .HKD data."""
+    t_amb[t_amb >= 350.0] = ma.masked
     status_flag = np.zeros((len(status), len(params["receiver"])), np.int32)
-    for irec, nrec in enumerate(np.array(params["receiver"])):
+    for irec, nrec in enumerate(params["receiver"]):
         # status flags for individual channels
         status_flag[~isbit(status, irec + (nrec - 1) * (8 - irec)), irec] = 1
         if nrec == 1:
             # receiver 1 thermal stability & ambient target stability & noise diode
-            status_flag[
-                isbit(status, 25)
-                | isbit(status, 29)
-                | ~isbit(status, 22)
-                | (~isbit(status, 24) & ~isbit(status, 25)),
-                irec,
-            ] = 1
+            if np.all(ma.is_masked(t_amb[:, 0])) | np.all(ma.is_masked(t_amb[:, 1])):
+                status_flag[
+                    isbit(status, 25)
+                    | ~isbit(status, 22)
+                    | (~isbit(status, 24) & ~isbit(status, 25)),
+                    irec,
+                ] = 1
+            else:
+                status_flag[
+                    isbit(status, 25)
+                    | isbit(status, 29)
+                    | ~isbit(status, 22)
+                    | (~isbit(status, 24) & ~isbit(status, 25)),
+                    irec,
+                ] = 1
         if nrec == 2:
             # receiver 2 thermal stability & ambient target stability & noise diode
-            status_flag[
-                isbit(status, 27)
-                | isbit(status, 29)
-                | ~isbit(status, 23)
-                | (~isbit(status, 26) & ~isbit(status, 27)),
-                irec,
-            ] = 1
+            if np.all(ma.is_masked(t_amb[:, 0])) | np.all(ma.is_masked(t_amb[:, 1])):
+                status_flag[
+                    isbit(status, 25)
+                    | ~isbit(status, 22)
+                    | (~isbit(status, 24) & ~isbit(status, 25)),
+                    irec,
+                ] = 1
+            else:
+                status_flag[
+                    isbit(status, 27)
+                    | isbit(status, 29)
+                    | ~isbit(status, 23)
+                    | (~isbit(status, 26) & ~isbit(status, 27)),
+                    irec,
+                ] = 1
 
     return status_flag
 
@@ -359,7 +378,7 @@ def _add_bls(brt: RpgBin, bls: RpgBin, hkd: RpgBin, params: dict) -> None:
         bls.data["time"], hkd.data["time"], params["int_time"] * 2
     )
     bls.data["status"][time_ind, :] = hkd_sanity_check(
-        hkd.data["status"][ind_hkd], params
+        hkd.data["status"][ind_hkd], params, hkd.data["temp"][ind_hkd, 0:2]
     )
     bls.data["pointing_flag"] = np.ones(len(bls.data["time"]), np.int32)
     bls.data["liquid_cloud_flag"] = np.ones(len(bls.data["time"]), np.int32) * 2
@@ -499,6 +518,9 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict) -> None:
                     seqs[seqi, 1][0] : seqs[seqi, 1][0] + seqs[seqi, 2][0]
                 ],
                 params,
+                hkd.data["temp"][
+                    seqs[seqi, 1][0] : seqs[seqi, 1][0] + seqs[seqi, 2][0], 0:2
+                ],
             )
             blb_status_add = np.zeros(
                 (blb.header["_n_ang"], len(params["receiver"])), np.int32

@@ -1,6 +1,7 @@
 """Module for writing Level 2 netCDF files."""
 
 from datetime import datetime
+from itertools import groupby
 
 import netCDF4 as nc
 import numpy as np
@@ -136,7 +137,7 @@ def get_products(
             coeff_lin = lin(elevation_angle[index])
             coeff_quad = quad(elevation_angle[index])
             tmp_product = (
-                coeff_offset[:]
+                np.squeeze(coeff_offset[:])
                 + np.einsum("ij,ij->i", ret_in[index, :], coeff_lin)
                 + np.einsum("ij,ij->i", ret_in[index, :] ** 2, coeff_quad)
             )
@@ -216,7 +217,7 @@ def get_products(
             else:
                 rpg_dat[product] = ret_product
 
-            _get_qf(rpg_dat, lev1, coeff, index, product)
+            _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
 
         else:
             product_list = (
@@ -232,7 +233,7 @@ def get_products(
                 ret_product[index_ret] = tmp_product[index_ret, ind]
                 rpg_dat[prd] = ret_product
 
-            _get_qf(rpg_dat, lev1, coeff, index, "stability")
+            _get_qf(rpg_dat, lev1, coeff, index, index_ret, "stability")
 
     elif data_type in ("2P01", "2P03"):
         if data_type == "2P01":
@@ -317,8 +318,6 @@ def get_products(
             if product == "absolute_humidity":
                 tmp_dat = tmp_dat / 1000.0
 
-        _get_qf(rpg_dat, lev1, coeff, index, product)
-
         index_ret = np.where(
             np.any(
                 np.abs(
@@ -339,6 +338,8 @@ def get_products(
             (len(index), len(rpg_dat["height"])), np.float32
         )
         rpg_dat[product][index_ret, :] = tmp_dat[index_ret, :]
+
+        _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
 
     elif data_type == "2P02":
         coeff = get_mvr_coeff(site, "tpb", lev1["frequency"][:], coeff_files)
@@ -377,25 +378,29 @@ def get_products(
         )
 
         for ix0v in ix0:
-            ix1v = ix0v + len(coeff["AG"])
-
-            if (ix1v < len(lev1["time"])) & (
-                np.allclose(
-                    elevation_angle[ix0v:ix1v],
-                    coeff["AG"],
-                    atol=0.5,
-                )
-            ):
+            ix1v = ix0v + len(coeff["AG"]) + 10
+            ind_multi = np.where(lev1["pointing_flag"][ix0v:ix1v] == 1)[0]
+            _, ind_ang, _ = np.intersect1d(
+                elevation_angle[ix0v + ind_multi], coeff["AG"], return_indices=True
+            )
+            if ix1v < len(lev1["time"]) and len(ind_ang) == len(coeff["AG"]):
                 scan_time = np.append(
                     scan_time,
-                    [np.array(lev1["time"][ix1v - 1] - lev1["time"][ix0v])],
+                    [
+                        np.array(
+                            lev1["time"][ix0v + ind_ang[0]]
+                            - lev1["time"][ix0v + ind_ang[-1]]
+                        )
+                    ],
                     axis=0,
                 )
-                ibl = np.append(ibl, [np.array(range(ix0v, ix1v))], axis=0)
+                ibl = np.append(ibl, [ix0v + np.flip(ind_ang)], axis=0)
                 tb = np.concatenate(
                     (
                         tb,
-                        np.expand_dims(lev1["tb"][ix0v:ix1v, freq_ind].T, 2),
+                        np.expand_dims(
+                            lev1["tb"][ix0v + np.flip(ind_ang), freq_ind].T, 2
+                        ),
                     ),
                     axis=2,
                 )
@@ -420,7 +425,7 @@ def get_products(
                         tb_alg, np.squeeze(tb[freq_bl[ifq], :, :]), axis=0
                     )
 
-            rpg_dat["temperature"] = offset(0) + np.einsum(
+            rpg_dat["temperature"] = np.transpose(offset(0)) + np.einsum(
                 "jk,ij->ik", lin(0), np.transpose(tb_alg)
             )
 
@@ -453,7 +458,7 @@ def get_products(
                 + coeff["output_offset"][:, np.newaxis]
             )
 
-        _get_qf(rpg_dat, lev1, coeff, index, "temperature")
+        _get_qf(rpg_dat, lev1, coeff, index, np.array(range(len(index))), "temperature")
 
     elif data_type in ("2P04", "2P07", "2P08"):
         assert temp_file is not None
@@ -522,20 +527,47 @@ def get_products(
 
 
 def _get_qf(
-    rpg_dat: dict, lev1: nc.Dataset, coeff: dict, index: np.ndarray, product: str
+    rpg_dat: dict,
+    lev1: nc.Dataset,
+    coeff: dict,
+    index: np.ndarray,
+    index_ret: np.ndarray,
+    product: str,
 ) -> None:
+    rpg_dat[product + "_quality_flag"] = ma.masked_all((len(index)), np.int32)
+    rpg_dat[product + "_quality_flag_status"] = ma.masked_all((len(index)), np.int32)
+
     _, freq_ind, _ = np.intersect1d(
         lev1["frequency"][:],
         coeff["FR"][:],
         assume_unique=False,
         return_indices=True,
     )
-    rpg_dat[product + "_quality_flag"] = np.bitwise_or.reduce(
-        lev1["quality_flag"][:, freq_ind][index], axis=1
+    rpg_dat[product + "_quality_flag"][index_ret] = np.bitwise_or.reduce(
+        lev1["quality_flag"][:, freq_ind][index[index_ret]], axis=1
     )
-    rpg_dat[product + "_quality_flag_status"] = lev1["quality_flag_status"][
+    seqs_all = [
+        (key, len(list(val))) for key, val in groupby(lev1["pointing_flag"][:] & 1 > 0)
+    ]
+    seqs = np.array(
+        [
+            (key, sum(s[1] for s in seqs_all[:i]), length)
+            for i, (key, length) in enumerate(seqs_all)
+            if bool(key) is True
+        ]
+    )
+
+    if product == "temperature" and len(seqs) > 0:
+        i_scn = np.where(seqs[:, 2] == int(np.round(np.median(seqs[:, 2]))))[0]
+        if len(i_scn) == len(rpg_dat[product + "_quality_flag"][:]):
+            for ind, val in enumerate(i_scn):
+                scan = np.arange(seqs[val, 1], seqs[val, 1] + seqs[val, 2])
+                flg = np.bitwise_or.reduce(lev1["quality_flag"][scan, freq_ind], axis=1)
+                rpg_dat[product + "_quality_flag"][ind] = np.bitwise_or.reduce(flg)
+
+    rpg_dat[product + "_quality_flag_status"][index_ret] = lev1["quality_flag_status"][
         :, freq_ind[0]
-    ][index]
+    ][index[index_ret]]
 
 
 def _combine_lev1(
@@ -594,7 +626,7 @@ def ele_retrieval(ele_obs: np.ndarray, coeff: dict) -> np.ndarray:
     ele_ret = coeff["AG"]
     if ele_ret.shape == ():
         ele_ret = np.array([ele_ret])
-    ind = np.argmin(np.abs(ele_obs - ele_ret[:, np.newaxis]), axis=0)
+    ind = np.argwhere(np.abs(ele_obs - ele_ret[:, np.newaxis]) < 0.5)[:, 0]
     return ele_ret[ind]
 
 
