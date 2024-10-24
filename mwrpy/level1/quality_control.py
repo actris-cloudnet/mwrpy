@@ -6,6 +6,7 @@ import netCDF4 as nc
 import numpy as np
 import pandas as pd
 import suncalc
+from PIL.ImageChops import offset
 from numpy import ma
 
 from mwrpy.level1.rpg_bin import RpgBin
@@ -180,6 +181,11 @@ def spectral_consistency(
     abs_diff = ma.masked_all(data["tb"].shape, dtype=np.float32)
     data["tb_spectrum"] = ma.masked_all(data["tb"].shape)
 
+    cos_ele = np.ones(len(data["time"]), np.float32)
+    cos_ele[data["pointing_flag"][:] == 1] = (np.cos(
+        np.deg2rad(data["elevation_angle"][data["pointing_flag"][:] == 1])
+    ) + 1.0) * 10.0
+
     c_list = get_coeff_list(site, "ins", coeff_files)
     if len(c_list) == 0:
         c_list = get_coeff_list(site, "spc", coeff_files)
@@ -241,26 +247,42 @@ def spectral_consistency(
                 },
                 index=pd.to_datetime(data["time"][ele_ind], unit="s"),
             )
+            ele_mean = np.where(
+                (data["elevation_angle"][:] > 89.5)
+                & (data["elevation_angle"][:] < 90.5)
+                & (data["pointing_flag"][:] == 0)
+            )[0]
             tb_z = pd.DataFrame(
                 {
                     "Tb": (
-                        data["tb"][ele_ind, ifreq] - data["tb_spectrum"][ele_ind, ifreq]
+                        np.abs(data["tb"][ele_mean, ifreq] - data["tb_spectrum"][ele_mean, ifreq])
                     ),
                 },
-                index=pd.to_datetime(data["time"][ele_ind], unit="s"),
+                index=pd.to_datetime(data["time"][ele_mean], unit="s"),
             )
-            tb_mean = tb_z.resample(
-                "20min", origin="start", closed="left", label="left", offset="10min"
-            ).mean()
-            tb_mean = tb_mean.reindex(tb_df.index, method="nearest")
+            tbz_mean = tb_z.resample("20min", origin="start", closed="left", label="left", offset="10min").mean()
+            tbz_mean = tbz_mean.reindex(tb_z.index, method="nearest")
+            tb_s = pd.DataFrame(
+                {
+                    "Tb": (
+                        np.abs(data["tb"][data["pointing_flag"][:] == 1, ifreq] -
+                               data["tb_spectrum"][data["pointing_flag"][:] == 1, ifreq])
+                    ),
+                },
+                index=pd.to_datetime(data["time"][data["pointing_flag"][:] == 1], unit="s"),
+            )
+            tbs_mean = tb_s.resample("20min", origin="start", closed="left", label="left", offset="10min").mean()
+            tbs_mean = tbs_mean.reindex(tb_s.index, method="nearest")
 
-            fact = [6.0, 7.5]  # factor for receiver retrieval uncertainty
+            tb_mean = pd.concat([tbz_mean, tbs_mean], sort=True).sort_index()
+            tb_mean = tb_mean[~tb_mean.index.duplicated()].reindex(tb_df.index, method="nearest")
+
+            fact = [10.0, 12.0]  # factor for receiver retrieval uncertainty
             # flag for individual channels based on channel retrieval uncertainty
-            sin_ele = np.sin(np.deg2rad(data["elevation_angle"][ele_ind]))
             flag_ind[
                 np.where(
-                    np.abs(tb_df["Tb"].values[:] - tb_mean["Tb"].values[:])
-                    > ret_rm[:, ifreq] * fact[data["receiver"][ifreq] - 1] / sin_ele
+                    np.abs(tb_df["Tb"].values[:] - tb_mean["Tb"].values)
+                    > ret_rm[:, ifreq] * fact[data["receiver"][ifreq] - 1] * cos_ele[ele_ind]
                 )[0],
                 ifreq,
             ] = True
@@ -348,11 +370,11 @@ def spectral_consistency(
             )
 
     # receiver flag based on mean absolute difference
-    sin_ele = np.sin(np.deg2rad(data["elevation_angle"][:]))
+    fact = [1.5, 2.0]
     for _, rec in enumerate(data["receiver_nb"]):
         flag_ind[
             np.ix_(
-                ma.mean(abs_diff[:, data["receiver"] == rec], axis=1) > 1.5 / sin_ele,
+                ma.mean(abs_diff[:, data["receiver"] == rec], axis=1) > fact[rec - 1] * cos_ele,
                 data["receiver"] == rec,
             )
         ] = True
