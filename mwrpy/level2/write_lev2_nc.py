@@ -54,6 +54,7 @@ def lev2_to_nc(
         "2P08",
         "2I01",
         "2I02",
+        "2I06",
     ):
         raise ValueError(f"Data type {data_type} not recognised")
 
@@ -96,8 +97,10 @@ def get_products(
 
     rpg_dat, coeff, index, scan_time = {}, {}, np.empty(0), np.empty(0)
 
-    if data_type in ("2I01", "2I02"):
-        product = "lwp" if data_type == "2I01" else "iwv"
+    if data_type in ("2I01", "2I02", "2I06"):
+        product = (
+            "lwp" if data_type == "2I01" else "iwv" if data_type == "2I02" else "sta"
+        )
 
         coeff = get_mvr_coeff(site, product, lev1["frequency"][:], coeff_files)
         if coeff[0]["RT"] < 2:
@@ -145,6 +148,8 @@ def get_products(
                 weights2(elevation_angle[index]),
                 factor(elevation_angle[index]),
             )
+            if fac.ndim == 1:
+                fac = fac[:, np.newaxis]
             in_sc, in_os = (
                 input_scale(elevation_angle[index]),
                 input_offset(elevation_angle[index]),
@@ -159,14 +164,23 @@ def get_products(
             hidden_layer[:, 1:] = np.tanh(
                 fac[:] * np.einsum("ijk,ij->ik", c_w1, ret_in[index, :])
             )
-            tmp_product = np.squeeze(
-                np.tanh(
-                    fac[:]
-                    * np.einsum("ij,ij->i", hidden_layer, c_w2).reshape((len(index), 1))
+            if product == "sta":
+                tmp_product = np.squeeze(
+                    np.tanh(fac[:] * np.einsum("ij,ikj->ik", hidden_layer, c_w2))
+                    * op_sc
+                    + op_os
                 )
-                * op_sc
-                + op_os
-            )
+            else:
+                tmp_product = np.squeeze(
+                    np.tanh(
+                        fac[:]
+                        * np.einsum("ij,ij->i", hidden_layer, c_w2).reshape(
+                            (len(index), 1)
+                        )
+                    )
+                    * op_sc
+                    + op_os
+                )
 
         index_ret = np.where(
             np.any(
@@ -184,26 +198,42 @@ def get_products(
                 axis=1,
             )
         )[0]  # type: ignore
-        ret_product = ma.masked_all(len(index), np.float32)
-        ret_product[index_ret] = tmp_product[index_ret]
-
-        if product == "lwp":
-            freq_win = np.where((np.round(lev1["frequency"][:].data, 1) == 31.4))[0]
-            rpg_dat["lwp"], rpg_dat["lwp_offset"] = (
-                ret_product,
-                ma.masked_all(len(index)),
-            )
-            if len(freq_win) == 1 and len(index_ret) > 0:
-                (
-                    rpg_dat["lwp"][index_ret],
-                    rpg_dat["lwp_offset"][index_ret],
-                ) = correct_lwp_offset(
-                    lev1.variables, ret_product[index_ret], index[index_ret]
+        if product in ("lwp", "iwv"):
+            ret_product = ma.masked_all(len(index), np.float32)
+            ret_product[index_ret] = tmp_product[index_ret]
+            if product == "lwp":
+                freq_win = np.where((np.round(lev1["frequency"][:].data, 1) == 31.4))[0]
+                rpg_dat["lwp"], rpg_dat["lwp_offset"] = (
+                    ret_product,
+                    ma.masked_all(len(index)),
                 )
-        else:
-            rpg_dat["iwv"] = ret_product
+                if len(freq_win) == 1 and len(index_ret) > 0:
+                    (
+                        rpg_dat["lwp"][index_ret],
+                        rpg_dat["lwp_offset"][index_ret],
+                    ) = correct_lwp_offset(
+                        lev1.variables, ret_product[index_ret], index[index_ret]
+                    )
+            else:
+                rpg_dat[product] = ret_product
 
-        _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
+            _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
+
+        else:
+            product_list = (
+                "k_index",
+                "ko_index",
+                "total_totals",
+                "lifted_index",
+                "showalter_index",
+                "cape",
+            )
+            for ind, prd in enumerate(product_list):
+                ret_product = ma.masked_all(len(index), np.float32)
+                ret_product[index_ret] = tmp_product[index_ret, ind]
+                rpg_dat[prd] = ret_product
+
+            _get_qf(rpg_dat, lev1, coeff, index, index_ret, "stability")
 
     elif data_type in ("2P01", "2P03"):
         if data_type == "2P01":

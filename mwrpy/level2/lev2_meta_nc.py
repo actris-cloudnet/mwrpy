@@ -33,6 +33,7 @@ def get_data_attributes(rpg_variables: dict, data_type: str, coeff: dict) -> dic
         "2P08",
         "2I01",
         "2I02",
+        "2I06",
     ):
         raise RuntimeError(
             ["Data type " + data_type + " not supported for file writing."]
@@ -387,6 +388,53 @@ ATTRIBUTES_2I02 = {
     ),
 }
 
+ATTRIBUTES_2I06 = {
+    "lifted_index": MetaData(
+        long_name="Lifted index",
+        units="1",
+        retrieval_type="",
+    ),
+    "ko_index": MetaData(
+        long_name="KO index",
+        units="1",
+        retrieval_type="",
+    ),
+    "total_totals": MetaData(
+        long_name="Total totals index",
+        units="1",
+        retrieval_type="",
+    ),
+    "k_index": MetaData(
+        long_name="K index",
+        units="1",
+        retrieval_type="",
+    ),
+    "showalter_index": MetaData(
+        long_name="Showalter index",
+        units="1",
+        retrieval_type="",
+    ),
+    "cape": MetaData(
+        long_name="Convective available potential energy",
+        units="1",
+        retrieval_type="",
+    ),
+    "stability_quality_flag": MetaData(
+        long_name="Quality flag for stability products",
+        units="1",
+        definition=DEFINITIONS_COM["quality_flag"],
+        comment="0 indicates data with good quality according to applied tests.\n"
+        "The list of (not) applied tests is encoded in quality_flag_status",
+    ),
+    "stability_quality_flag_status": MetaData(
+        long_name="Quality flag status for stability products",
+        units="1",
+        definition=DEFINITIONS_COM["quality_flag_status"],
+        comment="Checks not executed in determination of quality_flag.\n"
+        "0 indicates quality check has been applied.",
+    ),
+}
+
 
 FuncType: TypeAlias = Callable[[str], dict]
 att_reader: dict[str, dict] = {
@@ -398,4 +446,5 @@ att_reader: dict[str, dict] = {
     "2P08": ATTRIBUTES_2P08,
     "2I01": ATTRIBUTES_2I01,
     "2I02": ATTRIBUTES_2I02,
+    "2I06": ATTRIBUTES_2I06,
 }

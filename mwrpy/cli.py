@@ -20,7 +20,7 @@ def _parse_args(args):
     parser.add_argument(
         "command",
         nargs="?",
-        choices=["process", "plot"],
+        choices=["process", "plot", "no-plot"],
         default="process",
         help="Command to execute.",
     )
@@ -64,11 +64,6 @@ def _parse_args(args):
         type=str,
         metavar="YYYY-MM-DD",
         help="Single date to be processed.",
-    )
-    group.add_argument(
-        "--no-plot",
-        action="store_true",
-        help="Process without plotting.",
     )
     return parser.parse_args(args)
 

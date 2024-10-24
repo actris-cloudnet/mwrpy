@@ -20,7 +20,7 @@ def _get_ret_flag(nc_file: str, time: np.ndarray, variable: str) -> ndarray:
     """Returns quality flag for frequencies used in retrieval."""
     file = netCDF4.Dataset(nc_file)
     quality_flag = file.variables[variable + "_quality_flag"]
-    time_variable = seconds2hours(file.variables["time"])
+    time_variable = seconds2hours(file.variables["time"][:])
     _, index, _ = np.intersect1d(
         time_variable, time, assume_unique=True, return_indices=True
     )

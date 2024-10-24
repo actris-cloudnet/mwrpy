@@ -3,7 +3,6 @@
 import netCDF4 as nc
 import numpy as np
 from numpy import ma
-from numpy.testing import assert_array_equal
 
 from mwrpy.utils import get_coeff_list
 

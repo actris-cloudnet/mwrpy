@@ -98,14 +98,15 @@ Commands:
 
 - 2I01: Liquid water path (LWP)
 - 2I02: Integrated water vapor (IWV)
+- 2I06: Stability Indices
 - 2P01: Temperature profiles from single-pointing observations
 - 2P02: Temperature profiles from multiple-pointing observations
 - 2P03: Absolute humidity profiles
 - 2P04: Relative humidity profiles (derived from 2P01/2P02 + 2P03)
 - 2P07: Potential temperature (derived from 2P01/2P02 + 2P03)
 - 2P08: Equivalent potential temperature (derived from 2P01/2P02 + 2P03)
-- single: Single pointing data product (including 2I01, 2I02, 2P01, 2P03)
-- multi: Multiple pointing data product (including 2P02, 2P04, 2P07, 2P08)
+- single: Single pointing data product (including 2I01, 2I02, 2I06, 2P01, 2P03, and derived products)
+- multi: Multiple pointing data product (including 2P02, and derived products)
 
 ## Licence
 
