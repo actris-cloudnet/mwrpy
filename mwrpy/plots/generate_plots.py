@@ -1283,6 +1283,10 @@ def _plot_tb(
         ticks_x_labels = _get_standard_time_ticks()
         axa[0].set_ylabel("Mean absolute difference [K]", fontsize=12)
 
+        rain_flag = read_nc_fields(nc_file, "quality_flag")
+        rain_flag = _elevation_filter(nc_file, rain_flag, ele_range)
+        rain_flag = _pointing_filter(nc_file, rain_flag, ele_range, pointing)
+
         for irec, rec in enumerate(params["receiver_nb"]):
             axa[irec].set_position([0.125 + irec * 0.415, -0.05, 0.36, 0.125])
             no_flag = np.where(
@@ -1315,9 +1319,9 @@ def _plot_tb(
             axa[irec].set_xlabel("Time (UTC)", fontsize=12)
             axa[irec].set_ylim([0, np.nanmax(tb_m[no_flag, irec], initial=0.0) + 0.5])
 
-            if len(np.where(isbit(quality_flag[:, 0], 5))[0]) > 0:
+            if len(np.where(isbit(rain_flag[:, 0], 5))[0]) > 0:
                 data_g = np.zeros((len(time), 10), np.float32)
-                data_g[isbit(quality_flag[:, 0], 5), :] = 1.0
+                data_g[isbit(rain_flag[:, 0], 5), :] = 1.0
                 _plot_segment_data(
                     axa[irec],
                     ma.MaskedArray(data_g),
