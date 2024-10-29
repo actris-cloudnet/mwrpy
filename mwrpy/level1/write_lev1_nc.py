@@ -322,7 +322,7 @@ def hkd_sanity_check(status: np.ndarray, params: dict, t_amb: np.ndarray) -> np.
     status_flag = np.zeros((len(status), len(params["receiver"])), np.int32)
     for irec, nrec in enumerate(params["receiver"]):
         # status flags for individual channels
-        status_flag[~isbit(status, irec + (nrec - 1) * (8 - irec)), irec] = 1
+        status_flag[~isbit(status, irec + (nrec - 1)), irec] = 1
         if nrec == 1:
             # receiver 1 thermal stability & ambient target stability & noise diode
             if np.all(ma.is_masked(t_amb[:, 0])) | np.all(ma.is_masked(t_amb[:, 1])):
@@ -344,9 +344,9 @@ def hkd_sanity_check(status: np.ndarray, params: dict, t_amb: np.ndarray) -> np.
             # receiver 2 thermal stability & ambient target stability & noise diode
             if np.all(ma.is_masked(t_amb[:, 0])) | np.all(ma.is_masked(t_amb[:, 1])):
                 status_flag[
-                    isbit(status, 25)
-                    | ~isbit(status, 22)
-                    | (~isbit(status, 24) & ~isbit(status, 25)),
+                    isbit(status, 27)
+                    | ~isbit(status, 23)
+                    | (~isbit(status, 26) & ~isbit(status, 27)),
                     irec,
                 ] = 1
             else:
