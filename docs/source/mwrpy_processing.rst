@@ -76,7 +76,8 @@ Level 2 Single Pointing
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 Based on the Level 1c netCDF file ``mwr_1c.nc``, MWR single pointing data are extracted
-and product specific retrieval coefficients are applied to generate the Level 2 single pointing product:
+and product specific retrieval coefficients (``LWP*.RET``, ``IWV*.RET``, ``TPT*.RET``, ``HPT*.RET``, ``STA*.RET``)
+are applied to generate the Level 2 single pointing product:
 
 .. code-block:: python
 
@@ -100,7 +101,8 @@ Level 2 Multiple Pointing
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Based on the Level 1c file, MWR multiple pointing data (elevation scans) are extracted
-and product specific retrieval coefficients are applied to generate the Level 2 multiple pointing product:
+and product specific retrieval coefficients (``TPB*.RET``) are applied to generate the Level 2 multiple pointing
+product:
 
 .. code-block:: python
 
@@ -189,11 +191,12 @@ Level 2
 
 - 2I01: Liquid water path (LWP)
 - 2I02: Integrated water vapor (IWV)
+- 2I06: Stability Indices
 - 2P01: Temperature profiles from single-pointing observations
 - 2P02: Temperature profiles from multiple-pointing observations
 - 2P03: Absolute humidity profiles
 - 2P04: Relative humidity profiles (derived from 2P01/2P02 + 2P03)
 - 2P07: Potential temperature (derived from 2P01/2P02 + 2P03)
 - 2P08: Equivalent potential temperature (derived from 2P01/2P02 + 2P03)
-- single: Single pointing data product (including 2I01, 2I02, 2P01, 2P03)
-- multi: Multiple pointing data product (including 2P02, 2P04, 2P07, 2P08)
+- single: Single pointing data product (including 2I01, 2I02, 2I06, 2P01, 2P03, and derived products)
+- multi: Multiple pointing data product (including 2P02, and derived products)

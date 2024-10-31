@@ -138,10 +138,32 @@ def test_coefficients():
             "retrieval_elevation_angles": ((90.0, 90, 90), (1,)),
             "retrieval_frequencies": ((23.04, 58.0, 41.69999), (13,)),
         },
+        # "sta": {
+        #     "DY": ((1, 1, 1), (1,)),
+        #     "PS": ((1, 1, 1), (1,)),
+        #     "DB": ((1, 1, 1), (1,)),
+        #     "RP": ((24, 24, 24), (1,)),
+        #     "RT": ((2, 2, 2), (1,)),
+        #     "VN": ((110, 110, 110), (1,)),
+        #     "ND": ((9, 4, 6.5), (2,)),
+        #     "FR": ((23.04, 58, 41.699997), (13,)),
+        #     "AG": ((90.0, 90, 90), (1,)),
+        #     "AL": ((0.0, 10000.0, 2875.806396484375), (93,)),
+        #     "NP": ((0.025999999, 0.025999999, 0.025999999), (1,)),
+        #     "input_offset": ((61.403999328, -5.17420485e-05, 6304.67041), (1, 16)),
+        #     "input_scale": ((0.018800880, 1.00005507, 0.14665262), (1, 16)),
+        #     "output_offset": ((9.317116737, 0.0755304, 4.9657354), (1, 93)),
+        #     "output_scale": ((12.17451095, 0.1005687192082, 6.555077552), (1, 93)),
+        #     "W1": ((-22.01639366149, -2.077390670776, -4.22366380691), (17, 9, 1)),
+        #     "W2": ((-6.617764472961, -5.96833944320, -4.42309951782), (93, 10, 1)),
+        #     "RM": ((0.783515751, 0.00679313, 0.440780830021), (93, 1)),
+        #     "FR_BL": ((23.04, 58.0, 41.699997), (13,)),
+        #     "retrieval_elevation_angles": ((90.0, 90, 90), (1,)),
+        #     "retrieval_frequencies": ((23.04, 58.0, 41.69999), (13,)),
+        # },
     }
 
     for key, item in test_data.items():
-        data = get_mvr_coeff(SITE, key, FREQ, None)
         data = get_mvr_coeff(SITE, key, FREQ, None)
         if key == "lwp":
             expected = np.array(
@@ -159,12 +181,10 @@ def test_coefficients():
             else:
                 first, last, mean = item[name][0]
                 shape = item[name][1]
-            # print(key, name, first, last, mean, shape)
-            _check(name, value, float(first), float(last), float(mean), shape=shape)
+            _check(value, float(first), float(last), float(mean), shape=shape)
 
 
 def _check(
-    key: str,
     data: np.ndarray,
     first: float,
     last: float,
@@ -184,8 +204,6 @@ def _check(
 
     if isinstance(first_value, str):
         return
-
-    # print(key, f"{first_value}, {last_value}, {np.mean(data)}, {first}, {last}, {mean_value}, {shape}, {data.shape}")
 
     assert_array_almost_equal(first_value, first, decimal=4)
     assert_array_almost_equal(last_value, last, decimal=4)

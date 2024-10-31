@@ -5,7 +5,8 @@ import glob
 import logging
 import os
 import time
-from typing import Any, Iterator, Literal, NamedTuple
+from collections.abc import Iterable, Iterator
+from typing import Any, Literal, NamedTuple
 
 import netCDF4
 import numpy as np
@@ -569,7 +570,7 @@ def time_to_datetime_index(time_array: np.ndarray) -> pd.DatetimeIndex:
 
 
 def copy_variables(
-    source: netCDF4.Dataset, target: netCDF4.Dataset, keys: tuple
+    source: netCDF4.Dataset, target: netCDF4.Dataset, keys: Iterable[str]
 ) -> None:
     """Copies variables (and their attributes) from one file to another.
 
@@ -600,7 +601,7 @@ def copy_variables(
 
 
 def copy_global(
-    source: netCDF4.Dataset, target: netCDF4.Dataset, attributes: tuple
+    source: netCDF4.Dataset, target: netCDF4.Dataset, attributes: Iterable[str]
 ) -> None:
     """Copies global attributes from one file to another.
 

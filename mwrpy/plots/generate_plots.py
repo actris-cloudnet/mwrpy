@@ -253,7 +253,7 @@ def _set_labels(fig, ax, nc_file: str, sub_title: bool = True) -> date:
     return case_date
 
 
-def _set_title(ax, field_name: str, nc_file, identifier: str = " from actris_mwr_pro"):
+def _set_title(ax, field_name: str, nc_file, identifier: str = " from MWRpy"):
     """Sets title of plot."""
     if ATTRIBUTES[field_name].name:
         ax.set_title(f"{ATTRIBUTES[field_name].name}{identifier}", fontsize=14)
@@ -647,6 +647,8 @@ def _plot_instrument_data(
     """Calls plotting function for specified product."""
     if product == "int":
         _plot_int(ax, data, name, time, nc_file)
+    elif product == "sta":
+        _plot_sta(ax, data, name, time, nc_file)
     elif product in ("met", "met2"):
         _plot_met(ax, data, name, time, nc_file)
     elif product == "tb":
@@ -1281,6 +1283,10 @@ def _plot_tb(
         ticks_x_labels = _get_standard_time_ticks()
         axa[0].set_ylabel("Mean absolute difference [K]", fontsize=12)
 
+        rain_flag = read_nc_fields(nc_file, "quality_flag")
+        rain_flag = _elevation_filter(nc_file, rain_flag, ele_range)
+        rain_flag = _pointing_filter(nc_file, rain_flag, ele_range, pointing)
+
         for irec, rec in enumerate(params["receiver_nb"]):
             axa[irec].set_position([0.125 + irec * 0.415, -0.05, 0.36, 0.125])
             no_flag = np.where(
@@ -1313,9 +1319,9 @@ def _plot_tb(
             axa[irec].set_xlabel("Time (UTC)", fontsize=12)
             axa[irec].set_ylim([0, np.nanmax(tb_m[no_flag, irec], initial=0.0) + 0.5])
 
-            if len(np.where(isbit(quality_flag[:, 0], 5))[0]) > 0:
+            if len(np.where(isbit(rain_flag[:, 0], 5))[0]) > 0:
                 data_g = np.zeros((len(time), 10), np.float32)
-                data_g[isbit(quality_flag[:, 0], 5), :] = 1.0
+                data_g[isbit(rain_flag[:, 0], 5), :] = 1.0
                 _plot_segment_data(
                     axa[irec],
                     ma.MaskedArray(data_g),
@@ -1587,3 +1593,103 @@ def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
         color="wheat",
         linewidth=0.6,
     )
+
+
+def _plot_sta(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
+    """Plot for stability indices."""
+    flag = _get_ret_flag(nc_file, time, "stability")
+    data0, time0 = data_in[flag == 0], time[flag == 0]
+    if len(data0) == 0:
+        data0, time0 = data_in, time
+    plot_range = ATTRIBUTES[name].plot_range
+    assert plot_range is not None
+
+    rolling_mean = _calculate_rolling_mean(time0, data0, win=0.25)
+    time0 = _nan_time_gaps(time0)
+    vmin, vmax = plot_range
+    vmax = np.min([np.nanmax(rolling_mean) + 0.05, vmax])
+    vmin = np.max([np.nanmin(rolling_mean) - 0.05, vmin])
+    _set_ax(ax, vmax, ATTRIBUTES[name].ylabel, min_y=vmin)
+    _set_title(ax, name, nc_file, "")
+
+    limit_cape = [1500, 300, 1, 0]
+    limit_k_index = [35, 30, 1, 0]
+    limit_total_totals = [53, 48, 1, 0]
+    limit_lifted_index = [0, -3, 0, 1]
+    limit_showalter_index = [2, -2, 0, 1]
+    limit_ko_index = [6, 2, 0, 1]
+
+    probability = ["Low", "High"]
+    l_color = ["#3cb371", "#E64A23"]
+
+    if vmin < eval("limit_" + name)[0] < vmax:
+        ax.plot(
+            time,
+            np.ones(len(time)) * eval("limit_" + name)[0],
+            color=l_color[eval("limit_" + name)[2]],
+        )
+        ax.text(
+            0.5,
+            eval("limit_" + name)[0] + 0.025 * (vmax - vmin),
+            probability[eval("limit_" + name)[2]],
+        )
+    if vmin < eval("limit_" + name)[1] < vmax:
+        ax.plot(
+            time,
+            np.ones(len(time)) * eval("limit_" + name)[1],
+            color=l_color[eval("limit_" + name)[3]],
+        )
+        ax.text(
+            0.5,
+            eval("limit_" + name)[1] - 0.05 * (vmax - vmin),
+            probability[eval("limit_" + name)[3]],
+        )
+    if vmax < np.min(eval("limit_" + name)[:2]):
+        ax.text(0.5, vmax - 0.05 * (vmax - vmin), probability[eval("limit_" + name)[3]])
+    if vmin > np.max(eval("limit_" + name)[:2]):
+        ax.text(0.5, vmin + 0.05 * (vmax - vmin), probability[eval("limit_" + name)[2]])
+
+    ax.plot(
+        time0,
+        rolling_mean,
+        color="darkblue",
+        linewidth=4.0,
+    )
+    ax.plot(
+        time0,
+        rolling_mean,
+        color="lightblue",
+        linewidth=1.2,
+    )
+
+    flag_tmp = _calculate_rolling_mean(time, flag, win=1 / 60)
+    data_f = np.zeros((len(flag_tmp), 10), np.float32)
+    data_f[flag_tmp > 0, :] = 1.0
+    cmap = ListedColormap([_COLORS["lightgray"], _COLORS["gray"]])
+    norm = BoundaryNorm([0, 1, 2], cmap.N)
+    ax.pcolormesh(
+        time,
+        np.linspace(vmin, vmax, 10),
+        data_f.T,
+        cmap=cmap,
+        norm=norm,
+    )
+
+    case_date = _read_date(nc_file)
+    gtim = _gap_array(time, case_date, 15.0 / 60.0)
+    if len(gtim) > 0:
+        time_i, data_g = (
+            np.linspace(time[0], time[-1], len(time)),
+            np.zeros((len(time), 10), np.float32),
+        )
+        for ig, _ in enumerate(gtim[:, 0]):
+            xind = np.where((time_i >= gtim[ig, 0]) & (time_i <= gtim[ig, 1]))
+            data_g[xind, :] = 1.0
+
+        _plot_segment_data(
+            ax,
+            ma.MaskedArray(data_g),
+            "tb_missing",
+            (time_i, np.linspace(vmin, vmax, 10)),
+            nc_file,
+        )

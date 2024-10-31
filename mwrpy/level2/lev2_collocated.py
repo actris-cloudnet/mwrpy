@@ -1,3 +1,4 @@
+import logging
 from tempfile import NamedTemporaryFile
 
 import netCDF4
@@ -140,6 +141,40 @@ def generate_lev2_single(
                 copy_variables(source, nc_output, variables)
 
             copy_global(nc_lwp, nc_output, nc_lwp.ncattrs())
+
+            try:
+                with NamedTemporaryFile() as stability_file:
+                    prod, file = "2I06", stability_file.name
+                    lev2_to_nc(
+                        prod,
+                        mwr_l1c_file,
+                        output_file=file,
+                        site=site,
+                        temp_file=t_prof_file.name
+                        if prod in ("2P04", "2P07", "2P08")
+                        else None,
+                        hum_file=abs_hum_file.name
+                        if prod in ("2P04", "2P07", "2P08")
+                        else None,
+                        coeff_files=coeff_files,
+                    )
+                    with netCDF4.Dataset(stability_file.name, "r") as nc_sta:
+                        var_2I06 = (
+                            "lifted_index",
+                            "ko_index",
+                            "total_totals",
+                            "k_index",
+                            "showalter_index",
+                            "cape",
+                            "stability_quality_flag",
+                            "stability_quality_flag_status",
+                        )
+                        copy_variables(nc_sta, nc_output, var_2I06)
+
+                    copy_global(nc_lwp, nc_output, nc_lwp.ncattrs())
+
+            except IndexError:
+                logging.warning("No coefficient files for product " + prod)
 
         return nc_output
 

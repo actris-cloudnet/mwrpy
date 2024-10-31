@@ -179,7 +179,7 @@ def save_rpg(rpg: Rpg, output_file: str, att: dict, data_type: str) -> None:
             "bnds": 2,
             "height": len(rpg.data["height"][:]),
         }
-    elif data_type in ("2I01", "2I02"):
+    elif data_type in ("2I01", "2I02", "2I06"):
         dims = {"time": len(rpg.data["time"][:]), "bnds": 2}
     elif data_type == "2S02":
         dims = {
