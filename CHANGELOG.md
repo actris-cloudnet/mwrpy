@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.0 – 2024-10-31
+
+- Introduce stability index products and plots
+- Prefer INS\*.ret over SPC\*.ret for spectral consistency
+- Only use zenith data for SPC mean difference
+- Improve scan flagging
+- Correct rain detection in TB spectrum plot
+- Fix HKD flags
+
 ## 1.0.7 – 2024-10-17
 
 - Fix indexing in retrieval uncertainty
