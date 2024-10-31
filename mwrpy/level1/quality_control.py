@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import suncalc
 from numpy import ma
-from PIL.ImageChops import offset
 
 from mwrpy.level1.rpg_bin import RpgBin
 from mwrpy.level2.get_ret_coeff import get_mvr_coeff

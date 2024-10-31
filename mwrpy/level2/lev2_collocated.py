@@ -140,7 +140,7 @@ def generate_lev2_single(
             ):
                 copy_variables(source, nc_output, variables)
 
-            copy_global(nc_lwp, nc_output, tuple(nc_lwp.ncattrs()))
+            copy_global(nc_lwp, nc_output, nc_lwp.ncattrs())
 
             try:
                 with NamedTemporaryFile() as stability_file:
@@ -171,7 +171,7 @@ def generate_lev2_single(
                         )
                         copy_variables(nc_sta, nc_output, var_2I06)
 
-                    copy_global(nc_lwp, nc_output, tuple(nc_lwp.ncattrs()))
+                    copy_global(nc_lwp, nc_output, nc_lwp.ncattrs())
 
             except IndexError:
                 logging.warning("No coefficient files for product " + prod)
@@ -272,6 +272,6 @@ def generate_lev2_multi(
             ):
                 copy_variables(source, nc_output, variables)
 
-            copy_global(nc_temp, nc_output, tuple(nc_temp.ncattrs()))
+            copy_global(nc_temp, nc_output, nc_temp.ncattrs())
 
         return nc_output
