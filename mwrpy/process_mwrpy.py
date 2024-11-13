@@ -64,10 +64,18 @@ def main(args):
                 continue
             if args.command != "plot":
                 logging.info(f"Processing {product} product, {args.site} {date}")
-                start = time.process_time()
-                process_product(product, date, args.site)
-                elapsed_time = time.process_time() - start
-                logging.info(f"Processing took {elapsed_time:.1f} seconds")
+                if args.command == "reprocess":
+                    try:
+                        process_product(product, date, args.site)
+                    except Exception as e:
+                        logging.error(
+                            f"Error in processing products: {e}. Incomplete or no processing for {date}."
+                        )
+                else:
+                    start = time.process_time()
+                    process_product(product, date, args.site)
+                    elapsed_time = time.process_time() - start
+                    logging.info(f"Processing took {elapsed_time:.1f} seconds")
             if args.command != "no-plot":
                 logging.info(f"Plotting {product} product, {args.site} {date}")
                 try:

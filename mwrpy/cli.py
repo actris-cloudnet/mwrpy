@@ -20,7 +20,7 @@ def _parse_args(args):
     parser.add_argument(
         "command",
         nargs="?",
-        choices=["process", "plot", "no-plot"],
+        choices=["process", "plot", "no-plot", "reprocess"],
         default="process",
         help="Command to execute.",
     )
