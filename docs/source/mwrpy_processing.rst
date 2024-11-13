@@ -176,6 +176,8 @@ After defining the instrument type and site specific configuration files (includ
      - Only generate plots.
    * - `no-plot`
      - Only generate products.
+   * - `reprocess`
+     - Like `process`, but skips days when data processing fails.
 
 Data Types
 ~~~~~~~~~~

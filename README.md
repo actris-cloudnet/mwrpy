@@ -79,11 +79,12 @@ Arguments:
 
 Commands:
 
-| Command   | Description                                |
-| :-------- | :----------------------------------------- |
-| `process` | Process data and generate plots (default). |
-| `plot`    | Only generate plots.                       |
-| `no-plot` | Only generate products.                    |
+| Command     | Description                                                |
+| :---------- | :--------------------------------------------------------- |
+| `process`   | Process data and generate plots (default).                 |
+| `plot`      | Only generate plots.                                       |
+| `no-plot`   | Only generate products.                                    |
+| `reprocess` | Like `process`, but skips days when data processing fails. |
 
 ### Data types
 
