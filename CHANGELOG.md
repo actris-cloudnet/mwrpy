@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1 – 2024-11-13
+
+- Skip spectral consistency check if missing coefficients
+
 ## 1.1.0 – 2024-10-31
 
 - Introduce stability index products and plots
