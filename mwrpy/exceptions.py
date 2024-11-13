@@ -4,3 +4,7 @@ class MissingInputData(Exception):
 
 class InvalidFileError(Exception):
     pass
+
+
+class MissingCoefficientsError(Exception):
+    pass
