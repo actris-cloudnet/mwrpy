@@ -1,6 +1,7 @@
 """Quality control for level1 data."""
 
 import datetime
+import logging
 
 import netCDF4 as nc
 import numpy as np
@@ -8,6 +9,7 @@ import pandas as pd
 import suncalc
 from numpy import ma
 
+from mwrpy.exceptions import MissingCoefficientsError
 from mwrpy.level1.rpg_bin import RpgBin
 from mwrpy.level2.get_ret_coeff import get_mvr_coeff
 from mwrpy.level2.write_lev2_nc import retrieval_input
@@ -66,8 +68,14 @@ def apply_qc(
     if params["flag_status"][3] == 1 or "air_pressure" not in data:
         data["quality_flag_status"] = setbit(data["quality_flag_status"], 3)
     else:
-        ind = spectral_consistency(data, site, coeff_files)
-        data["quality_flag"][ind] = setbit(data["quality_flag"][ind], 3)
+        try:
+            ind = spectral_consistency(data, site, coeff_files)
+            data["quality_flag"][ind] = setbit(data["quality_flag"][ind], 3)
+        except MissingCoefficientsError as e:
+            logging.error(
+                f"Error in spectral consistency check: {e}. Proceeding without flagging."
+            )
+            data["quality_flag_status"] = setbit(data["quality_flag_status"], 3)
 
     # Bit 5: Receiver sanity
     if params["flag_status"][4] == 1:
@@ -306,6 +314,9 @@ def spectral_consistency(
 
     else:
         c_list = get_coeff_list(site, "tbx", coeff_files)
+
+        if not c_list:
+            raise MissingCoefficientsError("No coefficients found")
 
         for ifreq, _ in enumerate(data["frequency"]):
             with nc.Dataset(c_list[ifreq]) as cfile:
