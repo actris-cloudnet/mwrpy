@@ -130,6 +130,14 @@ def prepare_data(
         if len(file_list_hkd) == 0:
             raise MissingInputData("No HKD files found")
         rpg_hkd = RpgBin(file_list_hkd)
+        if (
+            "temp" not in rpg_hkd.data
+            or "stab" not in rpg_hkd.data
+            or "status" not in rpg_hkd.data
+        ):
+            raise MissingInputData(
+                "No temperature, stability or status data in HKD file"
+            )
 
         rpg_bin.data["status"] = np.zeros(
             (len(rpg_bin.data["time"]), len(params["receiver"])), np.int32
