@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.2 – 2024-11-18
+
+- Check HKD contains required variables
+- Add option to skip days when errors occur during reprocessing
+
 ## 1.1.1 – 2024-11-13
 
 - Skip spectral consistency check if missing coefficients
