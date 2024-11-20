@@ -189,8 +189,15 @@ def spectral_consistency(
     data["tb_spectrum"] = ma.masked_all(data["tb"].shape)
 
     cos_ele = np.ones(len(data["time"]), np.float32)
-    cos_ele[data["pointing_flag"][:] == 1] = (
-        np.cos(np.deg2rad(data["elevation_angle"][data["pointing_flag"][:] == 1])) + 1.0
+    cos_ele[(data["elevation_angle"] < 89.5) | (data["pointing_flag"] == 1)] = (
+        np.cos(
+            np.deg2rad(
+                data["elevation_angle"][
+                    (data["elevation_angle"] < 89.5) | (data["pointing_flag"] == 1)
+                ]
+            )
+        )
+        + 1.0
     ) * 10.0
 
     c_list = get_coeff_list(site, "ins", coeff_files)
@@ -248,7 +255,7 @@ def spectral_consistency(
         for ifreq, _ in enumerate(data["frequency"]):
             tb_df = pd.DataFrame(
                 {
-                    "Tb": (
+                    "Tb": np.abs(
                         data["tb"][ele_ind, ifreq] - data["tb_spectrum"][ele_ind, ifreq]
                     )
                 },
@@ -297,7 +304,7 @@ def spectral_consistency(
                 tb_df.index, method="nearest"
             )
 
-            fact = [10.0, 12.0]  # factor for receiver retrieval uncertainty
+            fact = [2.0, 4.0]  # factor for receiver retrieval uncertainty
             # flag for individual channels based on channel retrieval uncertainty
             flag_ind[
                 np.where(
