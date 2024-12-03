@@ -158,14 +158,14 @@ ATTRIBUTES_2P01 = {
         units="K",
     ),
     "temperature_quality_flag": MetaData(
-        long_name="Quality flag",
+        long_name="Temperature quality flag",
         units="1",
         definition=DEFINITIONS_COM["quality_flag"],
         comment="0 indicates data with good quality according to applied tests.\n"
         "The list of (not) applied tests is encoded in quality_flag_status",
     ),
     "temperature_quality_flag_status": MetaData(
-        long_name="Quality flag status",
+        long_name="Temperature quality flag status",
         units="1",
         definition=DEFINITIONS_COM["quality_flag_status"],
         comment="Checks not executed in determination of quality_flag.\n"
@@ -198,14 +198,14 @@ ATTRIBUTES_2P02 = {
         units="K",
     ),
     "temperature_quality_flag": MetaData(
-        long_name="Quality flag",
+        long_name="Temperature quality flag",
         units="1",
         definition=DEFINITIONS_COM["quality_flag"],
         comment="0 indicates data with good quality according to applied tests.\n"
         "The list of (not) applied tests is encoded in quality_flag_status",
     ),
     "temperature_quality_flag_status": MetaData(
-        long_name="Quality flag status",
+        long_name="Temperature quality flag status",
         units="1",
         definition=DEFINITIONS_COM["quality_flag_status"],
         comment="Checks not executed in determination of quality_flag.\n"
@@ -234,14 +234,14 @@ ATTRIBUTES_2P03 = {
         units="kg m-3",
     ),
     "absolute_humidity_quality_flag": MetaData(
-        long_name="Quality flag",
+        long_name="Absolute humidity quality flag",
         units="1",
         definition=DEFINITIONS_COM["quality_flag"],
         comment="0 indicates data with good quality according to applied tests.\n"
         "The list of (not) applied tests is encoded in quality_flag_status",
     ),
     "absolute_humidity_quality_flag_status": MetaData(
-        long_name="Quality flag status",
+        long_name="Absolute humidity quality flag status",
         units="1",
         definition=DEFINITIONS_COM["quality_flag_status"],
         comment="Checks not executed in determination of quality_flag.\n"
@@ -341,14 +341,14 @@ ATTRIBUTES_2I01 = {
         units="kg m-2",
     ),
     "lwp_quality_flag": MetaData(
-        long_name="Quality flag",
+        long_name="Liquid water path quality flag",
         units="1",
         definition=DEFINITIONS_COM["quality_flag"],
         comment="0 indicates data with good quality according to applied tests.\n"
         "The list of (not) applied tests is encoded in quality_flag_status",
     ),
     "lwp_quality_flag_status": MetaData(
-        long_name="Quality flag status",
+        long_name="Liquid water path quality flag status",
         units="1",
         definition=DEFINITIONS_COM["quality_flag_status"],
         comment="Checks not executed in determination of quality_flag.\n"
@@ -373,14 +373,14 @@ ATTRIBUTES_2I02 = {
         units="kg m-2",
     ),
     "iwv_quality_flag": MetaData(
-        long_name="Quality flag",
+        long_name="Integrated water vapour quality flag",
         units="1",
         definition=DEFINITIONS_COM["quality_flag"],
         comment="0 indicates data with good quality according to applied tests.\n"
         "The list of (not) applied tests is encoded in quality_flag_status",
     ),
     "iwv_quality_flag_status": MetaData(
-        long_name="Quality flag status",
+        long_name="Integrated water vapour quality flag status",
         units="1",
         definition=DEFINITIONS_COM["quality_flag_status"],
         comment="Checks not executed in determination of quality_flag.\n"
