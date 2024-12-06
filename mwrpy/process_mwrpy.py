@@ -20,10 +20,32 @@ from mwrpy.utils import (
 )
 
 PRODUCT_NAME = {
-    "1B01": "",
-    "1B11": "",
-    "1B21": "",
-    "1C01": "",
+    "1B01": [
+        "tb",
+        "tb_spectrum",
+        "sen",
+        "quality_flag",
+        "hkd",
+    ],
+    "1B11": [
+        "irt",
+    ],
+    "1B21": [
+        "met",
+        "met2",
+        "met_quality_flag",
+    ],
+    "1C01": [
+        "tb",
+        "tb_spectrum",
+        "sen",
+        "irt",
+        "met",
+        "met2",
+        "quality_flag",
+        "met_quality_flag",
+        "hkd",
+    ],
     "2I01": "lwp",
     "2I02": "iwv",
     "2I06": "stability",
@@ -50,6 +72,16 @@ PRODUCT_NAME = {
         "equivalent_potential_temperature",
     ],
 }
+f_names_stability = list(
+    [
+        "cape",
+        "k_index",
+        "total_totals",
+        "lifted_index",
+        "showalter_index",
+        "ko_index",
+    ]
+)
 
 
 def main(args):
@@ -139,7 +171,8 @@ def plot_product(prod: str, date, site: str):
             "met_quality_flag": ["met_quality_flag"],
             "hkd": ["t_amb", "t_rec", "t_sta"],
         }
-        for key, variables in keymap.items():
+        for key in PRODUCT_NAME[prod]:
+            variables = keymap[key]
             ele_range = (
                 (
                     89.0,
@@ -148,13 +181,16 @@ def plot_product(prod: str, date, site: str):
                 if key in ("tb", "tb_spectrum")
                 else (-1.0, 91.0)
             )
-            generate_figure(
-                filename,
-                variables,
-                ele_range=ele_range,
-                save_path=output_dir,
-                image_name=key,
-            )
+            try:
+                generate_figure(
+                    filename,
+                    variables,
+                    ele_range=ele_range,
+                    save_path=output_dir,
+                    image_name=key,
+                )
+            except Exception as err:
+                logging.error(err)
 
     elif os.path.isfile(filename) and (prod[0] == "2"):
         elevation = (
@@ -169,16 +205,7 @@ def plot_product(prod: str, date, site: str):
             )
         )
         if prod == "2I06":
-            f_names = list(
-                [
-                    "cape",
-                    "k_index",
-                    "total_totals",
-                    "lifted_index",
-                    "showalter_index",
-                    "ko_index",
-                ]
-            )
+            f_names = f_names_stability
             generate_figure(
                 filename,
                 f_names,
@@ -209,17 +236,10 @@ def plot_product(prod: str, date, site: str):
                     91.0,
                 )
             )
-            f_names = [
-                "cape",
-                "k_index",
-                "total_totals",
-                "lifted_index",
-                "showalter_index",
-                "ko_index",
-            ]
+            f_names = f_names_stability
             if var_name == "stability":
                 keymap = {
-                    var_name: f_names,
+                    var_name: f_names_stability,
                 }
             else:
                 keymap = {
@@ -227,14 +247,17 @@ def plot_product(prod: str, date, site: str):
                 }
             title = False if var_name in f_names else True
             for key, variables in keymap.items():
-                generate_figure(
-                    filename,
-                    variables,
-                    ele_range=elevation,
-                    save_path=output_dir,
-                    image_name=key,
-                    title=title,
-                )
+                try:
+                    generate_figure(
+                        filename,
+                        variables,
+                        ele_range=elevation,
+                        save_path=output_dir,
+                        image_name=key,
+                        title=title,
+                    )
+                except Exception as err:
+                    logging.error(err)
 
 
 def _get_raw_file_path(date_in: datetime.date, site: str) -> str:
