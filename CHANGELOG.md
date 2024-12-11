@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.3 – 2024-12-11
+
+- Adapt spectral consistency check for scans
+- Allow more clear sky detection
+- Update file format docs
+- Make level 1 plotting product specific
+
 ## 1.1.2 – 2024-11-18
 
 - Check HKD contains required variables
