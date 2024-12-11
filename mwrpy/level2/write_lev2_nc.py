@@ -95,7 +95,12 @@ def get_products(
     else:
         elevation_angle = 90 - lev1["zenith_angle"][:]
 
-    rpg_dat, coeff, index, scan_time = {}, {}, np.empty(0), np.empty(0)
+    rpg_dat, coeff, index, scan_time = (
+        {},
+        {},
+        np.empty([0], np.int32),
+        np.empty([0], np.int32),
+    )
 
     if data_type in ("2I01", "2I02", "2I06"):
         product = (
@@ -315,7 +320,7 @@ def get_products(
                 * op_sc
                 + op_os
             )
-            if product == "absolute_humidity":
+            if data_type == "2P03":
                 tmp_dat = tmp_dat / 1000.0
 
         index_ret = np.where(
@@ -374,7 +379,7 @@ def get_products(
         ibl, tb, scan_time = (
             np.empty([0, len(coeff["AG"])], np.int32),
             ma.masked_all((len(freq_ind), len(coeff["AG"]), 0), np.float32),
-            np.empty(0, np.int32),
+            np.empty([0], np.int32),
         )
 
         for ix0v in ix0:
