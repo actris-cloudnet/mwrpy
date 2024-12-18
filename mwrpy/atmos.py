@@ -164,19 +164,21 @@ def find_lwcl_free(lev1: dict) -> tuple[np.ndarray, np.ndarray]:
         )
         ind = utils.time_to_datetime_index(lev1["time"][:])
         tb_df = pd.DataFrame({"Tb": tb}, index=ind)
+        offset = "3min" if np.nanmean(np.diff(lev1["time"])) < 1.8 else "10min"
         tb_std = tb_df.rolling(
-            pd.tseries.frequencies.to_offset("2min"), center=True, min_periods=40
+            pd.tseries.frequencies.to_offset(offset), center=True, min_periods=50
         ).std()
+        offset = "20min" if np.nanmean(np.diff(lev1["time"])) < 1.8 else "60min"
         tb_mx = tb_std.rolling(
-            pd.tseries.frequencies.to_offset("20min"), center=True, min_periods=100
+            pd.tseries.frequencies.to_offset(offset), center=True, min_periods=100
         ).max()
 
         tb_wv = np.squeeze(lev1["tb"][:, freq_22])
         tb_rat = pd.DataFrame({"Tb": tb_wv / tb}, index=ind)
         tb_rat = tb_rat.rolling(
-            pd.tseries.frequencies.to_offset("20min"), center=True, min_periods=100
+            pd.tseries.frequencies.to_offset(offset), center=True, min_periods=100
         ).max()
-        index[tb_mx["Tb"] < np.nanmedian(tb_rat["Tb"]) * 0.1] = 0
+        index[tb_mx["Tb"] < tb_rat["Tb"] * 0.075] = 0
 
         df = pd.DataFrame({"index": index}, index=ind)
         df = df.bfill(limit=120)
