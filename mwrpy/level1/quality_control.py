@@ -200,9 +200,11 @@ def spectral_consistency(
         + 1.0
     ) * 10.0
 
-    c_list = get_coeff_list(site, "ins", coeff_files)
+    prefix = "ins"
+    c_list = get_coeff_list(site, prefix, coeff_files)
     if len(c_list) == 0:
-        c_list = get_coeff_list(site, "spc", coeff_files)
+        prefix = "spc"
+        c_list = get_coeff_list(site, prefix, coeff_files)
 
     if len(c_list) > 0:
         # pylint: disable=unbalanced-tuple-unpacking
@@ -215,14 +217,16 @@ def spectral_consistency(
             weights1,
             weights2,
             factor,
-        ) = get_mvr_coeff(site, "spc", data["frequency"][:], coeff_files)
+        ) = get_mvr_coeff(site, prefix, data["frequency"][:], coeff_files)
         ret_in = retrieval_input(data, coeff)
         ele_ind = ele_retrieval(data["elevation_angle"][:], coeff)
         ret_rm = rm_retrieval(
             data["elevation_angle"][ele_ind], coeff, data["frequency"][:]
         )
 
-        coeff_ind = np.searchsorted(coeff["AL"], data["frequency"])
+        _, freq_ind, coeff_ind = np.intersect1d(
+            data["frequency"], coeff["AL"], return_indices=True
+        )
         c_w1, c_w2, fac = (
             weights1(data["elevation_angle"][ele_ind]),
             weights2(data["elevation_angle"][ele_ind]),
@@ -243,7 +247,7 @@ def spectral_consistency(
             fac[:].reshape((len(ele_ind), 1))
             * np.einsum("ijk,ij->ik", c_w1, ret_in[ele_ind, :])
         )
-        data["tb_spectrum"][ele_ind, :] = (
+        data["tb_spectrum"][np.ix_(ele_ind, freq_ind)] = (
             np.tanh(
                 fac[:].reshape((len(ele_ind), 1))
                 * np.einsum("ijk,ik->ij", c_w2[:, coeff_ind, :], hidden_layer)

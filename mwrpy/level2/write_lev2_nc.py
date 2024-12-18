@@ -95,8 +95,8 @@ def get_products(
     else:
         elevation_angle = 90 - lev1["zenith_angle"][:]
 
-    rpg_dat, coeff, index, scan_time = (
-        {},
+    rpg_dat: dict = {}
+    coeff, index, scan_time = (
         {},
         np.empty([0], np.int32),
         np.empty([0], np.int32),
@@ -206,6 +206,7 @@ def get_products(
         if product in ("lwp", "iwv"):
             ret_product = ma.masked_all(len(index), np.float32)
             ret_product[index_ret] = tmp_product[index_ret]
+            _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
             if product == "lwp":
                 freq_win = np.where((np.round(lev1["frequency"][:].data, 1) == 31.4))[0]
                 rpg_dat["lwp"], rpg_dat["lwp_offset"] = (
@@ -217,12 +218,13 @@ def get_products(
                         rpg_dat["lwp"][index_ret],
                         rpg_dat["lwp_offset"][index_ret],
                     ) = correct_lwp_offset(
-                        lev1.variables, ret_product[index_ret], index[index_ret]
+                        lev1.variables,
+                        ret_product[index_ret],
+                        index[index_ret],
+                        rpg_dat["lwp_quality_flag"][index_ret],
                     )
             else:
                 rpg_dat[product] = ret_product
-
-            _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
 
         else:
             product_list = (
