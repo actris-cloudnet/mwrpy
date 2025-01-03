@@ -94,6 +94,7 @@ def main(args):
             if product not in PRODUCT_NAME:
                 logging.error(f"Product {product} not recognised")
                 continue
+            start = time.process_time()
             if args.command != "plot":
                 logging.info(f"Processing {product} product, {args.site} {date}")
                 if args.command == "reprocess":
@@ -104,17 +105,16 @@ def main(args):
                             f"Error in processing products: {e}. Incomplete or no processing for {date}."
                         )
                 else:
-                    start = time.process_time()
                     process_product(product, date, args.site)
-                    elapsed_time = time.process_time() - start
-                    logging.info(f"Processing took {elapsed_time:.1f} seconds")
             if args.command != "no-plot":
                 logging.info(f"Plotting {product} product, {args.site} {date}")
                 try:
                     plot_product(product, date, args.site)
-                except TypeError as err:
-                    logging.error(err)
+                except Exception as e:
+                    logging.error(f"Error in plotting product {product}: {e}.")
                 plt.close()
+            elapsed_time = time.process_time() - start
+            logging.info(f"Processing took {elapsed_time:.1f} seconds")
 
 
 def process_product(prod: str, date: datetime.date, site: str):
@@ -181,16 +181,13 @@ def plot_product(prod: str, date, site: str):
                 if key in ("tb", "tb_spectrum")
                 else (-1.0, 91.0)
             )
-            try:
-                generate_figure(
-                    filename,
-                    variables,
-                    ele_range=ele_range,
-                    save_path=output_dir,
-                    image_name=key,
-                )
-            except Exception as err:
-                logging.error(err)
+            generate_figure(
+                filename,
+                variables,
+                ele_range=ele_range,
+                save_path=output_dir,
+                image_name=key,
+            )
 
     elif os.path.isfile(filename) and (prod[0] == "2"):
         elevation = (
@@ -247,17 +244,14 @@ def plot_product(prod: str, date, site: str):
                 }
             title = False if var_name in f_names else True
             for key, variables in keymap.items():
-                try:
-                    generate_figure(
-                        filename,
-                        variables,
-                        ele_range=elevation,
-                        save_path=output_dir,
-                        image_name=key,
-                        title=title,
-                    )
-                except Exception as err:
-                    logging.error(err)
+                generate_figure(
+                    filename,
+                    variables,
+                    ele_range=elevation,
+                    save_path=output_dir,
+                    image_name=key,
+                    title=title,
+                )
 
 
 def _get_raw_file_path(date_in: datetime.date, site: str) -> str:

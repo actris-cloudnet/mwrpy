@@ -123,30 +123,21 @@ def c2k(T: np.ndarray) -> np.ndarray:
     return ma.array(T) + con.T0
 
 
-def dir_avg(time: np.ndarray, spd: np.ndarray, drc: np.ndarray, win: float = 0.5):
+def dir_avg(
+    time: np.ndarray, spd: np.ndarray, drc: np.ndarray, win: int = 30
+) -> np.ndarray:
     """Computes average wind direction (DEG) for a certain window length."""
-    width = int(ma.round(win / ma.median(ma.diff(ma.masked_invalid(time)))))
-    if (width % 2) != 0:
-        width = width + 1
-    seq = range(len(time))
-    avg_dir = []
-    for i in range(len(seq) - width + 1):
-        avg_dir.append(winddir(spd[seq[i : i + width]], drc[seq[i : i + width]]))
-    return np.array(avg_dir), width
+    ve = spd * np.sin(np.deg2rad(drc))
+    vn = spd * np.cos(np.deg2rad(drc))
+    ind = utils.time_to_datetime_index(time)
+    components = pd.DataFrame({"ve": ve, "vn": vn}, index=ind)
 
+    avg_comp = components.rolling(
+        pd.offsets.Minute(win), center=True, min_periods=1
+    ).mean()
+    avg_dir = np.rad2deg(np.arctan2(-avg_comp["ve"], -avg_comp["vn"])).values
 
-def winddir(spd: np.ndarray, drc: np.ndarray):
-    """Computes mean wind direction (deg)."""
-    ve = -np.mean(spd * np.sin(np.deg2rad(drc)))
-    vn = -np.mean(spd * np.cos(np.deg2rad(drc)))
-    vdir = np.rad2deg(np.arctan2(ve, vn))
-    if vdir < 180.0:
-        Dv = vdir + 180.0
-    elif vdir > 180.0:
-        Dv = vdir - 180
-    else:
-        Dv = vdir
-    return Dv
+    return np.where(avg_dir < 180.0, avg_dir + 180.0, avg_dir - 180.0)
 
 
 def find_lwcl_free(lev1: dict) -> tuple[np.ndarray, np.ndarray]:
