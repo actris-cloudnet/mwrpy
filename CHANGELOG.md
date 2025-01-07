@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.4 – 2025-01-07
+
+- Fix usage of INS coefficients
+- Include flag in LWP offset correction and adapt for frequent scanning
+
 ## 1.1.3 – 2024-12-11
 
 - Adapt spectral consistency check for scans
