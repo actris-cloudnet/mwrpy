@@ -6,6 +6,7 @@ from itertools import groupby
 import netCDF4 as nc
 import numpy as np
 import pytz
+from cftime import num2pydate
 from numpy import ma
 from timezonefinder import TimezoneFinder
 
@@ -82,7 +83,7 @@ def lev2_to_nc(
 
 def get_products(
     site: str | None,
-    lev1: nc.Dataset,
+    nclev1: nc.Dataset,
     data_type: str,
     params: dict,
     coeff_files: list | None,
@@ -90,10 +91,10 @@ def get_products(
     hum_file: str | None = None,
 ) -> tuple[dict, dict, np.ndarray, np.ndarray]:
     """Derive specified Level 2 products."""
-    if "elevation_angle" in lev1.variables:
-        elevation_angle = lev1["elevation_angle"][:]
-    else:
-        elevation_angle = 90 - lev1["zenith_angle"][:]
+    lev1 = {key: value[:] for key, value in nclev1.variables.items()}
+    if "elevation_angle" not in lev1:
+        lev1["elevation_angle"] = 90 - lev1["zenith_angle"][:]
+    lev1["time"] = _read_time(nclev1["time"])
 
     rpg_dat: dict = {}
     coeff, index, scan_time = (
@@ -133,14 +134,14 @@ def get_products(
             )
 
         coeff["retrieval_elevation_angles"] = _format_attribute_array(
-            ele_retrieval(elevation_angle[index], coeff)
+            ele_retrieval(lev1["elevation_angle"][index], coeff)
         )
         coeff["retrieval_frequencies"] = _get_retrieval_frequencies(coeff)
 
         if coeff["RT"] < 2:
-            coeff_offset = offset(elevation_angle[index])
-            coeff_lin = lin(elevation_angle[index])
-            coeff_quad = quad(elevation_angle[index])
+            coeff_offset = offset(lev1["elevation_angle"][index])
+            coeff_lin = lin(lev1["elevation_angle"][index])
+            coeff_quad = quad(lev1["elevation_angle"][index])
             tmp_product = (
                 np.squeeze(coeff_offset[:])
                 + np.einsum("ij,ij->i", ret_in[index, :], coeff_lin)
@@ -149,19 +150,19 @@ def get_products(
 
         else:
             c_w1, c_w2, fac = (
-                weights1(elevation_angle[index]),
-                weights2(elevation_angle[index]),
-                factor(elevation_angle[index]),
+                weights1(lev1["elevation_angle"][index]),
+                weights2(lev1["elevation_angle"][index]),
+                factor(lev1["elevation_angle"][index]),
             )
             if fac.ndim == 1:
                 fac = fac[:, np.newaxis]
             in_sc, in_os = (
-                input_scale(elevation_angle[index]),
-                input_offset(elevation_angle[index]),
+                input_scale(lev1["elevation_angle"][index]),
+                input_offset(lev1["elevation_angle"][index]),
             )
             op_sc, op_os = (
-                output_scale(elevation_angle[index]),
-                output_offset(elevation_angle[index]),
+                output_scale(lev1["elevation_angle"][index]),
+                output_offset(lev1["elevation_angle"][index]),
             )
 
             ret_in[index, 1:] = (ret_in[index, 1:] - in_os[:, :]) * in_sc[:, :]
@@ -191,12 +192,12 @@ def get_products(
             np.any(
                 np.abs(
                     (
-                        np.ones((len(elevation_angle[index]), len(coeff["AG"])))
+                        np.ones((len(lev1["elevation_angle"][index]), len(coeff["AG"])))
                         * coeff["AG"]
                     )
                     - np.transpose(
-                        np.ones((len(coeff["AG"]), len(elevation_angle[index])))
-                        * elevation_angle[index]
+                        np.ones((len(coeff["AG"]), len(lev1["elevation_angle"][index])))
+                        * lev1["elevation_angle"][index]
                     )
                 )
                 <= 0.5,
@@ -218,7 +219,7 @@ def get_products(
                         rpg_dat["lwp"][index_ret],
                         rpg_dat["lwp_offset"][index_ret],
                     ) = correct_lwp_offset(
-                        lev1.variables,
+                        lev1,
                         ret_product[index_ret],
                         index[index_ret],
                         rpg_dat["lwp_quality_flag"][index_ret],
@@ -274,7 +275,7 @@ def get_products(
                 f"No suitable data found for processing for data type: {data_type}"
             )
         coeff["retrieval_elevation_angles"] = _format_attribute_array(
-            ele_retrieval(elevation_angle[index], coeff)
+            ele_retrieval(lev1["elevation_angle"][index], coeff)
         )
 
         coeff["retrieval_frequencies"] = _get_retrieval_frequencies(coeff)
@@ -282,9 +283,9 @@ def get_products(
         rpg_dat["height"] = coeff["AL"][:] + params["altitude"]
 
         if coeff["RT"] < 2:
-            coeff_offset = offset(elevation_angle[index])
-            coeff_lin = lin(elevation_angle[index])
-            coeff_quad = quad(elevation_angle[index])
+            coeff_offset = offset(lev1["elevation_angle"][index])
+            coeff_lin = lin(lev1["elevation_angle"][index])
+            coeff_quad = quad(lev1["elevation_angle"][index])
             tmp_dat = (
                 coeff_offset
                 + np.einsum("ijk,ik->ij", coeff_lin, ret_in[index, :])
@@ -295,17 +296,17 @@ def get_products(
 
         else:
             c_w1, c_w2, fac = (
-                weights1(elevation_angle[index]),
-                weights2(elevation_angle[index]),
-                factor(elevation_angle[index]),
+                weights1(lev1["elevation_angle"][index]),
+                weights2(lev1["elevation_angle"][index]),
+                factor(lev1["elevation_angle"][index]),
             )
             in_sc, in_os = (
-                input_scale(elevation_angle[index]),
-                input_offset(elevation_angle[index]),
+                input_scale(lev1["elevation_angle"][index]),
+                input_offset(lev1["elevation_angle"][index]),
             )
             op_sc, op_os = (
-                output_scale(elevation_angle[index]),
-                output_offset(elevation_angle[index]),
+                output_scale(lev1["elevation_angle"][index]),
+                output_offset(lev1["elevation_angle"][index]),
             )
 
             ret_in[index, 1:] = (ret_in[index, 1:] - in_os) * in_sc
@@ -329,12 +330,12 @@ def get_products(
             np.any(
                 np.abs(
                     (
-                        np.ones((len(elevation_angle[index]), len(coeff["AG"])))
+                        np.ones((len(lev1["elevation_angle"][index]), len(coeff["AG"])))
                         * coeff["AG"]
                     )
                     - np.transpose(
-                        np.ones((len(coeff["AG"]), len(elevation_angle[index])))
-                        * elevation_angle[index]
+                        np.ones((len(coeff["AG"]), len(lev1["elevation_angle"][index])))
+                        * lev1["elevation_angle"][index]
                     )
                 )
                 <= 0.5,
@@ -373,8 +374,8 @@ def get_products(
         coeff["retrieval_frequencies"] = _get_retrieval_frequencies(coeff)
 
         ix0 = np.where(
-            (elevation_angle[:] > coeff["AG"][0] - 0.5)
-            & (elevation_angle[:] < coeff["AG"][0] + 0.5)
+            (lev1["elevation_angle"] > coeff["AG"][0] - 0.5)
+            & (lev1["elevation_angle"] < coeff["AG"][0] + 0.5)
             & (lev1["pointing_flag"][:] == 1)
             & (np.arange(len(lev1["time"])) + len(coeff["AG"]) < len(lev1["time"]))
         )[0]
@@ -388,7 +389,9 @@ def get_products(
             ix1v = ix0v + len(coeff["AG"]) + 10
             ind_multi = np.where(lev1["pointing_flag"][ix0v:ix1v] == 1)[0]
             _, ind_ang, _ = np.intersect1d(
-                elevation_angle[ix0v + ind_multi], coeff["AG"], return_indices=True
+                lev1["elevation_angle"][ix0v + ind_multi],
+                coeff["AG"],
+                return_indices=True,
             )
             if ix1v < len(lev1["time"]) and len(ind_ang) == len(coeff["AG"]):
                 scan_time = np.append(
@@ -406,7 +409,7 @@ def get_products(
                     (
                         tb,
                         np.expand_dims(
-                            lev1["tb"][ix0v + np.flip(ind_ang), freq_ind].T, 2
+                            lev1["tb"][np.ix_(ix0v + np.flip(ind_ang), freq_ind)].T, 2
                         ),
                     ),
                     axis=2,
@@ -485,25 +488,27 @@ def get_products(
 
         coeff["retrieval_type"] = "derived product"
         coeff["dependencies"] = temp_file + ", " + hum_file
+
+        hum_time = _read_time(hum_dat.variables["time"])
+        tem_time = _read_time(tem_dat.variables["time"])
+
         if len(hum_dat.variables["height"][:]) == len(tem_dat.variables["height"][:]):
             hum_int = interpol_2d(
-                hum_dat.variables["time"][:],
+                hum_time,
                 hum_dat.variables["absolute_humidity"][:, :],
                 tem_dat.variables["time"][:],
             )
         else:
             hum_int = interpolate_2d(
-                hum_dat.variables["time"][:],
+                hum_time,
                 hum_dat.variables["height"][:],
                 hum_dat.variables["absolute_humidity"][:, :],
-                tem_dat.variables["time"][:],
+                tem_time,
                 tem_dat.variables["height"][:],
             )
 
         rpg_dat["height"] = tem_dat.variables["height"][:]
-        pres = np.interp(
-            tem_dat.variables["time"][:], lev1["time"][:], lev1["air_pressure"][:]
-        )
+        pres = np.interp(tem_time, lev1["time"][:], lev1["air_pressure"][:])
         if data_type == "2P04":
             rpg_dat["relative_humidity"] = rel_hum(
                 tem_dat.variables["temperature"][:, :], hum_int
@@ -526,7 +531,7 @@ def get_products(
         _combine_lev1(
             tem_dat,
             rpg_dat,
-            np.arange(len(tem_dat.variables["time"][:])),
+            np.arange(len(tem_time)),
             data_type,
             scan_time,
         )
@@ -535,7 +540,7 @@ def get_products(
 
 def _get_qf(
     rpg_dat: dict,
-    lev1: nc.Dataset,
+    lev1: dict,
     coeff: dict,
     index: np.ndarray,
     index_ret: np.ndarray,
@@ -569,7 +574,9 @@ def _get_qf(
         if len(i_scn) == len(rpg_dat[product + "_quality_flag"][:]):
             for ind, val in enumerate(i_scn):
                 scan = np.arange(seqs[val, 1], seqs[val, 1] + seqs[val, 2])
-                flg = np.bitwise_or.reduce(lev1["quality_flag"][scan, freq_ind], axis=1)
+                flg = np.bitwise_or.reduce(
+                    lev1["quality_flag"][np.ix_(scan, freq_ind)], axis=1
+                )
                 rpg_dat[product + "_quality_flag"][ind] = np.bitwise_or.reduce(flg)
 
     rpg_dat[product + "_quality_flag_status"][index_ret] = lev1["quality_flag_status"][
@@ -637,13 +644,9 @@ def ele_retrieval(ele_obs: np.ndarray, coeff: dict) -> np.ndarray:
     return ele_ret[ind]
 
 
-def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
+def retrieval_input(lev1: dict, coeff: dict) -> np.ndarray:
     """Get retrieval input."""
     time_median = ma.median(lev1["time"][:])
-    if time_median < 24:
-        assert isinstance(lev1, nc.Dataset)
-        date = [lev1.year, lev1.month, lev1.day]
-        time_median = decimal_hour2unix(date, time_median)
 
     _, freq_ind, _ = np.intersect1d(
         lev1["frequency"][:],
@@ -653,8 +656,8 @@ def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
     )
     bias = np.ones((len(lev1["time"][:]), 1), np.float32)
 
-    latitude = float(ma.median(lev1["latitude"][:]))
-    longitude = float(ma.median(lev1["longitude"][:]))
+    latitude = float(ma.median(lev1["latitude"]))
+    longitude = float(ma.median(lev1["longitude"]))
 
     if coeff["RT"] == -1:
         ret_in = lev1["tb"][:, :]
@@ -758,11 +761,6 @@ def retrieval_input(lev1: dict | nc.Dataset, coeff: dict) -> np.ndarray:
     return ret_in
 
 
-def decimal_hour2unix(date: list, time: np.ndarray) -> np.ndarray | int:
-    unix_timestamp = np.datetime64("-".join(date)).astype("datetime64[s]").astype("int")
-    return (time * 60 * 60 + unix_timestamp).astype(int)
-
-
 def _get_retrieval_frequencies(coeff: dict) -> np.ndarray:
     if isinstance(coeff["FR"], ma.MaskedArray):
         frequencies = coeff["FR"][~coeff["FR"][:].mask]
@@ -780,3 +778,17 @@ def _combine_array_attributes(tem_dat: dict, hum_dat: dict, name: str) -> np.nda
 
 def _format_attribute_array(array: np.ndarray | list) -> np.ndarray:
     return np.round(np.sort(np.unique(array)), 2)
+
+
+def _read_time(ncvar: nc.Variable) -> np.ndarray:
+    """Read netCDF time in Unix time."""
+    return np.array(
+        [
+            dt.timestamp()
+            for dt in num2pydate(
+                ncvar[:],
+                units=ncvar.units,
+                calendar=getattr(ncvar, "calendar", "standard"),
+            )
+        ]
+    )
