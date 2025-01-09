@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.5 – 2025-01-09
+
+- Support different time units in L2 input files
+
 ## 1.1.4 – 2025-01-07
 
 - Fix usage of INS coefficients
