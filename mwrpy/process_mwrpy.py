@@ -46,18 +46,20 @@ PRODUCT_NAME = {
         "met_quality_flag",
         "hkd",
     ],
-    "2I01": "lwp",
-    "2I02": "iwv",
-    "2I06": "stability",
-    "2P01": "temperature",
-    "2P02": "temperature",
-    "2P03": "absolute_humidity",
-    "2P04": "relative_humidity",
-    "2P07": "potential_temperature",
+    "2I01": ["lwp", "lwp_scan"],
+    "2I02": ["iwv", "iwv_scan"],
+    "2I06": ["stability"],
+    "2P01": ["temperature"],
+    "2P02": ["temperature"],
+    "2P03": ["absolute_humidity"],
+    "2P04": ["relative_humidity"],
+    "2P07": ["potential_temperature"],
     "2P08": "equivalent_potential_temperature",
     "single": [
         "lwp",
+        "lwp_scan",
         "iwv",
+        "iwv_scan",
         "stability",
         "temperature",
         "absolute_humidity",
@@ -190,46 +192,56 @@ def plot_product(prod: str, date, site: str):
             )
 
     elif os.path.isfile(filename) and (prod[0] == "2"):
-        elevation = (
-            (
-                89.0,
-                91.0,
-            )
-            if prod not in ("2P02", "2P04", "2P07", "2P08")
-            else (
-                -1.0,
-                91.0,
-            )
-        )
-        if prod == "2I06":
-            f_names = f_names_stability
-            generate_figure(
-                filename,
-                f_names,
-                ele_range=elevation,
-                save_path=output_dir,
-                image_name=str(PRODUCT_NAME[prod]),
-                title=False,
-            )
-        else:
-            generate_figure(
-                filename,
-                [PRODUCT_NAME[prod]],
-                ele_range=elevation,
-                save_path=output_dir,
-                image_name=str(PRODUCT_NAME[prod]),
-            )
-
-    elif os.path.isfile(filename) and (prod in ("single", "multi")):
-        for var_name in PRODUCT_NAME[prod]:
+        for key in PRODUCT_NAME[prod]:
             elevation = (
                 (
                     89.0,
                     91.0,
                 )
-                if prod == "single"
+                if prod in ("2P01", "2P03", "2I06") or key in ("lwp", "iwv")
                 else (
                     -1.0,
+                    91.0,
+                )
+            )
+            if prod == "2I06":
+                f_names = f_names_stability
+                generate_figure(
+                    filename,
+                    f_names,
+                    ele_range=elevation,
+                    save_path=output_dir,
+                    image_name=PRODUCT_NAME[prod][0],
+                    title=False,
+                )
+            elif key in ("lwp_scan", "iwv_scan"):
+                generate_figure(
+                    filename,
+                    [key.rstrip("_scan")],
+                    ele_range=elevation,
+                    save_path=output_dir,
+                    image_name=key,
+                    title=False,
+                )
+            else:
+                generate_figure(
+                    filename,
+                    [key],
+                    ele_range=elevation,
+                    save_path=output_dir,
+                    image_name=key,
+                )
+
+    elif os.path.isfile(filename) and (prod in ("single", "multi")):
+        for var_name in PRODUCT_NAME[prod]:
+            elevation = (
+                (
+                    -1.0,
+                    91.0,
+                )
+                if prod == "multi" or var_name in ("lwp_scan", "iwv_scan")
+                else (
+                    89.0,
                     91.0,
                 )
             )
@@ -242,7 +254,11 @@ def plot_product(prod: str, date, site: str):
                 keymap = {
                     var_name: [var_name],
                 }
-            title = False if var_name in f_names else True
+            title = (
+                False
+                if var_name in f_names or var_name in ("lwp_scan", "iwv_scan")
+                else True
+            )
             for key, variables in keymap.items():
                 generate_figure(
                     filename,

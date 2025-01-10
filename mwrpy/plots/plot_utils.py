@@ -16,7 +16,9 @@ from mwrpy.utils import (
 )
 
 
-def _get_ret_flag(nc_file: str, time: np.ndarray, variable: str) -> ndarray:
+def _get_ret_flag(
+    nc_file: str, time: np.ndarray, variable: str, bits: int = 0
+) -> ndarray:
     """Returns quality flag for frequencies used in retrieval."""
     file = netCDF4.Dataset(nc_file)
     quality_flag = file.variables[variable + "_quality_flag"]
@@ -29,7 +31,7 @@ def _get_ret_flag(nc_file: str, time: np.ndarray, variable: str) -> ndarray:
     site = _read_location(nc_file)
     params = read_config(site, "params")
 
-    if params["flag_status"][3] == 0:
+    if params["flag_status"][3] == 0 and bits == 0:
         flag[isbit(quality_flag[:], 3) > 0] = 1
     else:
         flag[quality_flag[:] > 0] = 1

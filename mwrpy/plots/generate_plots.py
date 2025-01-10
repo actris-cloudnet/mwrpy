@@ -7,6 +7,7 @@ from datetime import date, datetime
 import matplotlib.pyplot as plt
 import netCDF4
 import numpy as np
+import pandas as pd
 from matplotlib import rcParams
 from matplotlib.axes import Axes
 from matplotlib.colors import BoundaryNorm, Colormap, ListedColormap
@@ -21,6 +22,7 @@ from matplotlib.ticker import (
 from matplotlib.transforms import Affine2D, Bbox, ScaledTranslation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from numpy import ma, ndarray
+from numpy.f2py.auxfuncs import isstring
 
 from mwrpy.atmos import abs_hum, dir_avg, t_dew_rh
 from mwrpy.plots.plot_meta import _COLORS, ATTRIBUTES
@@ -128,13 +130,12 @@ def generate_figure(
 
     for ax, field, name in zip(axes, valid_fields, valid_names):
         ax.set_facecolor(_COLORS["lightgray"])
-        if name in ("elevation_angle", "azimuth_angle"):
-            time = _read_time_vector(nc_file)
-        else:
-            field = _elevation_filter(nc_file, field, ele_range)
+        field = _elevation_filter(nc_file, field, ele_range)
+        is_height = _is_height_dimension(nc_file, name)
+        if image_name and "_scan" in image_name:
+            name = image_name
         if title:
             _set_title(ax, name, nc_file, "")
-        is_height = _is_height_dimension(nc_file, name)
         if not is_height:
             source = ATTRIBUTES[name].source
             _plot_instrument_data(
@@ -632,6 +633,8 @@ def _plot_instrument_data(
     """Calls plotting function for specified product."""
     if product == "int":
         _plot_int(ax, data, name, time, nc_file)
+    elif product == "scan":
+        _plot_scan(ax, data, name, time, nc_file)
     elif product == "sta":
         _plot_sta(ax, data, name, time, nc_file)
     elif product in ("met", "met2"):
@@ -1506,6 +1509,8 @@ def _calculate_ticks(x, yl, yl2):
 
 def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
     """Plot for integrated quantities (LWP, IWV)."""
+    # data_in = _elevation_filter(nc_file, data_in, ele_range=(89.0, 91.0))
+    # time = _elevation_filter(nc_file, time, ele_range=(89.0, 91.0))
     flag = _get_ret_flag(nc_file, time, name)
     data0, time0 = data_in[flag == 0], time[flag == 0]
     if len(data0) == 0:
@@ -1521,13 +1526,13 @@ def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
     _set_ax(ax, vmax, ATTRIBUTES[name].ylabel, min_y=vmin)
 
     flag_tmp = _calculate_rolling_mean(time, flag, win=1 / 60)
-    data_f = np.zeros((len(flag_tmp), 10), np.float32)
+    data_f = np.zeros((len(flag_tmp), 2), np.float32)
     data_f[flag_tmp > 0, :] = 1.0
     cmap = ListedColormap([_COLORS["lightgray"], _COLORS["gray"]])
     norm = BoundaryNorm([0, 1, 2], cmap.N)
     ax.pcolormesh(
         time,
-        np.linspace(vmin, vmax, 10),
+        np.linspace(vmin, vmax, 2),
         data_f.T,
         cmap=cmap,
         norm=norm,
@@ -1538,7 +1543,7 @@ def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
     if len(gtim) > 0:
         time_i, data_g = (
             np.linspace(time[0], time[-1], len(time)),
-            np.zeros((len(time), 10), np.float32),
+            np.zeros((len(time), 2), np.float32),
         )
         for ig, _ in enumerate(gtim[:, 0]):
             xind = np.where((time_i >= gtim[ig, 0]) & (time_i <= gtim[ig, 1]))
@@ -1548,7 +1553,7 @@ def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
             ax,
             ma.MaskedArray(data_g),
             "tb_missing",
-            (time_i, np.linspace(vmin, vmax, 10)),
+            (time_i, np.linspace(vmin, vmax, 2)),
             nc_file,
         )
 
@@ -1568,6 +1573,102 @@ def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
         color="wheat",
         linewidth=0.6,
     )
+
+
+def _plot_scan(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
+    """Plot for scans of integrated quantities (LWP, IWV)."""
+    elevation = read_nc_fields(nc_file, "elevation_angle")
+    angles = np.unique(np.round(elevation[elevation < 89.0]))
+    if len(angles) > 0:
+        fig, axs = plt.subplots(
+            len(angles),
+            1,
+            figsize=(16, 4 + (len(angles) - 1) * 4.8),
+            facecolor="w",
+            edgecolor="k",
+            sharex="col",
+            dpi=120,
+        )
+        fig.subplots_adjust(hspace=0.09)
+
+        for ind in range(len(angles)):
+            ele_range = (angles[ind] - 1.0, angles[ind] + 1.0)
+            elevation_f = _elevation_filter(nc_file, elevation, ele_range=ele_range)
+            data_s0 = _elevation_filter(nc_file, data_in, ele_range=ele_range) * np.cos(
+                np.deg2rad(90.0 - elevation_f)
+            )
+            time_s0 = _elevation_filter(nc_file, time, ele_range=ele_range)
+            azimuth = read_nc_fields(nc_file, "azimuth_angle")
+            azimuth = _elevation_filter(nc_file, azimuth, ele_range=ele_range)
+            flag = _get_ret_flag(nc_file, time_s0, name.rstrip("_scan"), 1)
+            data_s0 = ma.masked_where(flag > 0, data_s0)
+
+            scan = pd.DataFrame({"time": time_s0, "azimuth": azimuth, "var": data_s0})
+            scan["blocks"] = (scan["azimuth"] < scan["azimuth"].shift()).cumsum()
+            scan = scan[scan.groupby(scan["blocks"]).transform("size") == 36]
+            scan_mean = scan.groupby("blocks")["var"].mean()
+            time_median = scan.groupby("blocks")["time"].median()
+            scan["diff"] = (
+                (scan["var"] - scan_mean[scan["blocks"].values].values)
+                / scan_mean[scan["blocks"].values].values
+                * 100.0
+            )
+            az_pl = np.unique(azimuth)
+            var_pl = np.vstack(scan.groupby("blocks")["diff"].apply(list).to_numpy())
+
+            vmin, vmax = -np.nanmax(np.abs(var_pl)), np.nanmax(np.abs(var_pl))
+            axi = axs[ind] if len(angles) > 1 else axs
+            pl = axi.contourf(
+                time_median,
+                az_pl,
+                np.transpose(var_pl),
+                cmap=ATTRIBUTES[name].cbar,
+                levels=np.linspace(vmin, vmax, 11),
+            )
+
+            case_date = _read_date(nc_file)
+            gtim = _gap_array(time_median.values, case_date, 60.0 / 60.0)
+            if len(gtim) > 0:
+                time_i, data_g = (
+                    np.linspace(
+                        time_median.values[0],
+                        time_median.values[-1],
+                        len(time_median.values),
+                    ),
+                    np.zeros((len(time_median.values), 2), np.float32),
+                )
+                for ig, _ in enumerate(gtim[:, 0]):
+                    xind = np.where((time_i >= gtim[ig, 0]) & (time_i <= gtim[ig, 1]))
+                    data_g[xind, :] = 1.0
+
+                _plot_segment_data(
+                    axi,
+                    ma.MaskedArray(data_g),
+                    "tb_missing",
+                    (time_i, np.linspace(0, 360, 2)),
+                    nc_file,
+                )
+
+            axi.set_yticks(np.linspace(0, 360, 9))
+            axi.set_facecolor(_COLORS["gray"])
+            title_name = ATTRIBUTES[name].name
+            assert title_name is not None
+            axi.set_title(
+                title_name + " at " + str(int(angles[ind])) + "° elevation",
+                fontsize=14,
+            )
+            _set_labels(fig, axi, nc_file)
+            _set_ax(axi, 360.0, "Sensor azimmuth angle (DEG)")
+            if ind < len(angles) - 1:
+                axi.xaxis.set_tick_params(labelbottom=False)
+                axi.set_xlabel("")
+
+            colorbar = _init_colorbar(pl, axi)
+            locator = colorbar.ax.yaxis.get_major_locator()
+            locator.set_params(nbins=10)
+            colorbar.update_ticks()
+            colorbar.set_ticks([np.round(i, 1) for i in colorbar.get_ticks()])
+            colorbar.set_label(ATTRIBUTES[name].clabel, fontsize=13)
 
 
 def _plot_sta(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
@@ -1648,7 +1749,7 @@ def _plot_sta(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
     norm = BoundaryNorm([0, 1, 2], cmap.N)
     ax.pcolormesh(
         time,
-        np.linspace(vmin, vmax, 10),
+        np.linspace(vmin, vmax, 2),
         data_f.T,
         cmap=cmap,
         norm=norm,
@@ -1669,6 +1770,6 @@ def _plot_sta(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
             ax,
             ma.MaskedArray(data_g),
             "tb_missing",
-            (time_i, np.linspace(vmin, vmax, 10)),
+            (time_i, np.linspace(vmin, vmax, 2)),
             nc_file,
         )

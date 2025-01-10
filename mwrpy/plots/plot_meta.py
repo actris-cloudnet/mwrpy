@@ -107,6 +107,22 @@ ATTRIBUTES = {
         plot_type="bar",
         source="int",
     ),
+    "lwp_scan": PlotMeta(
+        name="LWP relative azimuth scan deviations",
+        cbar="PuOr",
+        clabel=_PP,
+        plot_range=(-200, 200),
+        plot_type="mesh",
+        source="scan",
+    ),
+    "iwv_scan": PlotMeta(
+        name="IWV relative azimuth scan deviations",
+        cbar="BrBG",
+        clabel=_PP,
+        plot_range=(-20, 20),
+        plot_type="mesh",
+        source="scan",
+    ),
     "absolute_humidity": PlotMeta(
         name="Absolute Humidity",
         cbar="Spectral_r",
@@ -209,7 +225,7 @@ ATTRIBUTES = {
         source="sen",
     ),
     "azimuth_angle": PlotMeta(
-        name="Azimuth angle",
+        name="Sensor azimuth angle",
         ylabel=_DEG,
         plot_range=(-5, 363),
         plot_type="bar",
