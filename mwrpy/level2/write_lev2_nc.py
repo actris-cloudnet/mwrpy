@@ -560,12 +560,12 @@ def _get_qf(
     if scan.any():
         for ind, _ in enumerate(scan[:, 0]):
             flg = np.bitwise_or.reduce(
-                lev1["quality_flag"][scan[ind, :], freq_ind], axis=1
+                lev1["quality_flag"][np.ix_(scan[ind, :], freq_ind)], axis=1
             )
             rpg_dat[product + "_quality_flag"][ind] = np.bitwise_or.reduce(flg)
     else:
         rpg_dat[product + "_quality_flag"][index_ret] = np.bitwise_or.reduce(
-            lev1["quality_flag"][np.ix_(index[index_ret], freq_ind)][:, freq_ind], axis=1
+            lev1["quality_flag"][np.ix_(index[index_ret], freq_ind)], axis=1
         )
     rpg_dat[product + "_quality_flag_status"][index_ret] = lev1["quality_flag_status"][
         :, freq_ind[0]
@@ -757,7 +757,9 @@ def _get_retrieval_frequencies(coeff: dict) -> np.ndarray:
     return _format_attribute_array(frequencies)
 
 
-def _combine_array_attributes(tem_dat: nc.Dataset, hum_dat: nc.Dataset, name: str) -> np.ndarray:
+def _combine_array_attributes(
+    tem_dat: nc.Dataset, hum_dat: nc.Dataset, name: str
+) -> np.ndarray:
     a = getattr(tem_dat["temperature"], name)
     b = getattr(hum_dat["absolute_humidity"], name)
     combined = np.hstack((a, b))

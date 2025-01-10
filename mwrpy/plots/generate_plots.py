@@ -264,8 +264,6 @@ def _find_valid_fields(nc_file: str, names: list) -> tuple[list, list]:
                     valid_names.remove(name)
             else:
                 valid_names.remove(name)
-    # if not valid_names:
-    #     raise ValueError("No fields to be plotted")
     return valid_data, valid_names
 
 
@@ -634,7 +632,7 @@ def _plot_instrument_data(
     if product == "int":
         _plot_int(ax, data, name, time, nc_file)
     elif product == "scan":
-        _plot_scan(ax, data, name, time, nc_file)
+        _plot_scan(data, name, time, nc_file)
     elif product == "sta":
         _plot_sta(ax, data, name, time, nc_file)
     elif product in ("met", "met2"):
@@ -1575,7 +1573,7 @@ def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
     )
 
 
-def _plot_scan(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
+def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
     """Plot for scans of integrated quantities (LWP, IWV)."""
     elevation = read_nc_fields(nc_file, "elevation_angle")
     angles = np.unique(np.round(elevation[elevation < 89.0]))
@@ -1590,6 +1588,17 @@ def _plot_scan(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: s
             dpi=120,
         )
         fig.subplots_adjust(hspace=0.09)
+        case_date = _read_date(nc_file)
+        site_name = _read_location(nc_file)
+        text = _get_subtitle_text(case_date, site_name)
+        fig.suptitle(
+            text,
+            fontsize=13,
+            y=0.885,
+            x=0.135,
+            horizontalalignment="left",
+            verticalalignment="bottom",
+        )
 
         for ind in range(len(angles)):
             ele_range = (angles[ind] - 1.0, angles[ind] + 1.0)
@@ -1626,7 +1635,6 @@ def _plot_scan(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: s
                 levels=np.linspace(vmin, vmax, 11),
             )
 
-            case_date = _read_date(nc_file)
             gtim = _gap_array(time_median.values, case_date, 60.0 / 60.0)
             if len(gtim) > 0:
                 time_i, data_g = (
@@ -1657,18 +1665,19 @@ def _plot_scan(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: s
                 title_name + " at " + str(int(angles[ind])) + "° elevation",
                 fontsize=14,
             )
-            _set_labels(fig, axi, nc_file)
             _set_ax(axi, 360.0, "Sensor azimmuth angle (DEG)")
             if ind < len(angles) - 1:
                 axi.xaxis.set_tick_params(labelbottom=False)
                 axi.set_xlabel("")
+            else:
+                axi.set_xlabel("Time (UTC)", fontsize=13)
 
             colorbar = _init_colorbar(pl, axi)
             locator = colorbar.ax.yaxis.get_major_locator()
             locator.set_params(nbins=10)
             colorbar.update_ticks()
             colorbar.set_ticks([np.round(i, 1) for i in colorbar.get_ticks()])
-            colorbar.set_label(ATTRIBUTES[name].clabel, fontsize=13)
+            colorbar.set_label("relative deviation (%)", fontsize=13)
 
 
 def _plot_sta(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
@@ -1743,7 +1752,7 @@ def _plot_sta(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
     )
 
     flag_tmp = _calculate_rolling_mean(time, flag, win=1 / 60)
-    data_f = np.zeros((len(flag_tmp), 10), np.float32)
+    data_f = np.zeros((len(flag_tmp), 2), np.float32)
     data_f[flag_tmp > 0, :] = 1.0
     cmap = ListedColormap([_COLORS["lightgray"], _COLORS["gray"]])
     norm = BoundaryNorm([0, 1, 2], cmap.N)
@@ -1760,7 +1769,7 @@ def _plot_sta(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
     if len(gtim) > 0:
         time_i, data_g = (
             np.linspace(time[0], time[-1], len(time)),
-            np.zeros((len(time), 10), np.float32),
+            np.zeros((len(time), 2), np.float32),
         )
         for ig, _ in enumerate(gtim[:, 0]):
             xind = np.where((time_i >= gtim[ig, 0]) & (time_i <= gtim[ig, 1]))

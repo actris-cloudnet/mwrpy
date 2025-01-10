@@ -108,7 +108,7 @@ ATTRIBUTES = {
         source="int",
     ),
     "lwp_scan": PlotMeta(
-        name="LWP relative azimuth scan deviations",
+        name="LWP azimuth scan",
         cbar="PuOr",
         clabel=_PP,
         plot_range=(-200, 200),
@@ -116,7 +116,7 @@ ATTRIBUTES = {
         source="scan",
     ),
     "iwv_scan": PlotMeta(
-        name="IWV relative azimuth scan deviations",
+        name="IWV azimuth scan",
         cbar="BrBG",
         clabel=_PP,
         plot_range=(-20, 20),

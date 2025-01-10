@@ -260,14 +260,24 @@ def plot_product(prod: str, date, site: str):
                 else True
             )
             for key, variables in keymap.items():
-                generate_figure(
-                    filename,
-                    variables,
-                    ele_range=elevation,
-                    save_path=output_dir,
-                    image_name=key,
-                    title=title,
-                )
+                if key in ("lwp_scan", "iwv_scan"):
+                    generate_figure(
+                        filename,
+                        [key.rstrip("_scan")],
+                        ele_range=elevation,
+                        save_path=output_dir,
+                        image_name=key,
+                        title=False,
+                    )
+                else:
+                    generate_figure(
+                        filename,
+                        variables,
+                        ele_range=elevation,
+                        save_path=output_dir,
+                        image_name=key,
+                        title=title,
+                    )
 
 
 def _get_raw_file_path(date_in: datetime.date, site: str) -> str:
