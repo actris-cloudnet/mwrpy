@@ -12,7 +12,7 @@ from matplotlib import rcParams
 from matplotlib.axes import Axes
 from matplotlib.colors import BoundaryNorm, Colormap, ListedColormap
 from matplotlib.patches import Patch
-from matplotlib.pyplot import Figure
+from matplotlib.pyplot import Figure, clabel
 from matplotlib.ticker import (
     FixedLocator,
     FormatStrFormatter,
@@ -1615,11 +1615,12 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
                 scan = scan[scan.groupby(scan["blocks"]).transform("size") == 36]
                 scan_mean = scan.groupby("blocks")["var"].mean()
                 time_median = scan.groupby("blocks")["time"].median()
-                scan["diff"] = (
-                    (scan["var"] - scan_mean[scan["blocks"].values].values)
-                    / scan_mean[scan["blocks"].values].values
-                    * 100.0
-                )
+                scan_std = scan.groupby("blocks")["var"].std()
+                scan["diff"] = scan["var"] - scan_mean[scan["blocks"].values].values
+                scan.loc[
+                    np.abs(scan["diff"]) > 3 * scan_std[scan["blocks"].values].values,
+                    "diff",
+                ] = np.nan
                 az_pl = np.unique(azimuth)
                 var_pl = np.vstack(
                     scan.groupby("blocks")["diff"].apply(list).to_numpy()
@@ -1634,7 +1635,7 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
                     levels=np.linspace(vmin, vmax, 11),
                 )
 
-                gtim = _gap_array(time_median.values, case_date, 60.0 / 60.0)
+                gtim = _gap_array(time_median.values, case_date, 120.0 / 60.0)
                 if len(gtim) > 0:
                     time_i, data_g = (
                         np.linspace(
@@ -1674,8 +1675,10 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
                 locator = colorbar.ax.yaxis.get_major_locator()
                 locator.set_params(nbins=10)
                 colorbar.update_ticks()
-                colorbar.set_ticks([np.round(i, 1) for i in colorbar.get_ticks()])
-                colorbar.set_label("relative deviation (%)", fontsize=13)
+                colorbar.set_ticks([np.round(i, 3) for i in colorbar.get_ticks()])
+                clab = str(ATTRIBUTES[name].clabel)
+                assert clab is not None
+                colorbar.set_label("scan deviation (" + clab + ")", fontsize=13)
 
         axp = axs[axt] if len(angles) > 1 else axs
         axp.xaxis.set_tick_params(labelbottom=True)
