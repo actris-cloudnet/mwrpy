@@ -1093,8 +1093,8 @@ def _plot_tb(
         no_flag = np.where(quality_flag[:, i] == 0)[0]
         if len(np.array(no_flag)) == 0:
             no_flag = np.arange(len(time))
-        tb_m = np.append(tb_m, [np.nanmean(data_in[no_flag, i])])  # TB mean
-        tb_s = np.append(tb_s, [np.nanstd(data_in[no_flag, i])])  # TB std
+        tb_m = np.append(tb_m, [ma.mean(data_in[no_flag, i])])  # TB mean
+        tb_s = np.append(tb_s, [ma.std(data_in[no_flag, i])])  # TB std
         axi.plot(
             time,
             np.ones(len(time)) * tb_m[i],
@@ -1507,8 +1507,6 @@ def _calculate_ticks(x, yl, yl2):
 
 def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
     """Plot for integrated quantities (LWP, IWV)."""
-    # data_in = _elevation_filter(nc_file, data_in, ele_range=(89.0, 91.0))
-    # time = _elevation_filter(nc_file, time, ele_range=(89.0, 91.0))
     flag = _get_ret_flag(nc_file, time, name)
     data0, time0 = data_in[flag == 0], time[flag == 0]
     if len(data0) == 0:
@@ -1589,16 +1587,7 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
         )
         fig.subplots_adjust(hspace=0.09)
         case_date = _read_date(nc_file)
-        site_name = _read_location(nc_file)
-        text = _get_subtitle_text(case_date, site_name)
-        fig.suptitle(
-            text,
-            fontsize=13,
-            y=0.885,
-            x=0.135,
-            horizontalalignment="left",
-            verticalalignment="bottom",
-        )
+        axt, ax1 = 0, -1
 
         for ind in range(len(angles)):
             ele_range = (angles[ind] - 1.0, angles[ind] + 1.0)
@@ -1612,72 +1601,102 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
             flag = _get_ret_flag(nc_file, time_s0, name.rstrip("_scan"), 1)
             data_s0 = ma.masked_where(flag > 0, data_s0)
 
-            scan = pd.DataFrame({"time": time_s0, "azimuth": azimuth, "var": data_s0})
-            scan["blocks"] = (scan["azimuth"] < scan["azimuth"].shift()).cumsum()
-            scan = scan[scan.groupby(scan["blocks"]).transform("size") == 36]
-            scan_mean = scan.groupby("blocks")["var"].mean()
-            time_median = scan.groupby("blocks")["time"].median()
-            scan["diff"] = (
-                (scan["var"] - scan_mean[scan["blocks"].values].values)
-                / scan_mean[scan["blocks"].values].values
-                * 100.0
-            )
-            az_pl = np.unique(azimuth)
-            var_pl = np.vstack(scan.groupby("blocks")["diff"].apply(list).to_numpy())
-
-            vmin, vmax = -np.nanmax(np.abs(var_pl)), np.nanmax(np.abs(var_pl))
             axi = axs[ind] if len(angles) > 1 else axs
-            pl = axi.contourf(
-                time_median,
-                az_pl,
-                np.transpose(var_pl),
-                cmap=ATTRIBUTES[name].cbar,
-                levels=np.linspace(vmin, vmax, 11),
-            )
-
-            gtim = _gap_array(time_median.values, case_date, 60.0 / 60.0)
-            if len(gtim) > 0:
-                time_i, data_g = (
-                    np.linspace(
-                        time_median.values[0],
-                        time_median.values[-1],
-                        len(time_median.values),
-                    ),
-                    np.zeros((len(time_median.values), 2), np.float32),
+            if data_s0.all() is ma.masked:
+                axi.remove()
+            else:
+                if ax1 < 0:
+                    ax1 = ind
+                axt = ind
+                scan = pd.DataFrame(
+                    {"time": time_s0, "azimuth": azimuth, "var": data_s0}
                 )
-                for ig, _ in enumerate(gtim[:, 0]):
-                    xind = np.where((time_i >= gtim[ig, 0]) & (time_i <= gtim[ig, 1]))
-                    data_g[xind, :] = 1.0
-
-                _plot_segment_data(
-                    axi,
-                    ma.MaskedArray(data_g),
-                    "tb_missing",
-                    (time_i, np.linspace(0, 360, 2)),
-                    nc_file,
+                scan["blocks"] = (scan["azimuth"] < scan["azimuth"].shift()).cumsum()
+                scan = scan[scan.groupby(scan["blocks"]).transform("size") == 36]
+                scan_mean = scan.groupby("blocks")["var"].mean()
+                time_median = scan.groupby("blocks")["time"].median()
+                scan["diff"] = (
+                    (scan["var"] - scan_mean[scan["blocks"].values].values)
+                    / scan_mean[scan["blocks"].values].values
+                    * 100.0
+                )
+                az_pl = np.unique(azimuth)
+                var_pl = np.vstack(
+                    scan.groupby("blocks")["diff"].apply(list).to_numpy()
                 )
 
-            axi.set_yticks(np.linspace(0, 360, 9))
-            axi.set_facecolor(_COLORS["gray"])
-            title_name = ATTRIBUTES[name].name
-            assert title_name is not None
-            axi.set_title(
-                title_name + " at " + str(int(angles[ind])) + "° elevation",
-                fontsize=14,
-            )
-            _set_ax(axi, 360.0, "Sensor azimmuth angle (DEG)")
-            if ind < len(angles) - 1:
+                vmin, vmax = -np.nanmax(np.abs(var_pl)), np.nanmax(np.abs(var_pl))
+                pl = axi.contourf(
+                    time_median,
+                    az_pl,
+                    np.transpose(var_pl),
+                    cmap=ATTRIBUTES[name].cbar,
+                    levels=np.linspace(vmin, vmax, 11),
+                )
+
+                gtim = _gap_array(time_median.values, case_date, 60.0 / 60.0)
+                if len(gtim) > 0:
+                    time_i, data_g = (
+                        np.linspace(
+                            time_median.values[0],
+                            time_median.values[-1],
+                            len(time_median.values),
+                        ),
+                        np.zeros((len(time_median.values), 2), np.float32),
+                    )
+                    for ig, _ in enumerate(gtim[:, 0]):
+                        xind = np.where(
+                            (time_i >= gtim[ig, 0]) & (time_i <= gtim[ig, 1])
+                        )
+                        data_g[xind, :] = 1.0
+
+                    _plot_segment_data(
+                        axi,
+                        ma.MaskedArray(data_g),
+                        "tb_missing",
+                        (time_i, np.linspace(0, 360, 2)),
+                        nc_file,
+                    )
+
+                axi.set_yticks(np.linspace(0, 360, 9))
+                axi.set_facecolor(_COLORS["gray"])
+                title_name = ATTRIBUTES[name].name
+                assert title_name is not None
+                axi.set_title(
+                    title_name + " at " + str(int(angles[ind])) + "° elevation",
+                    fontsize=14,
+                )
+                _set_ax(axi, 360.0, "Sensor azimmuth angle (DEG)")
                 axi.xaxis.set_tick_params(labelbottom=False)
                 axi.set_xlabel("")
-            else:
-                axi.set_xlabel("Time (UTC)", fontsize=13)
 
-            colorbar = _init_colorbar(pl, axi)
-            locator = colorbar.ax.yaxis.get_major_locator()
-            locator.set_params(nbins=10)
-            colorbar.update_ticks()
-            colorbar.set_ticks([np.round(i, 1) for i in colorbar.get_ticks()])
-            colorbar.set_label("relative deviation (%)", fontsize=13)
+                colorbar = _init_colorbar(pl, axi)
+                locator = colorbar.ax.yaxis.get_major_locator()
+                locator.set_params(nbins=10)
+                colorbar.update_ticks()
+                colorbar.set_ticks([np.round(i, 1) for i in colorbar.get_ticks()])
+                colorbar.set_label("relative deviation (%)", fontsize=13)
+
+        axp = axs[axt] if len(angles) > 1 else axs
+        axp.xaxis.set_tick_params(labelbottom=True)
+        axp.set_xlabel("Time (UTC)", fontsize=13)
+        if ax1 >= 0:
+            axp = axs[ax1] if len(angles) > 1 else axs
+            site_name = _read_location(nc_file)
+            text = _get_subtitle_text(case_date, site_name)
+            fig.suptitle(
+                text,
+                fontsize=13,
+                y=np.array(axp.get_position())[1][1]
+                + (
+                    np.array(axp.get_position())[1][1]
+                    - np.array(axp.get_position())[0][1]
+                )
+                * 0.0065,
+                x=0.135,
+                horizontalalignment="left",
+                verticalalignment="bottom",
+            )
 
 
 def _plot_sta(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):

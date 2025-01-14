@@ -115,7 +115,9 @@ def _gap_array(time: ndarray, case_date, tgap: float = 5.0 / 60.0) -> ndarray:
 
 def _calculate_rolling_mean(time: ndarray, data: ndarray, win: float = 0.5) -> ndarray:
     """Returns rolling mean."""
-    width = int(ma.round(win / ma.median(ma.diff(ma.masked_invalid(time)))))
+    width = ma.max(
+        (2, int(ma.round(win / ma.median(ma.diff(ma.masked_invalid(time))))))
+    )
     data = ma.filled(data, np.nan)
     if (width % 2) != 0:
         width = width + 1
