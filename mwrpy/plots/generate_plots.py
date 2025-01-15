@@ -93,7 +93,7 @@ def generate_figure(
     image_name: str | None = None,
     sub_title: bool = True,
     title: bool = True,
-) -> tuple[Dimensions, str] | None:
+) -> str | None:
     """Generates a mwrpy figure.
 
     Args:
@@ -151,11 +151,14 @@ def generate_figure(
             if plot_type == "mesh":
                 _plot_colormesh_data(ax, field, name, ax_value, nc_file)
 
-    case_date = _set_labels(fig, axes[-1], nc_file, sub_title)
-    file_name = handle_saving(
-        nc_file, image_name, save_path, show, case_date, valid_names
-    )
-    return Dimensions(fig, axes), file_name
+    if axes[-1].get_title() == "empty":
+        return None
+    else:
+        case_date = _set_labels(fig, axes[-1], nc_file, sub_title)
+        file_name = handle_saving(
+            nc_file, image_name, save_path, show, case_date, valid_names
+        )
+        return file_name
 
 
 def _mark_gaps(
@@ -632,7 +635,7 @@ def _plot_instrument_data(
     if product == "int":
         _plot_int(ax, data, name, time, nc_file)
     elif product == "scan":
-        _plot_scan(data, name, time, nc_file)
+        _plot_scan(data, name, time, nc_file, ax)
     elif product == "sta":
         _plot_sta(ax, data, name, time, nc_file)
     elif product in ("met", "met2"):
@@ -1571,11 +1574,13 @@ def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
     )
 
 
-def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
+def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, ax):
     """Plot for scans of integrated quantities (LWP, IWV)."""
     elevation = read_nc_fields(nc_file, "elevation_angle")
     angles = np.unique(np.round(elevation[elevation < 89.0]))
-    if len(angles) > 0:
+    if len(angles) == 0:
+        ax.set_title("empty")
+    else:
         fig, axs = plt.subplots(
             len(angles),
             1,

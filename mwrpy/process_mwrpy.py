@@ -114,7 +114,8 @@ def main(args):
                     plot_product(product, date, args.site)
                 except Exception as e:
                     logging.error(f"Error in plotting product {product}: {e}.")
-                plt.close()
+                finally:
+                    plt.close()
             elapsed_time = time.process_time() - start
             logging.info(f"Processing took {elapsed_time:.1f} seconds")
 
