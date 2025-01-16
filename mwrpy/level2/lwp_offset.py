@@ -61,6 +61,7 @@ def correct_lwp_offset(
         | (lwp > 0.06)
         | (lwp_max["Lwp"] > (tb_max["Tb"] * 0.0025))
     ] = np.nan
+    lwp[np.abs(lwp - np.nanmedian(lwp)) > 0.005] = np.nan
 
     seqs_all = [(key, len(list(val))) for key, val in groupby(np.isfinite(lwp))]
     seqs = np.array(
