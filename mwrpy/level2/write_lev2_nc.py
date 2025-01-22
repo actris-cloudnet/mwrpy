@@ -30,6 +30,7 @@ def lev2_to_nc(
     temp_file: str | None = None,
     hum_file: str | None = None,
     coeff_files: list | None = None,
+    lwp_offset: float | None = None,
 ):
     """This function reads Level 1 files,
     applies retrieval coefficients for Level 2 products
@@ -43,6 +44,7 @@ def lev2_to_nc(
         temp_file: Name of temperature product file.
         hum_file: Name of humidity product file.
         coeff_files: List of coefficient files.
+        lwp_offset: Offset for LWP correction.
 
     """
     if data_type not in (
@@ -72,6 +74,7 @@ def lev2_to_nc(
             coeff_files=coeff_files,
             temp_file=temp_file,
             hum_file=hum_file,
+            lwp_offset=lwp_offset,
         )
         _combine_lev1(lev1, rpg_dat, index, data_type, scan_time)
         _del_att(global_attributes)
@@ -88,6 +91,7 @@ def get_products(
     coeff_files: list | None,
     temp_file: str | None = None,
     hum_file: str | None = None,
+    lwp_offset: float | None = None,
 ) -> tuple[dict, dict, np.ndarray, np.ndarray]:
     """Derive specified Level 2 products."""
     lev1 = {key: value[:] for key, value in nclev1.variables.items()}
@@ -222,6 +226,7 @@ def get_products(
                         ret_product[index_ret],
                         index[index_ret],
                         rpg_dat["lwp_quality_flag"][index_ret],
+                        lwp_offset,
                     )
             else:
                 rpg_dat[product] = ret_product

@@ -12,6 +12,7 @@ def generate_lev2_single(
     mwr_l1c_file: str,
     output_file: str,
     coeff_files: list[str] | None = None,
+    lwp_offset: float | None = None,
 ):
     with (
         NamedTemporaryFile() as lwp_file,
@@ -47,6 +48,7 @@ def generate_lev2_single(
                 if prod in ("2P04", "2P07", "2P08")
                 else None,
                 coeff_files=coeff_files,
+                lwp_offset=lwp_offset,
             )
 
         with (

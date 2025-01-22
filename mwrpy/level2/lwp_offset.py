@@ -13,6 +13,7 @@ def correct_lwp_offset(
     lwp_org: np.ndarray,
     index: np.ndarray,
     qf: np.ndarray,
+    offset_yd: float | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """This function corrects Lwp offset using the
     2min Lwp standard deviation and the water vapor
@@ -23,6 +24,7 @@ def correct_lwp_offset(
         lwp_org: Lwp array.
         index: Index to use.
         qf: Quality flag
+        offset_yd: LWP offset from previous day.
     """
     lwcl_i = lev1["liquid_cloud_flag"][:][index]
     ind = utils.time_to_datetime_index(lev1["time"][:][index])
@@ -87,6 +89,10 @@ def correct_lwp_offset(
     lwp_offset = lwp_df.rolling(
         pd.tseries.frequencies.to_offset("60min"), center=True, min_periods=10
     ).mean()
+    if (offset_yd is not None) and (
+        np.abs(offset_yd - np.ma.median(lwp_offset["Lwp"])) < 0.005
+    ):
+        lwp_offset["Lwp"][0] = offset_yd
     lwp_offset = lwp_offset.interpolate(method="linear")
     lwp_offset = lwp_offset.bfill()
 
