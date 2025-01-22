@@ -522,11 +522,17 @@ def _get_filename(prod: str, date_in: datetime.date, site: str) -> str:
         level = prod[0]
     else:
         level = "2"
-    data_out_dir = os.path.join(
-        params["data_out"], f"level{level}", date_in.strftime("%Y/%m/%d")
-    )
-    wigos_id = global_attributes["wigos_station_id"]
-    filename = f"MWR_{prod}_{wigos_id}_{date_in.strftime('%Y%m%d')}.nc"
+    if prod == "lwp_offset":
+        data_out_dir = os.path.join(
+            params["data_out"], f"level{level}", date_in.strftime("%Y")
+        )
+        filename = f"MWR_{prod}_{date_in.strftime('%Y')}.csv"
+    else:
+        data_out_dir = os.path.join(
+            params["data_out"], f"level{level}", date_in.strftime("%Y/%m/%d")
+        )
+        wigos_id = global_attributes["wigos_station_id"]
+        filename = f"MWR_{prod}_{wigos_id}_{date_in.strftime('%Y%m%d')}.nc"
     return os.path.join(data_out_dir, filename)
 
 

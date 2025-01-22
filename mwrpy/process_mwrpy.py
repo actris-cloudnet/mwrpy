@@ -6,6 +6,8 @@ import os
 import time
 
 import matplotlib.pyplot as plt
+import netCDF4 as nc
+import pandas as pd
 
 from mwrpy.level1.write_lev1_nc import lev1_to_nc
 from mwrpy.level2.lev2_collocated import generate_lev2_multi, generate_lev2_single
@@ -126,6 +128,16 @@ def process_product(prod: str, date: datetime.date, site: str):
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
 
+    lwp_offset = None
+    yd = date - datetime.timedelta(days=1)
+    offset_file = _get_filename("lwp_offset", yd, site)
+    if (prod in ("2I01", "single")) and (os.path.isfile(offset_file)):
+        csv_off = pd.read_csv(offset_file, usecols=["date", "offset"])
+        if yd.strftime("%m-%d") in csv_off["date"].values:
+            lwp_offset = csv_off.loc[
+                csv_off["date"] == yd.strftime("%m-%d"), "offset"
+            ].values[0]
+
     if prod[0] == "1":
         lev1_to_nc(
             prod,
@@ -150,11 +162,48 @@ def process_product(prod: str, date: datetime.date, site: str):
             site=site,
             temp_file=temp_file,
             hum_file=hum_file,
+            lwp_offset=lwp_offset,
         )
     elif prod == "single":
-        generate_lev2_single(site, _get_filename("1C01", date, site), output_file)
+        generate_lev2_single(
+            site, _get_filename("1C01", date, site), output_file, lwp_offset
+        )
     elif prod == "multi":
         generate_lev2_multi(site, _get_filename("1C01", date, site), output_file)
+
+    if (
+        (prod in ("2I01", "single"))
+        and (os.path.isfile(output_file))
+        and (os.path.isfile(offset_file))
+    ):
+        output = nc.Dataset(output_file)
+        if lwp_offset != output["lwp_offset"][-1]:
+            csv_off = pd.concat(
+                [
+                    csv_off,
+                    pd.DataFrame(
+                        {
+                            "date": date.strftime("%m-%d"),
+                            "offset": output["lwp_offset"][-1],
+                        },
+                        index=[0],
+                    ),
+                ]
+            )
+            csv_off = csv_off.sort_values(by=["date"])
+            csv_off = csv_off.drop_duplicates(subset=["date"])
+            csv_off.to_csv(offset_file, index=False)
+    elif (
+        (prod in ("2I01", "single"))
+        and (os.path.isfile(output_file))
+        and (not os.path.isfile(offset_file))
+    ):
+        output = nc.Dataset(output_file)
+        csv_off = pd.DataFrame(
+            {"date": date.strftime("%m-%d"), "offset": output["lwp_offset"][-1]},
+            index=[0],
+        )
+        csv_off.to_csv(offset_file, index=False)
 
 
 def plot_product(prod: str, date, site: str):
