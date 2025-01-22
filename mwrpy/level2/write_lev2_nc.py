@@ -29,8 +29,8 @@ def lev2_to_nc(
     site: str | None = None,
     temp_file: str | None = None,
     hum_file: str | None = None,
-    coeff_files: list | None = None,
     lwp_offset: float | None = None,
+    coeff_files: list | None = None,
 ):
     """This function reads Level 1 files,
     applies retrieval coefficients for Level 2 products
@@ -43,8 +43,8 @@ def lev2_to_nc(
         site: Name of site.
         temp_file: Name of temperature product file.
         hum_file: Name of humidity product file.
-        coeff_files: List of coefficient files.
         lwp_offset: Offset for LWP correction.
+        coeff_files: List of coefficient files.
 
     """
     if data_type not in (

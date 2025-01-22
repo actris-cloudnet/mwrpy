@@ -177,14 +177,16 @@ def process_product(prod: str, date: datetime.date, site: str):
         and (os.path.isfile(offset_file))
     ):
         output = nc.Dataset(output_file)
-        if lwp_offset != output["lwp_offset"][-1]:
+        if (lwp_offset != round(float(output["lwp_offset"][-1].data), 5)) and (
+            output["lwp_offset"][-1] != 0.0
+        ):
             csv_off = pd.concat(
                 [
                     csv_off,
                     pd.DataFrame(
                         {
                             "date": date.strftime("%m-%d"),
-                            "offset": output["lwp_offset"][-1],
+                            "offset": round(float(output["lwp_offset"][-1].data), 5),
                         },
                         index=[0],
                     ),
@@ -200,7 +202,10 @@ def process_product(prod: str, date: datetime.date, site: str):
     ):
         output = nc.Dataset(output_file)
         csv_off = pd.DataFrame(
-            {"date": date.strftime("%m-%d"), "offset": output["lwp_offset"][-1]},
+            {
+                "date": date.strftime("%m-%d"),
+                "offset": round(float(output["lwp_offset"][-1].data), 5),
+            },
             index=[0],
         )
         csv_off.to_csv(offset_file, index=False)

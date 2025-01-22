@@ -11,8 +11,8 @@ def generate_lev2_single(
     site: str | None,
     mwr_l1c_file: str,
     output_file: str,
-    coeff_files: list[str] | None = None,
     lwp_offset: float | None = None,
+    coeff_files: list[str] | None = None,
 ):
     with (
         NamedTemporaryFile() as lwp_file,
@@ -47,8 +47,8 @@ def generate_lev2_single(
                 hum_file=abs_hum_file.name
                 if prod in ("2P04", "2P07", "2P08")
                 else None,
-                coeff_files=coeff_files,
                 lwp_offset=lwp_offset,
+                coeff_files=coeff_files,
             )
 
         with (
@@ -158,6 +158,7 @@ def generate_lev2_single(
                         hum_file=abs_hum_file.name
                         if prod in ("2P04", "2P07", "2P08")
                         else None,
+                        lwp_offset=None,
                         coeff_files=coeff_files,
                     )
                     with netCDF4.Dataset(stability_file.name, "r") as nc_sta:
@@ -214,6 +215,7 @@ def generate_lev2_multi(
                 if prod not in ("2P02", "2P03")
                 else None,
                 hum_file=abs_hum_file.name if prod not in ("2P02", "2P03") else None,
+                lwp_offset=None,
                 coeff_files=coeff_files,
             )
 
