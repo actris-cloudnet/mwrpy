@@ -89,10 +89,14 @@ def correct_lwp_offset(
     lwp_offset = lwp_df.rolling(
         pd.tseries.frequencies.to_offset("60min"), center=True, min_periods=10
     ).mean()
-    if (offset_yd is not None) and (
-        np.abs(offset_yd - np.ma.median(lwp_offset["Lwp"])) < 0.005
+    if (
+        (offset_yd is not None)
+        and not (np.isnan(lwp).all())
+        and (np.abs(offset_yd - np.ma.median(lwp)) < 0.005)
     ):
-        lwp_offset["Lwp"][0] = offset_yd
+        lwp_offset.loc[lwp_offset.index[0], "Lwp"] = offset_yd
+    elif offset_yd is not None:
+        lwp_offset.loc[lwp_offset.index[0], "Lwp"] = offset_yd
     lwp_offset = lwp_offset.interpolate(method="linear")
     lwp_offset = lwp_offset.bfill()
 
