@@ -12,7 +12,7 @@ from matplotlib import rcParams
 from matplotlib.axes import Axes
 from matplotlib.colors import BoundaryNorm, Colormap, ListedColormap
 from matplotlib.patches import Patch
-from matplotlib.pyplot import Figure, clabel
+from matplotlib.pyplot import Figure
 from matplotlib.ticker import (
     FixedLocator,
     FormatStrFormatter,
@@ -22,7 +22,6 @@ from matplotlib.ticker import (
 from matplotlib.transforms import Affine2D, Bbox, ScaledTranslation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from numpy import ma, ndarray
-from numpy.f2py.auxfuncs import isstring
 
 from mwrpy.atmos import abs_hum, dir_avg, t_dew_rh
 from mwrpy.plots.plot_meta import _COLORS, ATTRIBUTES
@@ -130,7 +129,10 @@ def generate_figure(
 
     for ax, field, name in zip(axes, valid_fields, valid_names):
         ax.set_facecolor(_COLORS["lightgray"])
-        field = _elevation_filter(nc_file, field, ele_range)
+        if "angle" in name:
+            time = _read_time_vector(nc_file)
+        else:
+            field = _elevation_filter(nc_file, field, ele_range)
         is_height = _is_height_dimension(nc_file, name)
         if image_name and "_scan" in image_name:
             name = image_name
@@ -1578,7 +1580,7 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
     """Plot for scans of integrated quantities (LWP, IWV)."""
     elevation = read_nc_fields(nc_file, "elevation_angle")
     angles = np.unique(np.round(elevation[elevation < 89.0]))
-    if len(angles) == 0:
+    if (len(angles) == 0) | (data_in[np.isin(elevation, angles)].mask.all()):
         ax.set_title("empty")
     else:
         fig, axs = plt.subplots(
@@ -1616,8 +1618,15 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
                 scan = pd.DataFrame(
                     {"time": time_s0, "azimuth": azimuth, "var": data_s0}
                 )
-                scan["blocks"] = (scan["azimuth"] < scan["azimuth"].shift()).cumsum()
-                scan = scan[scan.groupby(scan["blocks"]).transform("size") == 36]
+                az_pl = np.unique(azimuth)
+                if np.diff(az_pl).all() > 0:
+                    scan["blocks"] = (scan["azimuth"].diff() <= 0.0).cumsum()
+                else:
+                    scan["blocks"] = (scan["azimuth"].diff() >= 0.0).cumsum()
+                scan = scan[
+                    scan.groupby(scan["blocks"]).transform("size") == len(az_pl)
+                ]
+
                 scan_mean = scan.groupby("blocks")["var"].mean()
                 time_median = scan.groupby("blocks")["time"].median()
                 scan_std = scan.groupby("blocks")["var"].std()
@@ -1626,18 +1635,20 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
                     np.abs(scan["diff"]) > 3 * scan_std[scan["blocks"].values].values,
                     "diff",
                 ] = np.nan
-                az_pl = np.unique(azimuth)
                 var_pl = np.vstack(
                     scan.groupby("blocks")["diff"].apply(list).to_numpy()
                 )
 
                 vmin, vmax = -np.nanmax(np.abs(var_pl)), np.nanmax(np.abs(var_pl))
-                pl = axi.contourf(
+                cmap = plt.colormaps[str(ATTRIBUTES[name].cbar)]
+                levels = np.linspace(vmin, vmax, 11)
+                norm = BoundaryNorm(levels, ncolors=cmap.N, clip=True)
+                pl = axi.pcolormesh(
                     time_median,
                     az_pl,
                     np.transpose(var_pl),
-                    cmap=ATTRIBUTES[name].cbar,
-                    levels=np.linspace(vmin, vmax, 11),
+                    cmap=cmap,
+                    norm=norm,
                 )
 
                 gtim = _gap_array(time_median.values, case_date, 120.0 / 60.0)

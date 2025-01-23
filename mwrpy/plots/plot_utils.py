@@ -88,7 +88,7 @@ def _nan_time_gaps(time: ndarray, tgap: float = 5.0 / 60.0) -> ndarray:
     time_diff = ma.diff(ma.masked_invalid(time))
     gaps = np.where(time_diff > tgap)[0] + 1
     if len(gaps) > 0:
-        time[gaps[0 : np.min([len(time), gaps[-1]])]] = np.nan
+        time[gaps[0 : ma.min([len(time), gaps[-1]])]] = ma.masked
     return time
 
 
