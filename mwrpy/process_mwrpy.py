@@ -129,14 +129,19 @@ def process_product(prod: str, date: datetime.date, site: str):
         os.makedirs(output_dir)
 
     lwp_offset = None
-    yd = date - datetime.timedelta(days=1)
-    offset_file = _get_filename("lwp_offset", yd, site)
-    if (prod in ("2I01", "single")) and (os.path.isfile(offset_file)):
-        csv_off = pd.read_csv(offset_file, usecols=["date", "offset"])
-        if yd.strftime("%m-%d") in csv_off["date"].values:
-            lwp_offset = csv_off.loc[
-                csv_off["date"] == yd.strftime("%m-%d"), "offset"
-            ].values[0]
+    for iday in range(2):
+        pday = date - datetime.timedelta(days=iday + 1)
+        offset_file = _get_filename("lwp_offset", pday, site)
+        if (
+            (prod in ("2I01", "single"))
+            and (os.path.isfile(offset_file))
+            and (lwp_offset is None)
+        ):
+            csv_off = pd.read_csv(offset_file, usecols=["date", "offset"])
+            if pday.strftime("%m-%d") in csv_off["date"].values:
+                lwp_offset = csv_off.loc[
+                    csv_off["date"] == pday.strftime("%m-%d"), "offset"
+                ].values[0]
 
     if prod[0] == "1":
         lev1_to_nc(
@@ -171,6 +176,7 @@ def process_product(prod: str, date: datetime.date, site: str):
     elif prod == "multi":
         generate_lev2_multi(site, _get_filename("1C01", date, site), output_file)
 
+    offset_file = _get_filename("lwp_offset", date, site)
     if (
         (prod in ("2I01", "single"))
         and (os.path.isfile(output_file))
@@ -180,6 +186,7 @@ def process_product(prod: str, date: datetime.date, site: str):
         if (lwp_offset != round(float(output["lwp_offset"][-1].data), 5)) and (
             output["lwp_offset"][-1] != 0.0
         ):
+            csv_off = pd.read_csv(offset_file, usecols=["date", "offset"])
             csv_off = pd.concat(
                 [
                     csv_off,
@@ -201,14 +208,15 @@ def process_product(prod: str, date: datetime.date, site: str):
         and (not os.path.isfile(offset_file))
     ):
         output = nc.Dataset(output_file)
-        csv_off = pd.DataFrame(
-            {
-                "date": date.strftime("%m-%d"),
-                "offset": round(float(output["lwp_offset"][-1].data), 5),
-            },
-            index=[0],
-        )
-        csv_off.to_csv(offset_file, index=False)
+        if output["lwp_offset"][-1] != 0.0:
+            csv_off = pd.DataFrame(
+                {
+                    "date": date.strftime("%m-%d"),
+                    "offset": round(float(output["lwp_offset"][-1].data), 5),
+                },
+                index=[0],
+            )
+            csv_off.to_csv(offset_file, index=False)
 
 
 def plot_product(prod: str, date, site: str):

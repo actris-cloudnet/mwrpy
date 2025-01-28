@@ -526,7 +526,7 @@ def _get_filename(prod: str, date_in: datetime.date, site: str) -> str:
         data_out_dir = os.path.join(
             params["data_out"], f"level{level}", date_in.strftime("%Y")
         )
-        filename = f"MWR_{prod}_{date_in.strftime('%Y')}.csv"
+        filename = f"{site}_{prod}_{date_in.strftime('%Y')}.csv"
     else:
         data_out_dir = os.path.join(
             params["data_out"], f"level{level}", date_in.strftime("%Y/%m/%d")
