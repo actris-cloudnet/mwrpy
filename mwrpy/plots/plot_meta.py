@@ -109,7 +109,7 @@ ATTRIBUTES = {
     ),
     "lwp_scan": PlotMeta(
         name="LWP azimuth scan",
-        cbar="PuOr",
+        cbar=["PuBu", "PuOr"],
         clabel=_KGM2,
         plot_range=(-200, 200),
         plot_type="mesh",
@@ -117,7 +117,7 @@ ATTRIBUTES = {
     ),
     "iwv_scan": PlotMeta(
         name="IWV azimuth scan",
-        cbar="BrBG",
+        cbar=["YlGnBu", "BrBG"],
         clabel=_KGM2,
         plot_range=(-20, 20),
         plot_type="mesh",

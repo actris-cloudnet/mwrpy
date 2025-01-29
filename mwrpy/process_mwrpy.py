@@ -181,7 +181,7 @@ def plot_product(prod: str, date, site: str):
                     89.0,
                     91.0,
                 )
-                if key in ("tb", "tb_spectrum")
+                if key in ("tb", "tb_spectrum", "irt")
                 else (-1.0, 91.0)
             )
             generate_figure(

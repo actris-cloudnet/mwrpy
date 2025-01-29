@@ -125,23 +125,34 @@ def generate_figure(
 
     fig, axes = _initialize_figure(len(valid_fields), dpi)
     time = _read_time_vector(nc_file)
-    time = _elevation_filter(nc_file, time, ele_range)
 
     for ax, field, name in zip(axes, valid_fields, valid_names):
         ax.set_facecolor(_COLORS["lightgray"])
-        if "angle" in name:
-            time = _read_time_vector(nc_file)
-        else:
-            field = _elevation_filter(nc_file, field, ele_range)
         is_height = _is_height_dimension(nc_file, name)
         if image_name and "_scan" in image_name:
             name = image_name
+        pl_source = ATTRIBUTES[name].source
+        if "angle" not in name and pl_source not in (
+            "met",
+            "met2",
+            "irt",
+            "qf",
+            "mqf",
+            "hkd",
+            "scan",
+        ):
+            if ax == axes[0]:
+                time = _elevation_azimuth_filter(nc_file, time, ele_range)
+            field = _elevation_azimuth_filter(nc_file, field, ele_range)
+        elif pl_source in ("met", "met2", "irt", "qf", "mqf", "hkd"):
+            if ax == axes[0]:
+                time = _elevation_filter(nc_file, time, ele_range)
+            field = _elevation_filter(nc_file, field, ele_range)
         if title:
             _set_title(ax, name, nc_file, "")
         if not is_height:
-            source = ATTRIBUTES[name].source
             _plot_instrument_data(
-                ax, field, name, source, time, fig, nc_file, ele_range, pointing
+                ax, field, name, pl_source, time, fig, nc_file, ele_range, pointing
             )
         else:
             ax_value = _read_ax_values(nc_file)
@@ -295,6 +306,30 @@ def _elevation_filter(full_path: str, data_field: ndarray, ele_range: tuple) -> 
     return data_field
 
 
+def _elevation_azimuth_filter(
+    full_path: str, data_field: ndarray, ele_range: tuple
+) -> ndarray:
+    """Filters data for specified range of elevation angles."""
+    with netCDF4.Dataset(full_path) as nc:
+        if "elevation_angle" in nc.variables and "azimuth_angle" in nc.variables:
+            elevation = read_nc_fields(full_path, "elevation_angle")
+            azimuth = read_nc_fields(full_path, "azimuth_angle")
+            if data_field.ndim > 1:
+                data_field = data_field[
+                    (elevation >= ele_range[0])
+                    & (elevation <= ele_range[1])
+                    & (np.abs(azimuth - ma.median(azimuth)) < 0.5),
+                    :,
+                ]
+            else:
+                data_field = data_field[
+                    (elevation >= ele_range[0])
+                    & (elevation <= ele_range[1])
+                    & (np.abs(azimuth - ma.median(azimuth)) < 0.5)
+                ]
+    return data_field
+
+
 def _pointing_filter(
     full_path: str, data_field: ndarray, ele_range: tuple, status: int
 ) -> ndarray:
@@ -302,7 +337,7 @@ def _pointing_filter(
     with netCDF4.Dataset(full_path) as nc:
         if "pointing_flag" in nc.variables:
             pointing = read_nc_fields(full_path, "pointing_flag")
-            pointing = _elevation_filter(full_path, pointing, ele_range)
+            pointing = _elevation_azimuth_filter(full_path, pointing, ele_range)
             if data_field.ndim > 1:
                 data_field = data_field[pointing == status, :]
             else:
@@ -373,10 +408,10 @@ def _get_standard_time_ticks(resolution: int = 4) -> list:
     ]
 
 
-def _init_colorbar(plot, axis):
+def _init_colorbar(plot, axis, size: str = "1%", pad: float = 0.25):
     """Returns colorbar."""
     divider = make_axes_locatable(axis)
-    cax = divider.append_axes("right", size="1%", pad=0.25)
+    cax = divider.append_axes("right", size=size, pad=pad)
     return plt.colorbar(plot, fraction=1.0, ax=axis, cax=cax)
 
 
@@ -790,7 +825,7 @@ def _plot_sen(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
         if len(val) > 0:
             time1 = _nan_time_gaps(time1, np.max(val[cnt > 10]) * 2)
         else:
-            time1 = _nan_time_gaps(time1, np.median(np.diff(time1)) * 2)
+            time1 = _nan_time_gaps(time1, ma.median(np.diff(time1)) * 2)
         ax.plot(
             time1,
             data_in[(pointing_flag == 1) & (data_in > 0.0)],
@@ -997,13 +1032,13 @@ def _plot_tb(
     quality_flag = read_nc_fields(nc_file, "quality_flag")
     if name == "tb_spectrum":
         tb = read_nc_fields(nc_file, "tb")
-        tb = _elevation_filter(nc_file, tb, ele_range)
+        tb = _elevation_azimuth_filter(nc_file, tb, ele_range)
         quality_flag[~isbit(quality_flag, 3)] = 0
         data_in = tb - data_in
 
     data_in = _pointing_filter(nc_file, data_in, ele_range, pointing)
     time = _pointing_filter(nc_file, time, ele_range, pointing)
-    quality_flag = _elevation_filter(nc_file, quality_flag, ele_range)
+    quality_flag = _elevation_azimuth_filter(nc_file, quality_flag, ele_range)
     quality_flag = _pointing_filter(nc_file, quality_flag, ele_range, pointing)
 
     fig.clear()
@@ -1267,7 +1302,7 @@ def _plot_tb(
         axa[0].set_ylabel("Mean absolute difference [K]", fontsize=12)
 
         rain_flag = read_nc_fields(nc_file, "quality_flag")
-        rain_flag = _elevation_filter(nc_file, rain_flag, ele_range)
+        rain_flag = _elevation_azimuth_filter(nc_file, rain_flag, ele_range)
         rain_flag = _pointing_filter(nc_file, rain_flag, ele_range, pointing)
 
         for irec, rec in enumerate(params["receiver_nb"]):
@@ -1393,7 +1428,7 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
             markersize=3,
             label="Dewpoint",
         )
-        vmin, vmax = ma.min([data, t_d]) - 1.0, ma.max([data, t_d]) + 1.0
+        vmin, vmax = np.nanmin([data, t_d]) - 1.0, np.nanmax([data, t_d]) + 1.0
         ax.legend(loc="upper right", markerscale=2)
         _set_ax(ax, vmax, ylabel, min_y=vmin)
         ax.grid(True)
@@ -1512,7 +1547,7 @@ def _calculate_ticks(x, yl, yl2):
 
 def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
     """Plot for integrated quantities (LWP, IWV)."""
-    flag = _get_ret_flag(nc_file, time, name)
+    flag = _get_ret_flag(nc_file, time, name.rstrip("_scan"))
     data0, time0 = data_in[flag == 0], time[flag == 0]
     if len(data0) == 0:
         data0, time0 = data_in, time
@@ -1580,13 +1615,13 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
     """Plot for scans of integrated quantities (LWP, IWV)."""
     elevation = read_nc_fields(nc_file, "elevation_angle")
     angles = np.unique(np.round(elevation[elevation < 89.0]))
-    if (len(angles) == 0) | (data_in[np.isin(elevation, angles)].mask.all()):
+    if (len(angles) == 0) | (data_in[np.isin(np.round(elevation), angles)].mask.all()):
         ax.set_title("empty")
     else:
         fig, axs = plt.subplots(
             len(angles),
-            1,
-            figsize=(16, 4 + (len(angles) - 1) * 4.8),
+            2,
+            figsize=(16, 4 + (len(angles) - 1) * 10.8),
             facecolor="w",
             edgecolor="k",
             sharex="col",
@@ -1594,7 +1629,7 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
         )
         fig.subplots_adjust(hspace=0.09)
         case_date = _read_date(nc_file)
-        axt, ax1 = 0, -1
+        axt, ax1 = 0, 0
 
         for ind in range(len(angles)):
             ele_range = (angles[ind] - 1.0, angles[ind] + 1.0)
@@ -1608,13 +1643,13 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
             flag = _get_ret_flag(nc_file, time_s0, name.rstrip("_scan"), 1)
             data_s0 = ma.masked_where(flag > 0, data_s0)
 
-            axi = axs[ind] if len(angles) > 1 else axs
+            axi = axs[ind, :] if len(angles) > 1 else axs
             if data_s0.all() is ma.masked:
-                axi.remove()
+                [axi[i].remove() for i in range(2)]
             else:
-                if ax1 < 0:
-                    ax1 = ind
                 axt = ind
+                if ax1 == 0:
+                    ax1 = ind
                 scan = pd.DataFrame(
                     {"time": time_s0, "azimuth": azimuth, "var": data_s0}
                 )
@@ -1626,96 +1661,124 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
                 scan = scan[
                     scan.groupby(scan["blocks"]).transform("size") == len(az_pl)
                 ]
-
-                scan_mean = scan.groupby("blocks")["var"].mean()
                 time_median = scan.groupby("blocks")["time"].median()
-                scan_std = scan.groupby("blocks")["var"].std()
+                scan_mean = scan.groupby("blocks")["var"].mean()
                 scan["diff"] = scan["var"] - scan_mean[scan["blocks"].values].values
+                scan_std = scan.groupby("blocks")["var"].std()
+
+                var_l = ["var", "diff"]
                 scan.loc[
-                    np.abs(scan["diff"]) > 3 * scan_std[scan["blocks"].values].values,
-                    "diff",
+                    np.abs(scan["diff"]) > 2 * scan_std[scan["blocks"].values].values,
+                    var_l,
                 ] = np.nan
-                var_pl = np.vstack(
-                    scan.groupby("blocks")["diff"].apply(list).to_numpy()
-                )
-
-                vmin, vmax = -np.nanmax(np.abs(var_pl)), np.nanmax(np.abs(var_pl))
-                cmap = plt.colormaps[str(ATTRIBUTES[name].cbar)]
-                levels = np.linspace(vmin, vmax, 11)
-                norm = BoundaryNorm(levels, ncolors=cmap.N, clip=True)
-                pl = axi.pcolormesh(
-                    time_median,
-                    az_pl,
-                    np.transpose(var_pl),
-                    cmap=cmap,
-                    norm=norm,
-                )
-
-                gtim = _gap_array(time_median.values, case_date, 120.0 / 60.0)
-                if len(gtim) > 0:
-                    time_i, data_g = (
-                        np.linspace(
-                            time_median.values[0],
-                            time_median.values[-1],
-                            len(time_median.values),
-                        ),
-                        np.zeros((len(time_median.values), 2), np.float32),
+                for ip in range(2):
+                    var_pl = np.vstack(
+                        scan.groupby("blocks")[var_l[ip]].apply(list).to_numpy()
                     )
-                    for ig, _ in enumerate(gtim[:, 0]):
-                        xind = np.where(
-                            (time_i >= gtim[ig, 0]) & (time_i <= gtim[ig, 1])
+                    c_name = ATTRIBUTES[name].cbar
+                    assert c_name is not None
+                    cmap = plt.colormaps[str(c_name[ip])]
+                    if ip == 0:
+                        vmin, vmax = (
+                            np.nanmax([0.0, np.nanmin(var_pl)]),
+                            np.nanmax(var_pl),
                         )
-                        data_g[xind, :] = 1.0
-
-                    _plot_segment_data(
-                        axi,
-                        ma.MaskedArray(data_g),
-                        "tb_missing",
-                        (time_i, np.linspace(0, 360, 2)),
-                        nc_file,
+                    else:
+                        vmin, vmax = (
+                            -np.nanmax(np.abs(var_pl)),
+                            np.nanmax(np.abs(var_pl)),
+                        )
+                    levels = np.linspace(vmin, vmax, 13)
+                    norm = BoundaryNorm(levels, ncolors=cmap.N, clip=True)
+                    pl = axi[ip].pcolormesh(
+                        time_median,
+                        az_pl,
+                        np.transpose(var_pl),
+                        cmap=cmap,
+                        norm=norm,
                     )
 
-                axi.set_yticks(np.linspace(0, 360, 9))
-                axi.set_facecolor(_COLORS["gray"])
-                title_name = ATTRIBUTES[name].name
-                assert title_name is not None
-                axi.set_title(
-                    title_name + " at " + str(int(angles[ind])) + "° elevation",
-                    fontsize=14,
-                )
-                _set_ax(axi, 360.0, "Sensor azimmuth angle (DEG)")
-                axi.xaxis.set_tick_params(labelbottom=False)
-                axi.set_xlabel("")
+                    gtim = _gap_array(time_median.values, case_date, 120.0 / 60.0)
+                    if len(gtim) > 0:
+                        time_i, data_g = (
+                            np.linspace(
+                                time_median.values[0],
+                                time_median.values[-1],
+                                len(time_median.values),
+                            ),
+                            np.zeros((len(time_median.values), 2), np.float32),
+                        )
+                        for ig, _ in enumerate(gtim[:, 0]):
+                            xind = np.where(
+                                (time_i >= gtim[ig, 0]) & (time_i <= gtim[ig, 1])
+                            )
+                            data_g[xind, :] = 1.0
+                        for ip in range(2):
+                            _plot_segment_data(
+                                axi[ip],
+                                ma.MaskedArray(data_g),
+                                "tb_missing",
+                                (time_i, np.linspace(0, 360, 2)),
+                                nc_file,
+                            )
 
-                colorbar = _init_colorbar(pl, axi)
-                locator = colorbar.ax.yaxis.get_major_locator()
-                locator.set_params(nbins=10)
-                colorbar.update_ticks()
-                colorbar.set_ticks([np.round(i, 3) for i in colorbar.get_ticks()])
-                clab = str(ATTRIBUTES[name].clabel)
-                assert clab is not None
-                colorbar.set_label("scan deviation (" + clab + ")", fontsize=13)
+                    axi[ip].set_facecolor(_COLORS["gray"])
+                    title_name = ATTRIBUTES[name].name
+                    axi[ip].set_yticks(np.linspace(0, 360, 9))
+                    axi[ip].xaxis.set_tick_params(labelbottom=False)
+                    axi[ip].set_xlabel("")
 
-        axp = axs[axt] if len(angles) > 1 else axs
-        axp.xaxis.set_tick_params(labelbottom=True)
-        axp.set_xlabel("Time (UTC)", fontsize=13)
-        if ax1 >= 0:
-            axp = axs[ax1] if len(angles) > 1 else axs
-            site_name = _read_location(nc_file)
-            text = _get_subtitle_text(case_date, site_name)
-            fig.suptitle(
-                text,
-                fontsize=13,
-                y=np.array(axp.get_position())[1][1]
-                + (
-                    np.array(axp.get_position())[1][1]
-                    - np.array(axp.get_position())[0][1]
-                )
-                * 0.0065,
-                x=0.135,
-                horizontalalignment="left",
-                verticalalignment="bottom",
+                    colorbar = _init_colorbar(pl, axi[ip], size="2%", pad=0.05)
+                    locator = colorbar.ax.yaxis.get_major_locator()
+                    locator.set_params(nbins=10)
+                    colorbar.update_ticks()
+                    colorbar.set_ticks([i for i in colorbar.get_ticks()])
+                    assert title_name is not None
+                    ro = 1 if "IWV" in title_name and ip == 0 else 0
+                    colorbar.set_ticklabels(
+                        [str(np.round(i, 3 - ro)) for i in colorbar.get_ticks()]
+                    )
+                    clab = str(ATTRIBUTES[name].clabel)
+                    assert clab is not None
+                    if ip == 0:
+                        axi[ip].text(
+                            20.5,
+                            370,
+                            title_name
+                            + " at "
+                            + str(np.round(angles[ind], 1))
+                            + "° elevation",
+                            fontsize=14,
+                        )
+                        _set_ax(axi[ip], 360.0, "Sensor azimmuth angle (DEG)")
+                        colorbar.set_label(
+                            title_name[:3] + " (" + clab + ")", fontsize=13
+                        )
+                    else:
+                        _set_ax(axi[ip], 360.0, "")
+                        colorbar.set_label("scan deviation (" + clab + ")", fontsize=13)
+                        axi[ip].yaxis.set_tick_params(labelbottom=False)
+
+        axp = axs[axt, :] if len(angles) > 1 else axs
+        for ip in range(2):
+            axp[ip].xaxis.set_tick_params(labelbottom=True)
+            axp[ip].set_xlabel("Time (UTC)", fontsize=13)
+
+        site_name = _read_location(nc_file)
+        text = _get_subtitle_text(case_date, site_name)
+        fig.suptitle(
+            text,
+            fontsize=13,
+            y=np.array(axs[ax1, 0].get_position())[1][1]
+            + (
+                np.array(axs[ax1, 0].get_position())[1][1]
+                - np.array(axs[ax1, 0].get_position())[0][1]
             )
+            * 0.0065,
+            x=0.135,
+            horizontalalignment="left",
+            verticalalignment="bottom",
+        )
 
 
 def _plot_sta(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
