@@ -198,7 +198,7 @@ def spectral_consistency(
             )
         )
         + 1.0
-    ) * 10.0
+    )
 
     prefix = "ins"
     c_list = get_coeff_list(site, prefix, coeff_files)
@@ -219,37 +219,44 @@ def spectral_consistency(
             factor,
         ) = get_mvr_coeff(site, prefix, data["frequency"][:], coeff_files)
         ret_in = retrieval_input(data, coeff)
-        ele_ind = ele_retrieval(data["elevation_angle"][:], coeff)
-        ret_rm = rm_retrieval(
-            data["elevation_angle"][ele_ind], coeff, data["frequency"][:]
-        )
+        ele_ind = np.where(
+            (np.abs(data["elevation_angle"][:] - 90.0) < 0.5)
+            & (data["pointing_flag"][:] == 0)
+            & (
+                np.abs(
+                    data["azimuth_angle"][:] - np.ma.median(data["azimuth_angle"][:])
+                )
+                < 0.5
+            )
+        )[0]
+        ret_rm = rm_retrieval(data["elevation_angle"][:], coeff, data["frequency"][:])
 
         _, freq_ind, coeff_ind = np.intersect1d(
             data["frequency"], coeff["AL"], return_indices=True
         )
         c_w1, c_w2, fac = (
-            weights1(data["elevation_angle"][ele_ind]),
-            weights2(data["elevation_angle"][ele_ind]),
-            factor(data["elevation_angle"][ele_ind]),
+            weights1(data["elevation_angle"][:]),
+            weights2(data["elevation_angle"][:]),
+            factor(data["elevation_angle"][:]),
         )
         in_sc, in_os = (
-            input_scale(data["elevation_angle"][ele_ind]),
-            input_offset(data["elevation_angle"][ele_ind]),
+            input_scale(data["elevation_angle"][:]),
+            input_offset(data["elevation_angle"][:]),
         )
         op_sc, op_os = (
-            output_scale(data["elevation_angle"][ele_ind]),
-            output_offset(data["elevation_angle"][ele_ind]),
+            output_scale(data["elevation_angle"][:]),
+            output_offset(data["elevation_angle"][:]),
         )
 
-        ret_in[ele_ind, 1:] = (ret_in[ele_ind, 1:] - in_os) * in_sc
-        hidden_layer = np.ones((len(ele_ind), c_w1.shape[2] + 1), np.float32)
+        ret_in[:, 1:] = (ret_in[:, 1:] - in_os) * in_sc
+        hidden_layer = np.ones((len(ret_rm), c_w1.shape[2] + 1), np.float32)
         hidden_layer[:, 1:] = np.tanh(
-            fac[:].reshape((len(ele_ind), 1))
-            * np.einsum("ijk,ij->ik", c_w1, ret_in[ele_ind, :])
+            fac[:].reshape((len(ret_rm), 1))
+            * np.einsum("ijk,ij->ik", c_w1, ret_in[:, :])
         )
-        data["tb_spectrum"][np.ix_(ele_ind, freq_ind)] = (
+        data["tb_spectrum"][:, freq_ind] = (
             np.tanh(
-                fac[:].reshape((len(ele_ind), 1))
+                fac[:].reshape((len(ret_rm), 1))
                 * np.einsum("ijk,ik->ij", c_w2[:, coeff_ind, :], hidden_layer)
             )
             * op_sc[:, coeff_ind]
@@ -257,7 +264,7 @@ def spectral_consistency(
         )
 
         for ifreq, _ in enumerate(data["frequency"]):
-            tb_df = pd.DataFrame(
+            tb_z = pd.DataFrame(
                 {
                     "Tb": np.abs(
                         data["tb"][ele_ind, ifreq] - data["tb_spectrum"][ele_ind, ifreq]
@@ -265,63 +272,56 @@ def spectral_consistency(
                 },
                 index=pd.to_datetime(data["time"][ele_ind], unit="s"),
             )
-            ele_mean = np.where(
-                (data["elevation_angle"][:] > 89.5)
-                & (data["elevation_angle"][:] < 90.5)
-                & (data["pointing_flag"][:] == 0)
-            )[0]
-            tb_z = pd.DataFrame(
-                {
-                    "Tb": (
-                        np.abs(
-                            data["tb"][ele_mean, ifreq]
-                            - data["tb_spectrum"][ele_mean, ifreq]
-                        )
-                    ),
-                },
-                index=pd.to_datetime(data["time"][ele_mean], unit="s"),
-            )
             tbz_mean = tb_z.resample(
-                "20min", origin="start", closed="left", label="left", offset="10min"
+                "10min", origin="start", closed="left", label="left", offset="5min"
             ).mean()
             tbz_mean = tbz_mean.reindex(tb_z.index, method="nearest")
-            tb_s = pd.DataFrame(
-                {
-                    "Tb": (
-                        np.abs(
-                            data["tb"][data["pointing_flag"][:] == 1, ifreq]
-                            - data["tb_spectrum"][data["pointing_flag"][:] == 1, ifreq]
-                        )
-                    ),
-                },
-                index=pd.to_datetime(
-                    data["time"][data["pointing_flag"][:] == 1], unit="s"
-                ),
+            tb_diff = tb_z - tbz_mean
+            tb_diff = tb_diff.reindex(
+                pd.to_datetime(data["time"][:], unit="s"), method="nearest"
             )
-            tbs_mean = tb_s.resample(
-                "20min", origin="start", closed="left", label="left", offset="10min"
-            ).mean()
-            tbs_mean = tbs_mean.reindex(tb_s.index, method="nearest")
-
-            tb_mean = pd.concat([tbz_mean, tbs_mean], sort=True).sort_index()
-            tb_mean = tb_mean[~tb_mean.index.duplicated()].reindex(
-                tb_df.index, method="nearest"
-            )
-
+            tb_diff.iloc[~np.isin(range(len(ret_rm)), ele_ind)] = np.nan
             fact = [2.0, 4.0]  # factor for receiver retrieval uncertainty
             # flag for individual channels based on channel retrieval uncertainty
             flag_ind[
                 np.where(
-                    np.abs(tb_df["Tb"].values[:] - tb_mean["Tb"].values)
-                    > ret_rm[:, ifreq]
-                    * fact[data["receiver"][ifreq] - 1]
-                    * cos_ele[ele_ind]
+                    np.abs(tb_diff["Tb"].values)
+                    > ret_rm[:, ifreq] * fact[data["receiver"][ifreq] - 1]
                 )[0],
                 ifreq,
             ] = True
-            abs_diff[:, ifreq] = np.abs(
-                data["tb"][:, ifreq] - data["tb_spectrum"][:, ifreq]
+            abs_diff[ele_ind, ifreq] = np.abs(
+                data["tb"][ele_ind, ifreq] - data["tb_spectrum"][ele_ind, ifreq]
             )
+
+            # flag for elevation scans (only receiver 2)
+            ele_s = ele_retrieval(
+                data["elevation_angle"][:], data["pointing_flag"][:], coeff
+            )
+            if (len(ele_s) > 0) and (data["receiver"][ifreq] == 2):
+                tb_diff = pd.DataFrame(
+                    {
+                        "Tb": np.abs(
+                            data["tb"][ele_s, ifreq] - data["tb_spectrum"][ele_s, ifreq]
+                        ),
+                    },
+                    index=pd.to_datetime(data["time"][ele_s], unit="s"),
+                )
+                tb_diff = tb_diff[~tb_diff.index.duplicated()].reindex(
+                    pd.to_datetime(data["time"][:], unit="s"), method="nearest"
+                )
+                tb_diff.loc[
+                    (data["elevation_angle"][:] > 89.5)
+                    | (data["pointing_flag"][:] == 0)
+                ] = np.nan
+                # flag for individual channels based on channel retrieval uncertainty
+                flag_ind[
+                    np.where(
+                        np.abs(tb_diff["Tb"].values)
+                        > ret_rm[:, ifreq] * 2.5 * cos_ele[:]
+                    )[0],
+                    ifreq,
+                ] = True
 
     else:
         c_list = get_coeff_list(site, "tbx", coeff_files)
@@ -371,11 +371,11 @@ def spectral_consistency(
                         index=pd.to_datetime(data["time"][:], unit="s"),
                     )
                     tb_mean = tb_df.resample(
-                        "20min",
+                        "10min",
                         origin="start",
                         closed="left",
                         label="left",
-                        offset="10min",
+                        offset="5min",
                     ).mean()
                     tb_mean = tb_mean.reindex(tb_df.index, method="nearest")
 
@@ -410,8 +410,7 @@ def spectral_consistency(
     for _, rec in enumerate(data["receiver_nb"]):
         flag_ind[
             np.ix_(
-                ma.mean(abs_diff[:, data["receiver"] == rec], axis=1)
-                > fact[rec - 1] * cos_ele,
+                ma.mean(abs_diff[:, data["receiver"] == rec], axis=1) > fact[rec - 1],
                 data["receiver"] == rec,
             )
         ] = True
@@ -419,13 +418,17 @@ def spectral_consistency(
     return flag_ind
 
 
-def ele_retrieval(ele_obs: np.ndarray, coeff: dict) -> np.ndarray:
+def ele_retrieval(ele_obs: np.ndarray, pointing: np.ndarray, coeff: dict) -> np.ndarray:
     """Extracts elevation angles used in retrieval."""
     ele_ret = coeff["AG"]
     if ele_ret.shape == ():
         ele_ret = np.array([ele_ret])
     return np.array(
-        [i for i, v in enumerate(ele_obs) if np.min(np.abs(v - ele_ret)) < 0.5]
+        [
+            i
+            for i, v in enumerate(ele_obs)
+            if np.min(np.abs(v - ele_ret)) < 0.5 and pointing[i] == 1
+        ]
     )
 
 

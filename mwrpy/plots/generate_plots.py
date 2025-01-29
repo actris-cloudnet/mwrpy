@@ -1654,6 +1654,7 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
                     {"time": time_s0, "azimuth": azimuth, "var": data_s0}
                 )
                 az_pl = np.unique(azimuth)
+                az_pl = az_pl[np.mod(az_pl, 5) == 0]
                 if np.diff(az_pl).all() > 0:
                     scan["blocks"] = (scan["azimuth"].diff() <= 0.0).cumsum()
                 else:
@@ -1766,13 +1767,14 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
 
         site_name = _read_location(nc_file)
         text = _get_subtitle_text(case_date, site_name)
+        axp = axs[ax1, :] if len(angles) > 1 else axs
         fig.suptitle(
             text,
             fontsize=13,
-            y=np.array(axs[ax1, 0].get_position())[1][1]
+            y=np.array(axp[0].get_position())[1][1]
             + (
-                np.array(axs[ax1, 0].get_position())[1][1]
-                - np.array(axs[ax1, 0].get_position())[0][1]
+                np.array(axp[0].get_position())[1][1]
+                - np.array(axp[0].get_position())[0][1]
             )
             * 0.0065,
             x=0.135,
