@@ -13,7 +13,7 @@ def correct_lwp_offset(
     lwp_org: np.ndarray,
     index: np.ndarray,
     qf: np.ndarray,
-    offset_pd: float | None = None,
+    offset_xd: list[float | None] = [None, None],
 ) -> tuple[np.ndarray, np.ndarray]:
     """This function corrects Lwp offset using the
     2min Lwp standard deviation and the water vapor
@@ -24,7 +24,7 @@ def correct_lwp_offset(
         lwp_org: Lwp array.
         index: Index to use.
         qf: Quality flag
-        offset_pd: LWP offset from previous days.
+        offset_xd: LWP offset from previous/next days.
     """
     lwcl_i = lev1["liquid_cloud_flag"][:][index]
     ind = utils.time_to_datetime_index(lev1["time"][:][index])
@@ -90,13 +90,27 @@ def correct_lwp_offset(
         pd.tseries.frequencies.to_offset("60min"), center=True, min_periods=10
     ).mean()
     if (
-        (offset_pd is not None)
+        (offset_xd[0] is not None)
         and not (np.isnan(lwp).all())
-        and (np.abs(offset_pd - np.ma.median(lwp)) < 0.005)
+        and (np.abs(offset_xd[0] - np.nanmedian(lwp)) < 0.005)
+        and (
+            (lwp_offset.first_valid_index() - lwp_offset.index[0]).total_seconds()
+            > 12 * 3600
+        )
     ):
-        lwp_offset.loc[lwp_offset.index[0], "Lwp"] = offset_pd
-    elif offset_pd is not None:
-        lwp_offset.loc[lwp_offset.index[0], "Lwp"] = offset_pd
+        lwp_offset.loc[lwp_offset.index[0], "Lwp"] = offset_xd[0]
+    if (
+        (offset_xd[1] is not None)
+        and not (np.isnan(lwp).all())
+        and (np.abs(offset_xd[1] - np.nanmedian(lwp)) < 0.005)
+        and (
+            (lwp_offset.index[-1] - lwp_offset.last_valid_index()).total_seconds()
+            > 12 * 3600
+        )
+    ):
+        lwp_offset.loc[lwp_offset.index[-1], "Lwp"] = offset_xd[1]
+    if (np.isnan(lwp).all()) and any(offset_xd):
+        lwp_offset.iloc[0] = np.nanmean(np.array(offset_xd).astype(float))
     lwp_offset = lwp_offset.interpolate(method="linear")
     lwp_offset = lwp_offset.bfill()
 

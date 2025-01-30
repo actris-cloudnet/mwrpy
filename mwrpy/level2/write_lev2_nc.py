@@ -29,7 +29,7 @@ def lev2_to_nc(
     site: str | None = None,
     temp_file: str | None = None,
     hum_file: str | None = None,
-    lwp_offset: float | None = None,
+    lwp_offset: list[float | None] = [None, None],
     coeff_files: list | None = None,
 ):
     """This function reads Level 1 files,
@@ -91,7 +91,7 @@ def get_products(
     coeff_files: list | None,
     temp_file: str | None = None,
     hum_file: str | None = None,
-    lwp_offset: float | None = None,
+    lwp_offset: list[float | None] = [None, None],
 ) -> tuple[dict, dict, np.ndarray, np.ndarray]:
     """Derive specified Level 2 products."""
     lev1 = {key: value[:] for key, value in nclev1.variables.items()}

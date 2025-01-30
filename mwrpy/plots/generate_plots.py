@@ -12,7 +12,7 @@ from matplotlib import rcParams
 from matplotlib.axes import Axes
 from matplotlib.colors import BoundaryNorm, Colormap, ListedColormap
 from matplotlib.patches import Patch
-from matplotlib.pyplot import Figure, clabel
+from matplotlib.pyplot import Figure
 from matplotlib.ticker import (
     FixedLocator,
     FormatStrFormatter,
@@ -22,7 +22,6 @@ from matplotlib.ticker import (
 from matplotlib.transforms import Affine2D, Bbox, ScaledTranslation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from numpy import ma, ndarray
-from numpy.f2py.auxfuncs import isstring
 
 from mwrpy.atmos import abs_hum, dir_avg, t_dew_rh
 from mwrpy.plots.plot_meta import _COLORS, ATTRIBUTES
