@@ -81,6 +81,31 @@ def epoch2unix(epoch_time, time_ref, epoch: Epoch = (2001, 1, 1)):
     return unix_time
 
 
+def epoch2unix_scalar(epoch_time: float, time_ref: int, epoch: Epoch = (2001, 1, 1)):
+    """Converts seconds since some epoch to Unix time in UTC.
+
+    Args:
+        epoch_time: float value of seconds since the given epoch.
+        time_ref: HATPRO time reference (1: UTC, 0: Local Time)
+        epoch: Epoch of the input time. Default is (2001,1,1,0,0,0).
+
+    Returns:
+        float: Unix time in seconds since (1970,1,1,0,0,0).
+
+    """
+    delta = (
+        datetime.datetime(*epoch) - datetime.datetime(1970, 1, 1, 0, 0, 0)
+    ).total_seconds()
+    unix_time = epoch_time + int(delta)
+    if time_ref == 0:
+        unix_time = time.mktime(
+            datetime.datetime.fromtimestamp(
+                unix_time, datetime.timezone.utc
+            ).timetuple()
+        )
+    return unix_time
+
+
 def isscalar(array: Any) -> bool:
     """Tests if input is scalar.
 

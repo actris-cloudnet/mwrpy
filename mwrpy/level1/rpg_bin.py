@@ -88,13 +88,15 @@ class RpgBin:
 
     def _get_date(self):
         time_median = float(np.ma.median(self.raw_data["time"]))
-        date = datetime.datetime.utcfromtimestamp(
-            utils.epoch2unix(time_median, self.header["_time_ref"])
+        date = datetime.datetime.fromtimestamp(
+            utils.epoch2unix_scalar(time_median, self.header["_time_ref"])
         ).strftime("%Y-%m-%d")
         today = float(datetime.datetime.today().strftime("%Y"))
         if float(date[0:4]) > today:
-            date = datetime.datetime.utcfromtimestamp(
-                utils.epoch2unix(time_median, self.header["_time_ref"], (1970, 1, 1))
+            date = datetime.datetime.fromtimestamp(
+                utils.epoch2unix_scalar(
+                    time_median, self.header["_time_ref"], (1970, 1, 1)
+                )
             ).strftime("%Y-%m-%d")
         return date
 
