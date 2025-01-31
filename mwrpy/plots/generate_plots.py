@@ -821,11 +821,7 @@ def _plot_sen(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
     )
     if name == "elevation_angle":
         time1 = time[(pointing_flag == 1) & (data_in > 0.0)]
-        val, cnt = np.unique(np.round(np.diff(time1), 2), return_counts=True)
-        if len(val) > 0:
-            time1 = _nan_time_gaps(time1, np.max(val[cnt > 10]) * 2)
-        else:
-            time1 = _nan_time_gaps(time1, ma.median(np.diff(time1)) * 2)
+        time1 = _nan_time_gaps(time1, 1.01)
         ax.plot(
             time1,
             data_in[(pointing_flag == 1) & (data_in > 0.0)],
