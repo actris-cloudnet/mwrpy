@@ -132,14 +132,19 @@ def generate_figure(
         if image_name and "_scan" in image_name:
             name = image_name
         pl_source = ATTRIBUTES[name].source
-        if "angle" not in name and pl_source not in (
-            "met",
-            "met2",
-            "irt",
-            "qf",
-            "mqf",
-            "hkd",
-            "scan",
+        if (
+            not is_height
+            and "angle" not in name
+            and pl_source
+            not in (
+                "met",
+                "met2",
+                "irt",
+                "qf",
+                "mqf",
+                "hkd",
+                "scan",
+            )
         ):
             if ax == axes[0]:
                 time = _elevation_azimuth_filter(nc_file, time, ele_range)
@@ -314,18 +319,19 @@ def _elevation_azimuth_filter(
         if "elevation_angle" in nc.variables and "azimuth_angle" in nc.variables:
             elevation = read_nc_fields(full_path, "elevation_angle")
             azimuth = read_nc_fields(full_path, "azimuth_angle")
+            az_diff = np.diff(np.hstack((azimuth, -1)))
             if data_field.ndim > 1:
                 data_field = data_field[
                     (elevation >= ele_range[0])
                     & (elevation <= ele_range[1])
-                    & (np.abs(azimuth - ma.median(azimuth)) < 0.5),
+                    & (np.isclose(az_diff, 0.0, atol=0.5)),
                     :,
                 ]
             else:
                 data_field = data_field[
                     (elevation >= ele_range[0])
                     & (elevation <= ele_range[1])
-                    & (np.abs(azimuth - ma.median(azimuth)) < 0.5)
+                    & (np.isclose(az_diff, 0.0, atol=0.5))
                 ]
     return data_field
 
@@ -576,7 +582,7 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
         time, data = _mark_gaps(
             axes[0][:],
             ma.MaskedArray(data_in),
-            np.ma.median(np.diff(axes[0][:])) * 60.0 * 2,
+            60.1,
         )
 
     ax.contourf(
@@ -1129,8 +1135,8 @@ def _plot_tb(
         no_flag = np.where(quality_flag[:, i] == 0)[0]
         if len(np.array(no_flag)) == 0:
             no_flag = np.arange(len(time))
-        tb_m = np.append(tb_m, [ma.mean(data_in[no_flag, i])])  # TB mean
-        tb_s = np.append(tb_s, [ma.std(data_in[no_flag, i])])  # TB std
+        tb_m = np.append(tb_m, [np.nanmean(data_in[no_flag, i])])  # TB mean
+        tb_s = np.append(tb_s, [np.nanstd(data_in[no_flag, i])])  # TB std
         axi.plot(
             time,
             np.ones(len(time)) * tb_m[i],
