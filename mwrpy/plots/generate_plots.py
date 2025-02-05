@@ -815,39 +815,30 @@ def _plot_sen(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
     qf = _get_freq_flag(quality_flag, np.array([6]))
     assert variables.plot_range is not None
     vmin, vmax = variables.plot_range
-    time1 = time[(pointing_flag == 1)]
+    time1 = time[(pointing_flag == 0)]
     time1 = _nan_time_gaps(time1, 15.0 / 60.0)
     ax.plot(
-        time[pointing_flag == 0],
+        time1,
         data_in[pointing_flag == 0],
         "--.",
         color=_COLORS["darkgreen"],
         label="single pointing",
         linewidth=0.8,
     )
+    time1 = time[(pointing_flag == 1) & (data_in >= 0.0)]
+    time1 = _nan_time_gaps(time1, 1.01)
+    ax.plot(
+        time1,
+        data_in[(pointing_flag == 1) & (data_in >= 0.0)],
+        "--.",
+        alpha=0.75,
+        color=_COLORS["green"],
+        label="multiple pointing",
+        linewidth=0.8,
+    )
     if name == "elevation_angle":
-        time1 = time[(pointing_flag == 1) & (data_in > 0.0)]
-        time1 = _nan_time_gaps(time1, 1.01)
-        ax.plot(
-            time1,
-            data_in[(pointing_flag == 1) & (data_in > 0.0)],
-            "--.",
-            alpha=0.75,
-            color=_COLORS["green"],
-            label="multiple pointing",
-            linewidth=0.8,
-        )
         ax.set_yticks(np.linspace(0, 90, 7))
     else:
-        ax.plot(
-            time1,
-            data_in[(pointing_flag == 1)],
-            "--.",
-            alpha=0.75,
-            color=_COLORS["green"],
-            label="multiple pointing",
-            linewidth=0.8,
-        )
         ax.set_yticks(np.linspace(0, 360, 9))
     ax.plot(
         time[np.any(qf == 1, axis=1)],
@@ -1135,8 +1126,8 @@ def _plot_tb(
         no_flag = np.where(quality_flag[:, i] == 0)[0]
         if len(np.array(no_flag)) == 0:
             no_flag = np.arange(len(time))
-        tb_m = np.append(tb_m, [np.nanmean(data_in[no_flag, i])])  # TB mean
-        tb_s = np.append(tb_s, [np.nanstd(data_in[no_flag, i])])  # TB std
+        tb_m = np.append(tb_m, [ma.mean(data_in[no_flag, i])])  # TB mean
+        tb_s = np.append(tb_s, [ma.std(data_in[no_flag, i])])  # TB std
         axi.plot(
             time,
             np.ones(len(time)) * tb_m[i],
@@ -1298,7 +1289,7 @@ def _plot_tb(
         )
 
     else:
-        tb_m = np.ones((len(time), len(params["receiver_nb"]))) * np.nan
+        tbx_m = np.ones((len(time), len(params["receiver_nb"]))) * np.nan
         axa = fig.subplots(1, 2)
         ticks_x_labels = _get_standard_time_ticks()
         axa[0].set_ylabel("Mean absolute difference [K]", fontsize=12)
@@ -1315,12 +1306,30 @@ def _plot_tb(
             )[0]
             if len(no_flag) == 0:
                 no_flag = np.arange(len(time))
-            tb_m[:, irec] = ma.mean(
+            tbx_m[:, irec] = np.nanmean(
                 np.abs(data_in[:, np.array(params["receiver"]) == rec]), axis=1
             )
             axa[irec].plot(
                 time,
-                tb_m[:, irec],
+                np.ones(len(time)) * np.nanmean(tbx_m[:, irec]),
+                "--",
+                color=_COLORS["darkgray"],
+                linewidth=1,
+            )
+            axa[irec].text(
+                0.55,
+                0.9,
+                str(round(np.nanmean(tbx_m[:, irec]), 2))
+                + " +/- "
+                + str(round(np.nanstd(tbx_m[:, irec]), 2))
+                + " K",
+                transform=axa[irec].transAxes + trans,
+                color=_COLORS["darkgray"],
+                fontweight="bold",
+            )
+            axa[irec].plot(
+                time,
+                tbx_m[:, irec],
                 "o",
                 color="black",
                 markersize=0.75,
@@ -1331,13 +1340,13 @@ def _plot_tb(
                 np.sum(quality_flag[:, np.array(params["receiver"]) == rec], axis=1) > 0
             )[0]
             axa[irec].plot(
-                time[flag], tb_m[flag, irec], "ro", markersize=0.75, fillstyle="full"
+                time[flag], tbx_m[flag, irec], "ro", markersize=0.75, fillstyle="full"
             )
             axa[irec].set_xticks(np.arange(0, 25, 4, dtype=int))
             axa[irec].set_xticklabels(ticks_x_labels, fontsize=12)
             axa[irec].set_xlim(0, 24)
             axa[irec].set_xlabel("Time (UTC)", fontsize=12)
-            axa[irec].set_ylim([0, np.nanmax(tb_m[no_flag, irec], initial=0.0) + 0.5])
+            axa[irec].set_ylim([0, np.nanmax(tbx_m[no_flag, irec], initial=0.0) + 0.5])
 
             if len(np.where(isbit(rain_flag[:, 0], 5))[0]) > 0:
                 data_g = np.zeros((len(time), 2), np.float32)
@@ -1349,7 +1358,7 @@ def _plot_tb(
                     (
                         time,
                         np.linspace(
-                            0, np.nanmax(tb_m[no_flag, irec], initial=0.0) + 0.5, 2
+                            0, np.nanmax(tbx_m[no_flag, irec], initial=0.0) + 0.5, 2
                         ),
                     ),
                     nc_file,
@@ -1357,7 +1366,7 @@ def _plot_tb(
                 handles, labels = axa[irec].get_legend_handles_labels()
                 handles.append(Patch(facecolor=_COLORS["gray"]))
                 labels.append("rain_detected")
-                axa[irec].legend(handles, labels, loc="upper right")
+                axa[irec].legend(handles, labels, loc="upper left")
 
 
 def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
