@@ -223,6 +223,8 @@ def read_blb(file_name: str) -> tuple[dict, dict]:
             header |= _read_one(file, [("_n_f", "<i4")])
         header |= _read_one(file, [("_f", "<f", header["_n_f"]), ("_n_ang", "<i4")])
         header |= _read_one(file, [("_ang", "<f", header["_n_ang"])])
+        if np.max(header["_ang"]) > 100000.0:
+            header["_ang"] = np.round(header["_ang"] - 100000.0, 1)
         dt: list[Field] = [("time", "<i4"), ("rain", "b")]
         for n in range(header["_n_f"]):
             dt += [(f"tb_{n}", "<f", header["_n_ang"])]

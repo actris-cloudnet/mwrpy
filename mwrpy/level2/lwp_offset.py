@@ -27,7 +27,7 @@ def correct_lwp_offset(
     lwcl_i = lev1["liquid_cloud_flag"][:][index]
     ind = utils.time_to_datetime_index(lev1["time"][:][index])
     lwp = np.copy(lwp_org)
-    lwp[lev1["elevation_angle"][index] < 89.0] = np.nan
+    lwp[(lev1["elevation_angle"][index] < 89.0) | (qf > 0)] = np.nan
     lwp_df = pd.DataFrame({"Lwp": lwp}, index=ind)
     offset = "3min" if np.nanmean(np.diff(lev1["time"])) < 1.8 else "10min"
     lwp_std = lwp_df.rolling(
@@ -61,6 +61,10 @@ def correct_lwp_offset(
         | (lwp > 0.06)
         | (lwp_max["Lwp"] > (tb_max["Tb"] * 0.0025))
     ] = np.nan
+    if not np.isnan(lwp).all():
+        lwp[
+            (np.abs(lwp - np.nanmedian(lwp)) > 0.005) & (lwp_min["Lwp"].values > -0.025)
+        ] = np.nan
 
     seqs_all = [(key, len(list(val))) for key, val in groupby(np.isfinite(lwp))]
     seqs = np.array(

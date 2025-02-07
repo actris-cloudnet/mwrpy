@@ -15,7 +15,6 @@ class PlotMeta(NamedTuple):
     source: str | None = None
     cbar_ext: str | None = None
     nlev: int | None = None
-    ele: tuple[float, float] | None = None
 
 
 _K = "K"
@@ -99,7 +98,6 @@ ATTRIBUTES = {
         plot_range=(-0.05, 1.0),
         plot_type="bar",
         source="int",
-        ele=(89.0, 91.0),
     ),
     "iwv": PlotMeta(
         name="Retrieved column-integrated water vapour",
@@ -108,6 +106,22 @@ ATTRIBUTES = {
         plot_range=(0, 50),
         plot_type="bar",
         source="int",
+    ),
+    "lwp_scan": PlotMeta(
+        name="LWP azimuth scan",
+        cbar=["PuBu", "PuOr"],
+        clabel=_KGM2,
+        plot_range=(-200, 200),
+        plot_type="mesh",
+        source="scan",
+    ),
+    "iwv_scan": PlotMeta(
+        name="IWV azimuth scan",
+        cbar=["YlGnBu", "BrBG"],
+        clabel=_KGM2,
+        plot_range=(-20, 20),
+        plot_type="mesh",
+        source="scan",
     ),
     "absolute_humidity": PlotMeta(
         name="Absolute Humidity",
@@ -211,7 +225,7 @@ ATTRIBUTES = {
         source="sen",
     ),
     "azimuth_angle": PlotMeta(
-        name="Azimuth angle",
+        name="Sensor azimuth angle",
         ylabel=_DEG,
         plot_range=(-5, 363),
         plot_type="bar",
@@ -265,7 +279,6 @@ ATTRIBUTES = {
         plot_range=(-100, 100),
         plot_type="bar",
         source="sta",
-        ele=(89.0, 91.0),
     ),
     "ko_index": PlotMeta(
         name="KO index",
@@ -273,7 +286,6 @@ ATTRIBUTES = {
         plot_range=(-100, 100),
         plot_type="bar",
         source="sta",
-        ele=(89.0, 91.0),
     ),
     "total_totals": PlotMeta(
         name="Total totals",
@@ -281,7 +293,6 @@ ATTRIBUTES = {
         plot_range=(-100, 100),
         plot_type="bar",
         source="sta",
-        ele=(89.0, 91.0),
     ),
     "k_index": PlotMeta(
         name="K index",
@@ -289,7 +300,6 @@ ATTRIBUTES = {
         plot_range=(-100, 100),
         plot_type="bar",
         source="sta",
-        ele=(89.0, 91.0),
     ),
     "showalter_index": PlotMeta(
         name="Showalter index",
@@ -297,7 +307,6 @@ ATTRIBUTES = {
         plot_range=(-100, 100),
         plot_type="bar",
         source="sta",
-        ele=(89.0, 91.0),
     ),
     "cape": PlotMeta(
         name="CAPE",
@@ -305,6 +314,5 @@ ATTRIBUTES = {
         plot_range=(-5000, 5000),
         plot_type="bar",
         source="sta",
-        ele=(89.0, 91.0),
     ),
 }

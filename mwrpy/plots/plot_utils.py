@@ -16,7 +16,9 @@ from mwrpy.utils import (
 )
 
 
-def _get_ret_flag(nc_file: str, time: np.ndarray, variable: str) -> ndarray:
+def _get_ret_flag(
+    nc_file: str, time: np.ndarray, variable: str, bits: int = 0
+) -> ndarray:
     """Returns quality flag for frequencies used in retrieval."""
     file = netCDF4.Dataset(nc_file)
     quality_flag = file.variables[variable + "_quality_flag"]
@@ -29,7 +31,7 @@ def _get_ret_flag(nc_file: str, time: np.ndarray, variable: str) -> ndarray:
     site = _read_location(nc_file)
     params = read_config(site, "params")
 
-    if params["flag_status"][3] == 0:
+    if params["flag_status"][3] == 0 and bits == 0:
         flag[isbit(quality_flag[:], 3) > 0] = 1
     else:
         flag[quality_flag[:] > 0] = 1
@@ -86,7 +88,7 @@ def _nan_time_gaps(time: ndarray, tgap: float = 5.0 / 60.0) -> ndarray:
     time_diff = ma.diff(ma.masked_invalid(time))
     gaps = np.where(time_diff > tgap)[0] + 1
     if len(gaps) > 0:
-        time[gaps[0 : np.min([len(time), gaps[-1]])]] = np.nan
+        time[gaps[0 : ma.min([len(time), gaps[-1]])]] = ma.masked
     return time
 
 
@@ -113,7 +115,9 @@ def _gap_array(time: ndarray, case_date, tgap: float = 5.0 / 60.0) -> ndarray:
 
 def _calculate_rolling_mean(time: ndarray, data: ndarray, win: float = 0.5) -> ndarray:
     """Returns rolling mean."""
-    width = int(ma.round(win / ma.median(ma.diff(ma.masked_invalid(time)))))
+    width = ma.max(
+        (2, int(ma.round(win / ma.median(ma.diff(ma.masked_invalid(time))))))
+    )
     data = ma.filled(data, np.nan)
     if (width % 2) != 0:
         width = width + 1

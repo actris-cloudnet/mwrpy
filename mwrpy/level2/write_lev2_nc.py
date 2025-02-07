@@ -1,7 +1,6 @@
 """Module for writing Level 2 netCDF files."""
 
 from datetime import datetime
-from itertools import groupby
 
 import netCDF4 as nc
 import numpy as np
@@ -63,7 +62,7 @@ def lev2_to_nc(
     params = read_config(site, "params")
 
     with nc.Dataset(lev1_file) as lev1:
-        params["altitude"] = np.median(lev1.variables["altitude"][:])
+        params["altitude"] = ma.median(lev1.variables["altitude"][:])
 
         rpg_dat, coeff, index, scan_time = get_products(
             site,
@@ -468,7 +467,9 @@ def get_products(
                 + coeff["output_offset"][:, np.newaxis]
             )
 
-        _get_qf(rpg_dat, lev1, coeff, index, np.array(range(len(index))), "temperature")
+        _get_qf(
+            rpg_dat, lev1, coeff, index, np.array(range(len(index))), "temperature", ibl
+        )
 
     elif data_type in ("2P04", "2P07", "2P08"):
         assert temp_file is not None
@@ -545,6 +546,7 @@ def _get_qf(
     index: np.ndarray,
     index_ret: np.ndarray,
     product: str,
+    scan: np.ndarray = np.empty([0], np.int32),
 ) -> None:
     rpg_dat[product + "_quality_flag"] = ma.masked_all((len(index)), np.int32)
     rpg_dat[product + "_quality_flag_status"] = ma.masked_all((len(index)), np.int32)
@@ -555,30 +557,16 @@ def _get_qf(
         assume_unique=False,
         return_indices=True,
     )
-    rpg_dat[product + "_quality_flag"][index_ret] = np.bitwise_or.reduce(
-        lev1["quality_flag"][:, freq_ind][index[index_ret]], axis=1
-    )
-    seqs_all = [
-        (key, len(list(val))) for key, val in groupby(lev1["pointing_flag"][:] & 1 > 0)
-    ]
-    seqs = np.array(
-        [
-            (key, sum(s[1] for s in seqs_all[:i]), length)
-            for i, (key, length) in enumerate(seqs_all)
-            if bool(key) is True
-        ]
-    )
-
-    if product == "temperature" and len(seqs) > 0:
-        i_scn = np.where(seqs[:, 2] == int(np.round(np.median(seqs[:, 2]))))[0]
-        if len(i_scn) == len(rpg_dat[product + "_quality_flag"][:]):
-            for ind, val in enumerate(i_scn):
-                scan = np.arange(seqs[val, 1], seqs[val, 1] + seqs[val, 2])
-                flg = np.bitwise_or.reduce(
-                    lev1["quality_flag"][np.ix_(scan, freq_ind)], axis=1
-                )
-                rpg_dat[product + "_quality_flag"][ind] = np.bitwise_or.reduce(flg)
-
+    if scan.any():
+        for ind, _ in enumerate(scan[:, 0]):
+            flg = np.bitwise_or.reduce(
+                lev1["quality_flag"][np.ix_(scan[ind, :], freq_ind)], axis=1
+            )
+            rpg_dat[product + "_quality_flag"][ind] = np.bitwise_or.reduce(flg)
+    else:
+        rpg_dat[product + "_quality_flag"][index_ret] = np.bitwise_or.reduce(
+            lev1["quality_flag"][np.ix_(index[index_ret], freq_ind)], axis=1
+        )
     rpg_dat[product + "_quality_flag_status"][index_ret] = lev1["quality_flag_status"][
         :, freq_ind[0]
     ][index[index_ret]]
@@ -769,7 +757,9 @@ def _get_retrieval_frequencies(coeff: dict) -> np.ndarray:
     return _format_attribute_array(frequencies)
 
 
-def _combine_array_attributes(tem_dat: dict, hum_dat: dict, name: str) -> np.ndarray:
+def _combine_array_attributes(
+    tem_dat: nc.Dataset, hum_dat: nc.Dataset, name: str
+) -> np.ndarray:
     a = getattr(tem_dat["temperature"], name)
     b = getattr(hum_dat["absolute_humidity"], name)
     combined = np.hstack((a, b))
