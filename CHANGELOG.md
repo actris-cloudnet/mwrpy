@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.0 – 2025-02-07
+
+- Handle local time in `lev1_to_nc`
+- Add azimuth scan plot
+- Remove large jumps in LWP offset
+- Use flag in LWP offset correction
+- Fix scan plot and elevation angles in old files
+- Remove azimuth scans from spectral consistency and RHI scans from scan plots
+- Change azimuth filter for zenith data
+
 ## 1.1.5 – 2025-01-09
 
 - Support different time units in L2 input files
