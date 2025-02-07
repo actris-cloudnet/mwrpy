@@ -77,7 +77,7 @@ def epoch2unix(
         if time_offset is None:
             raise ValueError("Local time and no time offset provided")
         delta -= time_offset
-    return epoch_time + delta.total_seconds()
+    return epoch_time + int(delta.total_seconds())
 
 
 def isscalar(array: Any) -> bool:
