@@ -87,11 +87,11 @@ def correct_lwp_offset(
 
     lwp_df = pd.DataFrame({"Lwp": lwp}, index=ind)
     lwp_offset = lwp_df.rolling(
-        pd.tseries.frequencies.to_offset("60min"), center=True, min_periods=10
+        pd.tseries.frequencies.to_offset("60min"), center=True
     ).mean()
     if (
         (offset_xd[0] is not None)
-        and not (np.isnan(lwp).all())
+        and not (np.isnan(lwp_offset.values).all())
         and (np.abs(offset_xd[0] - np.nanmedian(lwp)) < 0.005)
         and (
             (lwp_offset.first_valid_index() - lwp_offset.index[0]).total_seconds()
@@ -101,7 +101,7 @@ def correct_lwp_offset(
         lwp_offset.loc[lwp_offset.index[0], "Lwp"] = offset_xd[0]
     if (
         (offset_xd[1] is not None)
-        and not (np.isnan(lwp).all())
+        and not (np.isnan(lwp_offset.values).all())
         and (np.abs(offset_xd[1] - np.nanmedian(lwp)) < 0.005)
         and (
             (lwp_offset.index[-1] - lwp_offset.last_valid_index()).total_seconds()
@@ -109,7 +109,7 @@ def correct_lwp_offset(
         )
     ):
         lwp_offset.loc[lwp_offset.index[-1], "Lwp"] = offset_xd[1]
-    if (np.isnan(lwp).all()) and any(offset_xd):
+    if (np.isnan(lwp_offset.values).all()) and any(offset_xd):
         lwp_offset.iloc[0] = np.nanmean(np.array(offset_xd).astype(float))
     lwp_offset = lwp_offset.interpolate(method="linear")
     lwp_offset = lwp_offset.bfill()
