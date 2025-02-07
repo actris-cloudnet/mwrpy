@@ -17,9 +17,11 @@ product_list = ["1B01", "1B11", "1B21", "1C01"]
 def test_lev1_to_nc():
     for prod in product_list:
         hatpro = lev1_to_nc(prod, DATA_DIR, site)
-        assert hatpro.date == DATE
+        assert str(hatpro.date) == DATE
         for t in hatpro.data["time"][:]:
-            date = str(datetime.datetime.utcfromtimestamp(t).date())
+            date = str(
+                datetime.datetime.fromtimestamp(t, tz=datetime.timezone.utc).date()
+            )
             assert date == DATE
 
 

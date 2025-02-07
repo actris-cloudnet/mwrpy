@@ -1,6 +1,6 @@
 """RpgArray Class."""
 
-from datetime import datetime, timezone
+import datetime
 
 import netCDF4
 import numpy as np
@@ -88,9 +88,9 @@ class RpgArray:
 class Rpg:
     """Base class for RPG MWR."""
 
-    def __init__(self, raw_data: dict):
+    def __init__(self, raw_data: dict, date: datetime.date | None = None):
         self.raw_data = raw_data
-        self.date = self._get_date()
+        self.date = date if date is not None else self._get_date()
         self.data = self._init_data()
 
     def _init_data(self) -> dict:
@@ -100,10 +100,10 @@ class Rpg:
         return data
 
     def _get_date(self):
-        # epoch = datetime(1970, 1, 1).timestamp()
         time_median = float(ma.median(self.raw_data["time"]))
-        # time_median += epoch
-        return datetime.utcfromtimestamp(time_median).strftime("%Y-%m-%d")
+        return datetime.datetime.fromtimestamp(
+            time_median, tz=datetime.timezone.utc
+        ).date()
 
     def find_valid_times(self):
         """Sorts timestamps and finds valid times."""
@@ -121,13 +121,18 @@ class Rpg:
         time = self.data["time"].data[:]
         ind = np.zeros(len(time), dtype=int)
         for time_i, time_v in enumerate(time):
-            if "-".join(utils.seconds2date(time_v)[:3]) == self.date:
+            date_v = datetime.datetime.fromtimestamp(
+                time_v, tz=datetime.timezone.utc
+            ).date()
+            if date_v == self.date:
                 ind[time_i] = 1
         self._screen(np.where(ind == 1)[0])
 
     def _screen(self, ind: np.ndarray):
         if len(ind) < 1:
-            raise RuntimeError(["Error: no valid data for date: " + self.date])
+            raise RuntimeError(
+                "Error: no valid data for date: " + self.date.isoformat()
+            )
         n_time = len(self.data["time"].data)
         keys = self.data.keys()
         for key in keys:
@@ -194,7 +199,7 @@ def save_rpg(rpg: Rpg, output_file: str, att: dict, data_type: str) -> None:
         )
 
     with init_file(output_file, dims, rpg.data, att) as rootgrp:
-        setattr(rootgrp, "date", rpg.date)
+        setattr(rootgrp, "date", rpg.date.isoformat())
 
 
 def init_file(
@@ -257,7 +262,8 @@ def _write_vars2nc(nc_file: netCDF4.Dataset, mwr_variables: dict) -> None:
 def _add_standard_global_attributes(nc_file: netCDF4.Dataset, att_global) -> None:
     nc_file.mwrpy_version = version.__version__
     nc_file.processed = (
-        datetime.now(tz=timezone.utc).strftime("%d %b %Y %H:%M:%S") + " UTC"
+        datetime.datetime.now(tz=datetime.timezone.utc).strftime("%d %b %Y %H:%M:%S")
+        + " UTC"
     )
     for name, value in att_global.items():
         if value is None:

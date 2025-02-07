@@ -1,5 +1,6 @@
 """Module for writing Level 1 netCDF files."""
 
+import datetime
 import logging
 from collections.abc import Callable
 from itertools import groupby
@@ -33,6 +34,8 @@ def lev1_to_nc(
     output_file: str | None = None,
     coeff_files: list | None = None,
     instrument_config: dict | None = None,
+    date: datetime.date | None = None,
+    time_offset: datetime.timedelta | None = None,
 ) -> rpg_mwr.Rpg:
     """This function reads one day of RPG MWR binary files,
     adds attributes and writes it into netCDF file.
@@ -44,6 +47,8 @@ def lev1_to_nc(
         output_file: Output file name.
         coeff_files: List of coefficient files.
         instrument_config: Dictionary containing information about the instrument.
+        date: Measurement date in UTC.
+        time_offset: Time offset if instrument operated in local time.
 
     Raises:
         MissingInputData: if required input file is missing.
@@ -66,13 +71,13 @@ def lev1_to_nc(
     if instrument_config is not None:
         params = {**params, **instrument_config}
 
-    rpg_bin = prepare_data(path_to_files, data_type, params)
+    rpg_bin = prepare_data(path_to_files, data_type, params, time_offset)
 
     if data_type in ("1B01", "1C01"):
         apply_qc(site, rpg_bin, params, coeff_files)
     if data_type in ("1B21", "1C01"):
         apply_met_qc(rpg_bin.data, params)
-    hatpro = rpg_mwr.Rpg(rpg_bin.data)
+    hatpro = rpg_mwr.Rpg(rpg_bin.data, date)
     hatpro.find_valid_times()
     hatpro.data = get_data_attributes(hatpro.data, data_type)
     if output_file is not None:
@@ -87,13 +92,14 @@ def prepare_data(
     path_to_files: str,
     data_type: str,
     params: dict,
+    time_offset: datetime.timedelta | None = None,
 ) -> RpgBin:
     """Load and prepare data for netCDF writing."""
     if data_type in ("1B01", "1C01"):
         brt_files = get_file_list(path_to_files, "BRT")
         if len(brt_files) == 0:
             raise MissingInputData("No BRT files found")
-        rpg_bin = RpgBin(brt_files)
+        rpg_bin = RpgBin(brt_files, time_offset)
         ind_bandwidth = np.argsort(params["bandwidth"])
         rpg_bin.data["tb"] = rpg_bin.data["tb"][:, ind_bandwidth]
         rpg_bin.data["frequency"] = rpg_bin.header["_f"][ind_bandwidth]
@@ -129,7 +135,7 @@ def prepare_data(
         file_list_hkd = get_file_list(path_to_files, "HKD")
         if len(file_list_hkd) == 0:
             raise MissingInputData("No HKD files found")
-        rpg_hkd = RpgBin(file_list_hkd)
+        rpg_hkd = RpgBin(file_list_hkd, time_offset)
         if (
             "temp" not in rpg_hkd.data
             or "stab" not in rpg_hkd.data
@@ -154,12 +160,12 @@ def prepare_data(
 
         file_list_bls = get_file_list(path_to_files, "BLS")
         if len(file_list_bls) > 0:
-            rpg_bls = RpgBin(file_list_bls)
+            rpg_bls = RpgBin(file_list_bls, time_offset)
             _add_bls(rpg_bin, rpg_bls, rpg_hkd, params)
         else:
             file_list_blb = get_file_list(path_to_files, "BLB")
             if len(file_list_blb) > 0 and np.any(rpg_hkd.data["status"][:] & 2**18 > 0):
-                rpg_blb = RpgBin(file_list_blb)
+                rpg_blb = RpgBin(file_list_blb, time_offset)
                 _add_blb(rpg_bin, rpg_blb, rpg_hkd, params)
 
         if params["azi_cor"] != -999.0:
@@ -174,7 +180,7 @@ def prepare_data(
             if params["ir_flag"]:
                 file_list_irt = get_file_list(path_to_files, "IRT")
                 if len(file_list_irt) > 0:
-                    rpg_irt = RpgBin(file_list_irt)
+                    rpg_irt = RpgBin(file_list_irt, time_offset)
                     rpg_irt.data["irt"][rpg_irt.data["irt"] <= 125.5] = ma.masked
                     rpg_bin.data["ir_wavelength"] = rpg_irt.header["_f"] * 1e-6
                     rpg_bin.data["ir_bandwidth"] = params["ir_bandwidth"] * 1e-6
@@ -203,7 +209,7 @@ def prepare_data(
             file_list_met = get_file_list(path_to_files, "MET")
             if len(file_list_met) == 0:
                 raise MissingInputData("No MET files found")
-            rpg_met = RpgBin(file_list_met)
+            rpg_met = RpgBin(file_list_met, time_offset)
             add_interpol1d(
                 rpg_bin.data,
                 rpg_met.data["air_temperature"],
@@ -246,7 +252,7 @@ def prepare_data(
 
     elif data_type == "1B11":
         file_list_irt = get_file_list(path_to_files, "IRT")
-        rpg_bin = RpgBin(file_list_irt)
+        rpg_bin = RpgBin(file_list_irt, time_offset)
         rpg_bin.data["irt"][rpg_bin.data["irt"] <= 125.5] = ma.masked
         rpg_bin.data["ir_wavelength"] = rpg_bin.header["_f"] * 1e-6
         rpg_bin.data["ir_bandwidth"] = params["ir_bandwidth"] * 1e-6
@@ -254,7 +260,7 @@ def prepare_data(
 
     elif data_type == "1B21":
         file_list_met = get_file_list(path_to_files, "MET")
-        rpg_bin = RpgBin(file_list_met)
+        rpg_bin = RpgBin(file_list_met, time_offset)
         if "wind_speed" in rpg_bin.data:
             rpg_bin.data["wind_speed"] /= 3.6
         if "air_pressure" in rpg_bin.data:
@@ -268,7 +274,7 @@ def prepare_data(
         )
 
     file_list_hkd = get_file_list(path_to_files, "HKD")
-    _append_hkd(file_list_hkd, rpg_bin, data_type, params)
+    _append_hkd(file_list_hkd, rpg_bin, data_type, params, time_offset)
     rpg_bin.data["altitude"] = (
         np.ones(len(rpg_bin.data["time"]), np.float32) * params["altitude"]
     )
@@ -277,10 +283,14 @@ def prepare_data(
 
 
 def _append_hkd(
-    file_list_hkd: list, rpg_bin: RpgBin, data_type: str, params: dict
+    file_list_hkd: list,
+    rpg_bin: RpgBin,
+    data_type: str,
+    params: dict,
+    time_offset: datetime.timedelta | None = None,
 ) -> None:
     """Append hkd data on same time grid and perform TB sanity check."""
-    hkd = RpgBin(file_list_hkd)
+    hkd = RpgBin(file_list_hkd, time_offset)
 
     if "latitude" not in hkd.data:
         add_interpol1d(

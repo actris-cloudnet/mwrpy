@@ -68,12 +68,13 @@ def stack_files(file_list: list[str]) -> tuple[dict, dict]:
 class RpgBin:
     """Class for RPG binary files."""
 
-    def __init__(self, file_list: list[str]):
+    def __init__(
+        self, file_list: list[str], time_offset: datetime.timedelta | None = None
+    ):
         self.header, self.raw_data = stack_files(file_list)
         self.raw_data["time"] = utils.epoch2unix(
-            self.raw_data["time"], self.header["_time_ref"]
+            self.raw_data["time"], self.header["_time_ref"], time_offset=time_offset
         )
-        self.date = self._get_date()
         self.data: dict = {}
         self._init_data()
         if str(file_list[0][-3:]).lower() != "his":
@@ -86,20 +87,6 @@ class RpgBin:
         for key, data in self.raw_data.items():
             self.data[key] = data
 
-    def _get_date(self):
-        time_median = float(np.ma.median(self.raw_data["time"]))
-        date = datetime.datetime.fromtimestamp(
-            utils.epoch2unix_scalar(time_median, self.header["_time_ref"])
-        ).strftime("%Y-%m-%d")
-        today = float(datetime.datetime.today().strftime("%Y"))
-        if float(date[0:4]) > today:
-            date = datetime.datetime.fromtimestamp(
-                utils.epoch2unix_scalar(
-                    time_median, self.header["_time_ref"], (1970, 1, 1)
-                )
-            ).strftime("%Y-%m-%d")
-        return date
-
     def find_valid_times(self):
         # sort timestamps
         time = self.data["time"]
@@ -111,19 +98,9 @@ class RpgBin:
         _, ind = np.unique(time, return_index=True)
         self._screen(ind)
 
-        # find valid date
-        time = self.data["time"]
-        date = datetime.date.fromisoformat(self.date)
-        midnight = datetime.time(0, 0, 0, 0, datetime.timezone.utc)
-        min_ts = datetime.datetime.combine(date, midnight).timestamp()
-        max_ts = datetime.datetime.combine(
-            date + datetime.timedelta(days=1), midnight
-        ).timestamp()
-        self._screen((time >= min_ts) & (time < max_ts))
-
     def _screen(self, ind: np.ndarray):
         if len(ind) < 1:
-            raise InvalidFileError(f"No valid data for date: {self.date}")
+            raise InvalidFileError(f"No valid data found")
         n_time = len(self.data["time"])
         for key, array in self.data.items():
             if isinstance(array, np.ndarray):
