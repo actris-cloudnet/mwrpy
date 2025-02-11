@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 import netCDF4
 import numpy as np
+import pandas as pd
 from matplotlib import ticker
 from numpy import ma, ndarray
 
@@ -13,6 +14,7 @@ from mwrpy.utils import (
     isbit,
     read_config,
     seconds2hours,
+    time_to_datetime_index,
 )
 
 
@@ -115,20 +117,23 @@ def _gap_array(time: ndarray, case_date, tgap: float = 5.0 / 60.0) -> ndarray:
 
 def _calculate_rolling_mean(time: ndarray, data: ndarray, win: float = 0.5) -> ndarray:
     """Returns rolling mean."""
-    width = ma.max(
-        (2, int(ma.round(win / ma.median(ma.diff(ma.masked_invalid(time))))))
-    )
-    data = ma.filled(data, np.nan)
-    if (width % 2) != 0:
-        width = width + 1
     if data.ndim == 1:
-        rolling_window = np.repeat(1.0, width) / width
-        rolling_mean = np.convolve(data, rolling_window, mode="valid")
-        edge = width // 2
-        rolling_mean = np.pad(
-            rolling_mean, (edge, edge - 1), mode="constant", constant_values=np.nan
+        ind = time_to_datetime_index(time)
+        df = pd.DataFrame({"data": data}, index=ind)
+        rolling_mean = (
+            df.rolling(pd.offsets.Minute(win * 60), center=True, min_periods=1)
+            .mean()
+            .data
         )
     else:
+        if time[-1] - time[0] < win:
+            return data
+        width = ma.max(
+            (2, int(ma.round(win / ma.median(ma.diff(ma.masked_invalid(time))))))
+        )
+        data = ma.filled(data, np.nan)
+        if (width % 2) != 0:
+            width = width + 1
         rolling_window = np.ones((1, width)) * np.blackman(width)
         rolling_mean = convolve2DFFT(data, rolling_window.T, max_missing=0.1)
     return rolling_mean

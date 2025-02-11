@@ -1806,8 +1806,8 @@ def _plot_sta(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
     rolling_mean = _calculate_rolling_mean(time0, data0, win=0.25)
     time0 = _nan_time_gaps(time0)
     vmin, vmax = plot_range
-    vmax = np.min([np.nanmax(rolling_mean) + 0.05, vmax])
-    vmin = np.max([np.nanmin(rolling_mean) - 0.05, vmin])
+    vmax = np.nanmin([np.nanmax(rolling_mean) + 0.05, vmax])
+    vmin = np.nanmax([np.nanmin(rolling_mean) - 0.05, vmin])
     _set_ax(ax, vmax, ATTRIBUTES[name].ylabel, min_y=vmin)
     _set_title(ax, name, nc_file, "")
 

@@ -132,6 +132,7 @@ def process_product(prod: str, date: datetime.date, site: str):
             _get_raw_file_path(date, site),
             site=site,
             output_file=output_file,
+            date=date,
         )
     elif prod[0] == "2":
         if prod in ("2P04", "2P07", "2P08"):
