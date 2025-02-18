@@ -32,6 +32,7 @@ def lev1_to_nc(
     path_to_files: str,
     site: str | None = None,
     output_file: str | None = None,
+    lidar_path: str | None = None,
     coeff_files: list | None = None,
     instrument_config: dict | None = None,
     date: datetime.date | None = None,
@@ -45,6 +46,7 @@ def lev1_to_nc(
         path_to_files: Folder containing one day of RPG MWR binary files.
         site: Name of site.
         output_file: Output file name.
+        lidar_path: Path to (optional) lidar file
         coeff_files: List of coefficient files.
         instrument_config: Dictionary containing information about the instrument.
         date: Measurement date in UTC.
@@ -71,7 +73,7 @@ def lev1_to_nc(
     if instrument_config is not None:
         params = {**params, **instrument_config}
 
-    rpg_bin = prepare_data(path_to_files, data_type, params, time_offset)
+    rpg_bin = prepare_data(path_to_files, data_type, params, lidar_path, time_offset)
 
     if data_type in ("1B01", "1C01"):
         apply_qc(site, rpg_bin, params, coeff_files)
@@ -92,6 +94,7 @@ def prepare_data(
     path_to_files: str,
     data_type: str,
     params: dict,
+    lidar_path: str | None,
     time_offset: datetime.timedelta | None = None,
 ) -> RpgBin:
     """Load and prepare data for netCDF writing."""
@@ -122,7 +125,7 @@ def prepare_data(
             (
                 rpg_bin.data["liquid_cloud_flag"],
                 rpg_bin.data["liquid_cloud_flag_status"],
-            ) = atmos.find_lwcl_free(rpg_bin.data)
+            ) = atmos.find_lwcl_free(rpg_bin.data, lidar_path)
         else:
             (
                 rpg_bin.data["liquid_cloud_flag"],
@@ -204,7 +207,7 @@ def prepare_data(
             (
                 rpg_bin.data["liquid_cloud_flag"],
                 rpg_bin.data["liquid_cloud_flag_status"],
-            ) = atmos.find_lwcl_free(rpg_bin.data)
+            ) = atmos.find_lwcl_free(rpg_bin.data, lidar_path)
 
             file_list_met = get_file_list(path_to_files, "MET")
             if len(file_list_met) == 0:

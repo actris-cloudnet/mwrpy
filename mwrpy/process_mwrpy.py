@@ -1,6 +1,7 @@
 """Module for processing."""
 
 import datetime
+import glob
 import logging
 import os
 import time
@@ -165,6 +166,7 @@ def process_product(prod: str, date: datetime.date, site: str):
             _get_raw_file_path(date, site),
             site=site,
             output_file=output_file,
+            lidar_path=_get_lidar_file_path(date, site),
             date=date,
         )
     elif prod[0] == "2":
@@ -363,3 +365,22 @@ def plot_product(prod: str, date, site: str):
 def _get_raw_file_path(date_in: datetime.date, site: str) -> str:
     params = read_config(site, "params")
     return os.path.join(params["data_in"], date_in.strftime("%Y/%m/%d/"))
+
+
+def _get_lidar_file_path(date_in: datetime.date, site: str) -> str | None:
+    params = read_config(site, "params")
+    path = os.path.join(
+        params["path_to_lidar"],
+        date_in.strftime("%Y/%m/%d/"),
+        date_in.strftime("%Y%m%d") + "_" + site + "_" + params["lidar_model"],
+    )
+    file = glob.glob(path + "*.nc")
+    if len(file) == 0:
+        logging.info(
+            "No lidar file of type "
+            + params["lidar_model"]
+            + " found in directory "
+            + str(path)
+        )
+        return None
+    return file[0]

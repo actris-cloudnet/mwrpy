@@ -419,6 +419,35 @@ def read_nc_fields(nc_file: str, name: str) -> np.ndarray:
         return nc.variables[name][:]
 
 
+def read_lidar(path_to_lidar: str) -> dict:
+    """Reads lidar data."""
+    data, names = {}, ["time", "height", "beta"]
+    with netCDF4.Dataset(path_to_lidar) as nc:
+        for key in names:
+            data[key] = nc.variables[key][:].data
+            if key == "time":
+                epoch = datetime.datetime.strptime(
+                    nc.variables[key].units, "hours since %Y-%m-%d %H:%M:%S +00:00"
+                ).date()
+                data[key] = epoch2unix(
+                    (data[key] * 3600.0).astype(np.int32),
+                    1,
+                    (epoch.year, epoch.month, epoch.day),
+                )
+            if key == "beta":
+                data[key][data[key] == nc.variables[key].get_fill_value()] = np.nan
+
+    return data
+
+
+def n_elements(array: np.ndarray, dist: float, var: str | None = None) -> int:
+    """Returns the number of elements that cover certain distance. Adapted from CloudnetPy."""
+    n = dist / float(ma.median(ma.diff(array)))
+    if var == "time":
+        n = n / 60
+    return int(np.round(n))
+
+
 def append_data(data_in: dict, key: str, array: ma.MaskedArray) -> dict:
     """Appends data to a dictionary field (creates the field if not yet present).
 
@@ -484,7 +513,7 @@ def date_string_to_date(date_string: str) -> datetime.date:
 
 def get_time() -> str:
     """Returns current UTC-time."""
-    return f"{datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} +00:00"
+    return f"{datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M:%S')} +00:00"
 
 
 def get_date_from_past(n: int, reference_date: str | None = None) -> str:
@@ -548,7 +577,7 @@ def date_range(
         yield start_date + datetime.timedelta(n)
 
 
-def time_to_datetime_index(time_array: np.ndarray) -> pd.DatetimeIndex:
+def time_to_datetime_index(time_array: np.ndarray) -> pd.Series:
     time_units = "s" if max(time_array) > 25 else "h"
     return pd.to_datetime(time_array, unit=time_units)
 
