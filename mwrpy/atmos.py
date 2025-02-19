@@ -203,7 +203,8 @@ def find_lwcl_free(
                 liquid_flag = liquid_flag.reindex(
                     tb_df.index[mwr_ind], method="nearest"
                 )
-                index[mwr_ind] = liquid_flag["lf"][:].values
+                liquid_flag = liquid_flag.fillna(value=2.0)
+                index[mwr_ind] = np.array(liquid_flag["lf"][:].values, dtype=np.int32)
                 status[mwr_ind] = 1
                 index_rem = np.setxor1d(index_rem, mwr_ind)
 
