@@ -65,7 +65,8 @@ def correct_lwp_offset(
     ] = np.nan
     if not np.isnan(lwp).all():
         lwp[
-            (np.abs(lwp - np.nanmedian(lwp)) > 0.005) & (lwp_min["Lwp"].values > -0.025)
+            (np.abs(lwp - np.nanmedian(lwp)) > 0.005)
+            & (lwp_min["Lwp"].values - np.nanmedian(lwp) > -0.01)
         ] = np.nan
 
     seqs_all = [(key, len(list(val))) for key, val in groupby(np.isfinite(lwp))]
