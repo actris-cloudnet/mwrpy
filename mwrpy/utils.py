@@ -513,7 +513,7 @@ def date_string_to_date(date_string: str) -> datetime.date:
 
 def get_time() -> str:
     """Returns current UTC-time."""
-    return f"{datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M:%S')} +00:00"
+    return f"{datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} +00:00"
 
 
 def get_date_from_past(n: int, reference_date: str | None = None) -> str:

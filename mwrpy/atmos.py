@@ -173,7 +173,7 @@ def find_lwcl_free(
             pd.tseries.frequencies.to_offset(offset), center=True, min_periods=100
         ).max()
 
-        index_rem = np.arange(len(lev1["time"]), dtype=np.int32)
+        index_rem = np.array(range(len(lev1["time"])))
         if path_to_lidar:
             lidar = utils.read_lidar(path_to_lidar)
             mwr_ind = [
