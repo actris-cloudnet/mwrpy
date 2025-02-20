@@ -82,13 +82,13 @@ def correct_lwp_offset(
             if (
                 lev1["time"][seqs[sec, 1] + seqs[sec, 2] - 1]
                 - lev1["time"][seqs[sec, 1]]
-                < 180
+                < 30
             ):
                 lwp[seqs[sec, 1] : seqs[sec, 1] + seqs[sec, 2] - 1] = np.nan
 
     lwp_df = pd.DataFrame({"Lwp": lwp}, index=ind)
     lwp_offset = lwp_df.rolling(
-        pd.tseries.frequencies.to_offset("60min"), center=True
+        pd.tseries.frequencies.to_offset("60min"), center=True, min_periods=10
     ).mean()
     if (
         (offset_xd[0] is not None)
