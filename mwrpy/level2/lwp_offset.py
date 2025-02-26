@@ -55,13 +55,14 @@ def correct_lwp_offset(
     ).max()
 
     lwp[
-        (
+        ((lwcl_i == 1) & (lev1["liquid_cloud_flag_status"][:][index] == 1))
+        | (
             (lwcl_i != 0)
             & (lwp_max["Lwp"] > (tb_max["Tb"] * 0.0025 / 1.5))
             & (lwp_min["Lwp"] > -0.025)
         )
         | (lwp > 0.06)
-        | (lwp_max["Lwp"] > (tb_max["Tb"] * 0.0025))
+        | (lwp_max["Lwp"] > (tb_max["Tb"] * 0.0035))
     ] = np.nan
     if not np.isnan(lwp).all():
         lwp[
