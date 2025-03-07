@@ -141,9 +141,10 @@ def generate_figure(
             "hkd",
             "scan",
         ):
-            if ax == axes[0]:
-                time = _elevation_azimuth_filter(nc_file, time, ele_range)
-            field = _elevation_azimuth_filter(nc_file, field, ele_range)
+            if pointing == 0:
+                if ax == axes[0]:
+                    time = _elevation_azimuth_filter(nc_file, time, ele_range)
+                field = _elevation_azimuth_filter(nc_file, field, ele_range)
         elif pl_source in ("met", "met2", "irt", "qf", "mqf", "hkd"):
             if ax == axes[0]:
                 time = _elevation_filter(nc_file, time, ele_range)
@@ -605,11 +606,10 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
         time, data = _mark_gaps(axes[0][:], ma.MaskedArray(data), 35)
     else:
         data_in[(flag > 0) | (hum_flag > 0), :] = np.nan
-        val, cnt = np.unique(np.round(np.diff(axes[0][:]), 2), return_counts=True)
         time, data = _mark_gaps(
             axes[0][:],
             ma.MaskedArray(data_in),
-            np.max(val[cnt > 10]) * 60.0 * 2,
+            60.1,
         )
 
     if variables.cbar_ext in ("neither", "max"):

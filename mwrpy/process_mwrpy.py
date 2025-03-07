@@ -296,6 +296,7 @@ def plot_product(prod: str, date, site: str):
                     91.0,
                 )
             )
+            pointing = 1 if prod in ("2P02", "2P04", "2P07", "2P08") else 0
             if prod == "2I06":
                 f_names = f_names_stability
                 generate_figure(
@@ -322,6 +323,7 @@ def plot_product(prod: str, date, site: str):
                     ele_range=elevation,
                     save_path=output_dir,
                     image_name=key,
+                    pointing=pointing,
                 )
 
     elif os.path.isfile(filename) and (prod in ("single", "multi")):
@@ -337,6 +339,7 @@ def plot_product(prod: str, date, site: str):
                     91.0,
                 )
             )
+            pointing = 1 if prod == "multi" else 0
             f_names = f_names_stability
             if var_name == "stability":
                 keymap = {
@@ -369,6 +372,7 @@ def plot_product(prod: str, date, site: str):
                         save_path=output_dir,
                         image_name=key,
                         title=title,
+                        pointing=pointing,
                     )
 
 
