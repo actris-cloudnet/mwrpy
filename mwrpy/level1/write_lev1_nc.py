@@ -79,15 +79,15 @@ def lev1_to_nc(
         apply_qc(site, rpg_bin, params, coeff_files)
     if data_type in ("1B21", "1C01"):
         apply_met_qc(rpg_bin.data, params)
-    hatpro = rpg_mwr.Rpg(rpg_bin.data, date)
-    hatpro.find_valid_times()
-    hatpro.data = get_data_attributes(hatpro.data, data_type)
+    mwr = rpg_mwr.Rpg(rpg_bin.data, date)
+    mwr.find_valid_times()
+    mwr.data = get_data_attributes(mwr.data, data_type)
     if output_file is not None:
         global_attributes = read_config(site, "global_specs")
         if data_type != "1C01":
             update_lev1_attributes(global_attributes, data_type)
-        rpg_mwr.save_rpg(hatpro, output_file, global_attributes, data_type)
-    return hatpro
+        rpg_mwr.save_rpg(mwr, output_file, global_attributes, data_type)
+    return mwr
 
 
 def prepare_data(

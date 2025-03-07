@@ -181,7 +181,7 @@ ATTRIBUTES_1B01 = {
         "and Humidity by Ground-based Microwave Radiometers, PhD Thesis,\n"
         "University of Reading.) Derived from sensitivity analysis of LN2\n"
         "calibration plus instrument noise levels (ACTRIS work), \n"
-        "currently literature values (Maschwitz et al. for HATPRO, ? for radiometrics)",
+        "currently literature values (Maschwitz et al. for RPG, ? for radiometrics)",
     ),
     "tb_cov": MetaData(
         long_name="Error covariance matrix of brightness temperature channels",

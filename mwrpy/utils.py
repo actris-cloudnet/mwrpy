@@ -64,7 +64,7 @@ def epoch2unix(
 
     Args:
         epoch_time: 1-D array of seconds since the given epoch.
-        time_ref: HATPRO time reference (1: UTC, 0: Local Time)
+        time_ref: MWR time reference (1: UTC, 0: Local Time)
         epoch: Epoch of the input time. Default is (2001,1,1,0,0,0).
         time_offset: Time offset for local time.
 
@@ -347,6 +347,10 @@ def _read_itype_config_yaml(itype: str) -> dict:
     """Reads configuration file for specific instrument type."""
     dir_name = os.path.dirname(os.path.realpath(__file__))
     inst_file = os.path.join(dir_name, "site_config", itype + ".yaml")
+    if not os.path.isfile(inst_file):
+        raise NotImplementedError(
+            f"Error: config file for instrument type {itype} not found"
+        )
     with open(inst_file, "r", encoding="utf8") as f:
         return yaml.load(f, Loader=SafeLoader)
 

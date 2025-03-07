@@ -78,9 +78,9 @@ def lev2_to_nc(
         )
         _combine_lev1(lev1, rpg_dat, index, data_type, scan_time)
         _del_att(global_attributes)
-        hatpro = rpg_mwr.Rpg(rpg_dat)
-        hatpro.data = get_data_attributes(hatpro.data, data_type, coeff)
-        rpg_mwr.save_rpg(hatpro, output_file, global_attributes, data_type)
+        mwr = rpg_mwr.Rpg(rpg_dat)
+        mwr.data = get_data_attributes(mwr.data, data_type, coeff)
+        rpg_mwr.save_rpg(mwr, output_file, global_attributes, data_type)
 
 
 def get_products(
