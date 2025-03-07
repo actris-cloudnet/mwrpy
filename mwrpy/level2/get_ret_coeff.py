@@ -13,10 +13,10 @@ def get_mvr_coeff(
     """This function extracts retrieval coefficients for given files.
 
     Args:
-        coeff_files: List of coefficient files.
         site: Name of site.
         prefix: Identifier for type of product.
         freq: Frequencies of observations.
+        coeff_files: List of coefficient files.
 
     Examples:
         >>> from mwrpy.level2.get_ret_coeff import get_mvr_coeff

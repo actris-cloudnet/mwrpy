@@ -149,10 +149,19 @@ def find_lwcl_free(
     """
     index = np.ones(len(lev1["time"]), dtype=np.int32)
     status = np.zeros(len(lev1["time"]), dtype=np.int32)
-    freq_31 = np.where(np.round(lev1["frequency"][:], 1) == 31.4)[0]
-    freq_22 = np.where(np.round(lev1["frequency"][:], 1) == 22.2)[0]
-    if len(freq_31) == 1 and len(freq_22) == 1:
-        tb = np.squeeze(lev1["tb"][:, freq_31])
+
+    # Different frequencies for window and water vapor channels depending on instrument type
+    freq_win = np.where(
+        (np.isclose(np.round(lev1["frequency"][:], 1), 31.4))
+        | (np.isclose(np.round(lev1["frequency"][:], 1), 190.8))
+    )[0]
+    freq_win = np.array([freq_win[0]]) if len(freq_win) > 1 else freq_win
+    freq_wv = np.where(
+        (np.isclose(np.round(lev1["frequency"][:], 1), 22.2))
+        | (np.isclose(np.round(lev1["frequency"][:], 1), 183.9))
+    )[0]
+    if len(freq_win) == 1 and len(freq_wv) == 1:
+        tb = np.squeeze(lev1["tb"][:, freq_win])
         tb[(lev1["pointing_flag"][:] == 1) | (lev1["elevation_angle"][:] < 89.0)] = (
             np.nan
         )
@@ -167,7 +176,7 @@ def find_lwcl_free(
             pd.tseries.frequencies.to_offset(offset), center=True, min_periods=100
         ).max()
 
-        tb_wv = np.squeeze(lev1["tb"][:, freq_22])
+        tb_wv = np.squeeze(lev1["tb"][:, freq_wv])
         tb_rat = pd.DataFrame({"Tb": tb_wv / tb}, index=ind)
         tb_rat = tb_rat.rolling(
             pd.tseries.frequencies.to_offset(offset), center=True, min_periods=100
@@ -175,6 +184,7 @@ def find_lwcl_free(
 
         index_rem = np.array(range(len(lev1["time"])))
         if path_to_lidar:
+            # Use lidar data (Cloudnet format) to identify liquid water clouds
             lidar = utils.read_lidar(path_to_lidar)
             mwr_ind = [
                 i
@@ -187,11 +197,16 @@ def find_lwcl_free(
                 if np.min(np.abs(tt - lev1["time"])) < 600
             ]
             if len(mwr_ind) > 0:
+                fact = (
+                    0.75
+                    if np.isclose(np.round(lev1["frequency"][freq_win], 1), 190.8)
+                    else 0.1
+                )
                 liquid_from_lidar = droplet_mwrpy.find_liquid(
                     lidar,
                     lev1["time"][mwr_ind],
                     tb_mx["Tb"].iloc[mwr_ind].values,
-                    tb_th=np.nanmedian(tb_rat["Tb"]) * 0.1,
+                    tb_th=np.nanmedian(tb_rat["Tb"]) * fact,
                 )
                 liquid_flag = pd.DataFrame(
                     {"lf": liquid_from_lidar[lidar_ind]},

@@ -287,10 +287,22 @@ def get_coeff_list(site: str | None, prefix: str, coeff_files: list | None) -> l
     dir_path = os.path.dirname(os.path.realpath(__file__))
     s_list = [
         glob.glob(
-            dir_path + "/site_config/" + site + "/coefficients/" + prefix.lower() + "*"
+            dir_path
+            + "/site_config/"
+            + site
+            + "/coefficients/"
+            + "*"
+            + prefix.lower()
+            + "*"
         ),
         glob.glob(
-            dir_path + "/site_config/" + site + "/coefficients/" + prefix.upper() + "*"
+            dir_path
+            + "/site_config/"
+            + site
+            + "/coefficients/"
+            + "*"
+            + prefix.upper()
+            + "*"
         ),
     ]
     c_list = [x for x in s_list if x]
@@ -324,20 +336,23 @@ def get_file_list(path_to_files: str, extension: str):
 
 
 def read_config(site: str | None, key: Literal["global_specs", "params"]) -> dict:
-    data = _read_hatpro_config_yaml()[key]
+    itype = _read_site_config_yaml(site)["type"] if site is not None else "hatpro"
+    data = _read_itype_config_yaml(itype)[key]
     if site is not None:
         data.update(_read_site_config_yaml(site)[key])
     return data
 
 
-def _read_hatpro_config_yaml() -> dict:
+def _read_itype_config_yaml(itype: str) -> dict:
+    """Reads configuration file for specific instrument type."""
     dir_name = os.path.dirname(os.path.realpath(__file__))
-    inst_file = os.path.join(dir_name, "site_config", "hatpro.yaml")
+    inst_file = os.path.join(dir_name, "site_config", itype + ".yaml")
     with open(inst_file, "r", encoding="utf8") as f:
         return yaml.load(f, Loader=SafeLoader)
 
 
 def _read_site_config_yaml(site: str) -> dict:
+    """Reads configuration file for specific site."""
     dir_name = os.path.dirname(os.path.realpath(__file__))
     site_file = os.path.join(dir_name, "site_config", site, "config.yaml")
     if not os.path.isfile(site_file):

@@ -132,19 +132,14 @@ def generate_figure(
         if image_name and "_scan" in image_name:
             name = image_name
         pl_source = ATTRIBUTES[name].source
-        if (
-            not is_height
-            and "angle" not in name
-            and pl_source
-            not in (
-                "met",
-                "met2",
-                "irt",
-                "qf",
-                "mqf",
-                "hkd",
-                "scan",
-            )
+        if "angle" not in name and pl_source not in (
+            "met",
+            "met2",
+            "irt",
+            "qf",
+            "mqf",
+            "hkd",
+            "scan",
         ):
             if ax == axes[0]:
                 time = _elevation_azimuth_filter(nc_file, time, ele_range)
@@ -1035,13 +1030,13 @@ def _plot_tb(
     quality_flag = _pointing_filter(nc_file, quality_flag, ele_range, pointing)
 
     fig.clear()
+    col = 2 if len(frequency) > 7 else 1
     fig, axs = plt.subplots(
         7,
-        len(frequency) % 6,
+        col,
         figsize=(13, 16),
         facecolor="w",
         edgecolor="k",
-        sharex="col",
         dpi=120,
     )
     assert not isinstance(axs, Axes)
@@ -1059,7 +1054,7 @@ def _plot_tb(
             rotation="vertical",
             fontsize=20,
         )
-        if len(frequency) % 6 == 2:
+        if len(frequency) == 14:
             fig.text(0.445, 0.09, "flagged data", va="center", fontsize=20, color="r")
         else:
             fig.text(0.795, 0.09, "flagged data", va="center", fontsize=20, color="r")
@@ -1072,7 +1067,7 @@ def _plot_tb(
             rotation="vertical",
             fontsize=20,
         )
-        if len(frequency) % 6 == 2:
+        if len(frequency) == 14:
             fig.text(
                 0.37,
                 0.085,
@@ -1123,56 +1118,63 @@ def _plot_tb(
     tb_s: np.ndarray = np.array([])
 
     for i, axi in enumerate(axs.T.flatten()):
-        no_flag = np.where(quality_flag[:, i] == 0)[0]
-        if len(np.array(no_flag)) == 0:
-            no_flag = np.arange(len(time))
-        tb_m = np.append(tb_m, [ma.mean(data_in[no_flag, i])])  # TB mean
-        tb_s = np.append(tb_s, [ma.std(data_in[no_flag, i])])  # TB std
-        axi.plot(
-            time,
-            np.ones(len(time)) * tb_m[i],
-            "--",
-            color=_COLORS["darkgray"],
-            linewidth=1,
-        )
-        axi.plot(time, data_in[:, i], "ko", markersize=0.75, fillstyle="full")
-        flag = np.where(quality_flag[:, i] > 0)[0]
-        axi.plot(time[flag], data_in[flag, i], "ro", markersize=0.75, fillstyle="full")
-        axi.set_facecolor(_COLORS["lightgray"])
-        if len(data_in) > 0:
-            dif = np.nanmax(data_in[no_flag, i]) - np.nanmin(data_in[no_flag, i])
-            _set_ax(
-                axi,
-                np.nanmax(data_in[no_flag, i]) + 0.25 * dif,
-                "",
-                np.nanmin(data_in[no_flag, i]) - 0.25 * dif,
+        if i < len(frequency):
+            no_flag = np.where(quality_flag[:, i] == 0)[0]
+            if len(np.array(no_flag)) == 0:
+                no_flag = np.arange(len(time))
+            tb_m = np.append(tb_m, [ma.mean(data_in[no_flag, i])])  # TB mean
+            tb_s = np.append(tb_s, [ma.std(data_in[no_flag, i])])  # TB std
+            axi.plot(
+                time,
+                np.ones(len(time)) * tb_m[i],
+                "--",
+                color=_COLORS["darkgray"],
+                linewidth=1,
+            )
+            axi.plot(time, data_in[:, i], "ko", markersize=0.75, fillstyle="full")
+            flag = np.where(quality_flag[:, i] > 0)[0]
+            axi.plot(
+                time[flag], data_in[flag, i], "ro", markersize=0.75, fillstyle="full"
+            )
+            axi.set_facecolor(_COLORS["lightgray"])
+            if len(data_in) > 0:
+                dif = np.nanmax(data_in[no_flag, i]) - np.nanmin(data_in[no_flag, i])
+                _set_ax(
+                    axi,
+                    np.nanmax(data_in[no_flag, i]) + 0.25 * dif,
+                    "",
+                    np.nanmin(data_in[no_flag, i]) - 0.25 * dif,
+                )
+            else:
+                _set_ax(
+                    axi,
+                    100.0,
+                    "",
+                    0.0,
+                )
+            if i in (
+                len(np.where(np.array(params["receiver"]) == 1)[0]) - 1,
+                len(params["receiver"]) - 1,
+            ):
+                _set_labels(fig, axi, nc_file)
+            axi.text(
+                0.05,
+                0.9,
+                str(frequency[i]) + " GHz",
+                transform=axi.transAxes + trans,
+                color=_COLORS["darkgray"],
+                fontweight="bold",
+            )
+            axi.text(
+                0.55,
+                0.9,
+                str(round(tb_m[i], 2)) + " +/- " + str(round(tb_s[i], 2)) + " K",
+                transform=axi.transAxes + trans,
+                color=_COLORS["darkgray"],
+                fontweight="bold",
             )
         else:
-            _set_ax(
-                axi,
-                100.0,
-                "",
-                0.0,
-            )
-
-        if i in (6, 13):
-            _set_labels(fig, axi, nc_file)
-        axi.text(
-            0.05,
-            0.9,
-            str(frequency[i]) + " GHz",
-            transform=axi.transAxes + trans,
-            color=_COLORS["darkgray"],
-            fontweight="bold",
-        )
-        axi.text(
-            0.55,
-            0.9,
-            str(round(tb_m[i], 2)) + " +/- " + str(round(tb_s[i], 2)) + " K",
-            transform=axi.transAxes + trans,
-            color=_COLORS["darkgray"],
-            fontweight="bold",
-        )
+            axi.axis("off")
 
     # TB mean
     axa = fig.add_subplot(121)
@@ -1626,7 +1628,12 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
     """Plot for scans of integrated quantities (LWP, IWV)."""
     elevation = read_nc_fields(nc_file, "elevation_angle")
     angles = np.unique(np.round(elevation[elevation < 89.0]))
-    if (len(angles) == 0) | (data_in[np.isin(np.round(elevation), angles)].mask.all()):
+    azimuth = read_nc_fields(nc_file, "azimuth_angle")
+    if (
+        (len(angles) == 0)
+        | (data_in[np.isin(np.round(elevation), angles)].mask.all())
+        | (len(np.unique(np.round(azimuth[elevation < 89.0]))) < 2)
+    ):
         ax.set_title("empty")
     else:
         fig, axs = plt.subplots(
@@ -1649,7 +1656,6 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
                 np.deg2rad(90.0 - elevation_f)
             )
             time_s0 = _elevation_filter(nc_file, time, ele_range=ele_range)
-            azimuth = read_nc_fields(nc_file, "azimuth_angle")
             azimuth = _elevation_filter(nc_file, azimuth, ele_range=ele_range)
             flag = _get_ret_flag(nc_file, time_s0, name.rstrip("_scan"), 1)
             data_s0 = ma.masked_where(flag > 0, data_s0)

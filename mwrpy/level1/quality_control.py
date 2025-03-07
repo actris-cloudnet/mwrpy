@@ -281,12 +281,25 @@ def spectral_consistency(
                 pd.to_datetime(data["time"][:], unit="s"), method="nearest"
             )
             tb_diff.iloc[~np.isin(range(len(ret_rm)), ele_ind)] = np.nan
-            fact = [2.0, 4.0]  # factor for receiver retrieval uncertainty
+            f_mean = [25.0, 55.0, 90.0, 185.0]  # mean frequency for each band
+            fact = [2.0, 4.0, 3.0, 2.5]  # factor for receiver retrieval uncertainty
             # flag for individual channels based on channel retrieval uncertainty
             flag_ind[
                 np.where(
                     np.abs(tb_diff["Tb"].values)
-                    > ret_rm[:, ifreq] * fact[data["receiver"][ifreq] - 1]
+                    > ret_rm[:, ifreq]
+                    * fact[
+                        np.argmin(
+                            np.abs(
+                                f_mean
+                                - np.mean(
+                                    data["frequency"][
+                                        data["receiver"] == data["receiver"][ifreq]
+                                    ]
+                                )
+                            )
+                        )
+                    ]
                 )[0],
                 ifreq,
             ] = True
@@ -406,11 +419,19 @@ def spectral_consistency(
             )
 
     # receiver flag based on mean absolute difference
-    fact = [1.5, 2.0]
+    f_mean = [25.0, 55.0, 90.0, 185.0]  # mean frequency for each band
+    fact = [1.5, 2.0, 2.0, 3.0]  # factor for receiver retrieval uncertainty
     for _, rec in enumerate(data["receiver_nb"]):
         flag_ind[
             np.ix_(
-                ma.mean(abs_diff[:, data["receiver"] == rec], axis=1) > fact[rec - 1],
+                ma.mean(abs_diff[:, data["receiver"] == rec], axis=1)
+                > fact[
+                    np.argmin(
+                        np.abs(
+                            f_mean - np.mean(data["frequency"][data["receiver"] == rec])
+                        )
+                    )
+                ],
                 data["receiver"] == rec,
             )
         ] = True

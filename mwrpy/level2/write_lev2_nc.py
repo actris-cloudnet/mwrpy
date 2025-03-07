@@ -212,12 +212,11 @@ def get_products(
             ret_product[index_ret] = tmp_product[index_ret]
             _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
             if product == "lwp":
-                freq_win = np.where((np.round(lev1["frequency"][:].data, 1) == 31.4))[0]
                 rpg_dat["lwp"], rpg_dat["lwp_offset"] = (
                     ret_product,
                     ma.masked_all(len(index)),
                 )
-                if len(freq_win) == 1 and len(index_ret) > 0:
+                if len(index_ret) > 0:
                     (
                         rpg_dat["lwp"][index_ret],
                         rpg_dat["lwp_offset"][index_ret],

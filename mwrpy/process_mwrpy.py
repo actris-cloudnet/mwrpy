@@ -11,11 +11,16 @@ import netCDF4 as nc
 import pandas as pd
 
 from mwrpy.level1.write_lev1_nc import lev1_to_nc
-from mwrpy.level2.lev2_collocated import generate_lev2_multi, generate_lev2_single
+from mwrpy.level2.lev2_collocated import (
+    generate_lev2_lhumpro,
+    generate_lev2_multi,
+    generate_lev2_single,
+)
 from mwrpy.level2.write_lev2_nc import lev2_to_nc
 from mwrpy.plots.generate_plots import generate_figure
 from mwrpy.utils import (
     _get_filename,
+    _read_site_config_yaml,
     date_range,
     get_processing_dates,
     isodate2date,
@@ -160,6 +165,7 @@ def process_product(prod: str, date: datetime.date, site: str):
                     csv_off["date"] == xday[1].strftime("%m-%d"), "offset"
                 ].values[0]
 
+    itype = _read_site_config_yaml(site)["type"]
     if prod[0] == "1":
         lev1_to_nc(
             prod,
@@ -187,8 +193,12 @@ def process_product(prod: str, date: datetime.date, site: str):
             hum_file=hum_file,
             lwp_offset=lwp_offset,
         )
-    elif prod == "single":
+    elif prod == "single" and itype != "lhumpro_u90":
         generate_lev2_single(
+            site, _get_filename("1C01", date, site), output_file, lwp_offset
+        )
+    elif itype == "lhumpro_u90":
+        generate_lev2_lhumpro(
             site, _get_filename("1C01", date, site), output_file, lwp_offset
         )
     elif prod == "multi":
