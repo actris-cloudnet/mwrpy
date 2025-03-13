@@ -1627,7 +1627,7 @@ def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
 def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, ax):
     """Plot for scans of integrated quantities (LWP, IWV)."""
     elevation = read_nc_fields(nc_file, "elevation_angle")
-    angles = np.unique(np.round(elevation[elevation < 89.0]))
+    angles = np.unique(np.round(elevation[(elevation > 1.0) & (elevation < 89.0)]))
     azimuth = read_nc_fields(nc_file, "azimuth_angle")
     if (
         (len(angles) == 0)
@@ -1656,7 +1656,7 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
                 np.deg2rad(90.0 - elevation_f)
             )
             time_s0 = _elevation_filter(nc_file, time, ele_range=ele_range)
-            azimuth = _elevation_filter(nc_file, azimuth, ele_range=ele_range)
+            azi_f = _elevation_filter(nc_file, azimuth, ele_range=ele_range)
             flag = _get_ret_flag(nc_file, time_s0, name.rstrip("_scan"), 1)
             data_s0 = ma.masked_where(flag > 0, data_s0)
 
@@ -1667,11 +1667,9 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
                 axt = ind
                 if ax1 == 0:
                     ax1 = ind
-                scan = pd.DataFrame(
-                    {"time": time_s0, "azimuth": azimuth, "var": data_s0}
-                )
-                az_pl = np.unique(azimuth)
-                az_pl = az_pl[np.mod(az_pl, 5) == 0]
+                scan = pd.DataFrame({"time": time_s0, "azimuth": azi_f, "var": data_s0})
+                az_pl = np.unique(azi_f)
+                az_pl = az_pl[np.mod(az_pl - az_pl[0], 5) == 0]
                 if np.diff(az_pl).all() > 0:
                     scan["blocks"] = (scan["azimuth"].diff() <= 0.0).cumsum()
                 else:
@@ -1731,9 +1729,9 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
                                 (time_i >= gtim[ig, 0]) & (time_i <= gtim[ig, 1])
                             )
                             data_g[xind, :] = 1.0
-                        for ip in range(2):
+                        for segi in range(2):
                             _plot_segment_data(
-                                axi[ip],
+                                axi[segi],
                                 ma.MaskedArray(data_g),
                                 "tb_missing",
                                 (time_i, np.linspace(0, 360, 2)),
