@@ -273,6 +273,22 @@ ATTRIBUTES = {
         plot_type="bar",
         source="hkd",
     ),
+    "tb_cov_ln2": PlotMeta(
+        name="Covariance (LN2)",
+        cbar="viridis",
+        clabel="covariance (K$^2$)",
+        plot_range=(-1, 1),
+        plot_type="mesh",
+        source="cov",
+    ),
+    "tb_cov_amb": PlotMeta(
+        name="Covariance (Ambient)",
+        cbar="cividis",
+        clabel="covariance (K$^2$)",
+        plot_range=(-1, 1),
+        plot_type="mesh",
+        source="cov",
+    ),
     "lifted_index": PlotMeta(
         name="Lifted index",
         ylabel=_K,

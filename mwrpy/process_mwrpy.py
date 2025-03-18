@@ -53,6 +53,7 @@ PRODUCT_NAME = {
         "quality_flag",
         "met_quality_flag",
         "hkd",
+        "cov",
     ],
     "2I01": ["lwp", "lwp_scan"],
     "2I02": ["iwv", "iwv_scan"],
@@ -268,9 +269,12 @@ def plot_product(prod: str, date, site: str):
             "quality_flag": ["quality_flag"],
             "met_quality_flag": ["met_quality_flag"],
             "hkd": ["t_amb", "t_rec", "t_sta"],
+            "cov": ["tb_cov_ln2", "tb_cov_amb"],
         }
+        params = read_config(site, "params")
         for key in PRODUCT_NAME[prod]:
             variables = keymap[key]
+            out_dir = params["path_to_cal"] if key == "cov" else output_dir
             ele_range = (
                 (
                     89.0,
@@ -283,7 +287,7 @@ def plot_product(prod: str, date, site: str):
                 filename,
                 variables,
                 ele_range=ele_range,
-                save_path=output_dir,
+                save_path=out_dir,
                 image_name=key,
             )
 

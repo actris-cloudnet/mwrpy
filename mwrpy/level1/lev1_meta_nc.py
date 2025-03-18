@@ -185,25 +185,18 @@ ATTRIBUTES_1B01 = {
         comment="0=horizon, 90=zenith",
         dimensions=("time",),
     ),
-    # "tb_accuracy": MetaData(
-    #     long_name="Total absolute calibration uncertainty of brightness temperature,\n"
-    #     "one standard deviation",
-    #     units="K",
-    #     comment="specify here source of this variable, e.g. literature value,\n"
-    #     "specified by manufacturer, result of validation effort\n"
-    #     "(updated irregularily) For RDX systems, derived from analysis\n"
-    #     "performed by Tim Hewsion (Tim J. Hewison, 2006: Profiling Temperature\n"
-    #     "and Humidity by Ground-based Microwave Radiometers, PhD Thesis,\n"
-    #     "University of Reading.) Derived from sensitivity analysis of LN2\n"
-    #     "calibration plus instrument noise levels (ACTRIS work), \n"
-    #     "currently literature values (Maschwitz et al. for HATPRO, ? for radiometrics)",
-    # ),
-    # "tb_cov": MetaData(
-    #     long_name="Error covariance matrix of brightness temperature channels",
-    #     units="K*K",
-    #     comment="the covariance matrix has been determined using the xxx method\n"
-    #     "from observations at a blackbody target of temperature t_amb",
-    # ),
+    "tb_cov_amb": MetaData(
+        long_name="Error covariance matrix of brightness temperature channels on ambient target.",
+        units="K*K",
+        comment="Brightness temperature error covariance matrix determined on ambient target.",
+        dimensions=("frequency", "frequency"),
+    ),
+    "tb_cov_ln2": MetaData(
+        long_name="Error covariance matrix of brightness temperature channels on LN2 target.",
+        units="K*K",
+        comment="Brightness temperature error covariance matrix determined during absolute calibration on LN2 target.",
+        dimensions=("frequency", "frequency"),
+    ),
     "quality_flag": MetaData(
         long_name="Quality flag",
         units="1",
@@ -260,10 +253,6 @@ ATTRIBUTES_1B01 = {
         units="K",
         dimensions=("time", "frequency"),
     ),
-    # 'tn': MetaData(
-    #     long_name='Receiver noise temperature',
-    #     units='K',
-    # )
 }
 
 
