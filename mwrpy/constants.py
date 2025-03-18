@@ -19,4 +19,10 @@ RS = 287.058
 RW = 462.0
 
 # Vapor pressure e0 (Pa) at T0 (K)
-e0 = 611.0
+e0 = 611.2
+
+# Standard gravitational acceleration (m s-2)
+g0 = 9.80665
+
+# Standard atmospheric pressure at sea level (Pa)
+p0 = 101325.0
