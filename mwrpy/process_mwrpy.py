@@ -6,7 +6,6 @@ import logging
 import os
 import time
 
-import matplotlib.pyplot as plt
 import netCDF4 as nc
 import pandas as pd
 
@@ -100,6 +99,7 @@ def main(args):
     _start_date, _stop_date = get_processing_dates(args)
     start_date = isodate2date(_start_date)
     stop_date = isodate2date(_stop_date)
+
     for date in date_range(start_date, stop_date):
         for product in args.products:
             if product not in PRODUCT_NAME:
@@ -119,12 +119,8 @@ def main(args):
                     process_product(product, date, args.site)
             if args.command != "no-plot":
                 logging.info(f"Plotting {product} product, {args.site} {date}")
-                try:
-                    plot_product(product, date, args.site)
-                except Exception as e:
-                    logging.error(f"Error in plotting product {product}: {e}.")
-                finally:
-                    plt.close()
+                plot_product(product, date, args.site)
+
             elapsed_time = time.process_time() - start
             logging.info(f"Processing took {elapsed_time:.1f} seconds")
 
