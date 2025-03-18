@@ -193,9 +193,9 @@ def prepare_data(
                     "cal_date"
                 ][ind_cal]
                 rpg_bin.data["calibration_status"] = rpg_log.data["status"][ind_cal, :]
-                rpg_bin.data[f"tb_cov_{cal}"] = np.atleast_3d(
-                    rpg_log.data["covariance_matrix"]
-                ).T[ind_cal, :, :]
+                rpg_bin.data[f"tb_cov_{cal}"] = rpg_log.data["covariance_matrix"][
+                    ind_cal, :, :
+                ]
 
         if data_type == "1C01":
             if params["ir_flag"]:

@@ -2,6 +2,7 @@
 
 import glob
 import locale
+import logging
 from datetime import date, datetime
 
 import matplotlib.pyplot as plt
@@ -122,63 +123,67 @@ def generate_figure(
     valid_fields, valid_names = _find_valid_fields(nc_file, field_names)
     if len(valid_fields) == 0:
         return None
+    file_name = None
+    try:
+        fig, axes = _initialize_figure(len(valid_fields), dpi)
+        time = _read_time_vector(nc_file)
 
-    fig, axes = _initialize_figure(len(valid_fields), dpi)
-    time = _read_time_vector(nc_file)
-
-    for ax, field, name in zip(axes, valid_fields, valid_names):
-        ax.set_facecolor(_COLORS["lightgray"])
-        is_height = _is_height_dimension(nc_file, name)
-        if image_name and "_scan" in image_name:
-            name = image_name
-        pl_source = ATTRIBUTES[name].source
-        if "angle" not in name and pl_source not in (
-            "met",
-            "met2",
-            "irt",
-            "qf",
-            "mqf",
-            "hkd",
-            "scan",
-            "cov",
-        ):
-            if pointing == 0:
+        for ax, field, name in zip(axes, valid_fields, valid_names):
+            ax.set_facecolor(_COLORS["lightgray"])
+            is_height = _is_height_dimension(nc_file, name)
+            if image_name and "_scan" in image_name:
+                name = image_name
+            pl_source = ATTRIBUTES[name].source
+            if "angle" not in name and pl_source not in (
+                "met",
+                "met2",
+                "irt",
+                "qf",
+                "mqf",
+                "hkd",
+                "scan",
+                "cov",
+            ):
+                if pointing == 0:
+                    if ax == axes[0]:
+                        time = _elevation_azimuth_filter(nc_file, time, ele_range)
+                    field = _elevation_azimuth_filter(nc_file, field, ele_range)
+            elif pl_source in ("met", "met2", "irt", "qf", "mqf", "hkd"):
                 if ax == axes[0]:
-                    time = _elevation_azimuth_filter(nc_file, time, ele_range)
-                field = _elevation_azimuth_filter(nc_file, field, ele_range)
-        elif pl_source in ("met", "met2", "irt", "qf", "mqf", "hkd"):
-            if ax == axes[0]:
-                time = _elevation_filter(nc_file, time, ele_range)
-            field = _elevation_filter(nc_file, field, ele_range)
-        if title:
-            _set_title(ax, name, nc_file, "")
-        if not is_height:
-            _plot_instrument_data(
-                ax, field, name, pl_source, time, fig, nc_file, ele_range, pointing
+                    time = _elevation_filter(nc_file, time, ele_range)
+                field = _elevation_filter(nc_file, field, ele_range)
+            if title:
+                _set_title(ax, name, nc_file, "")
+            if not is_height:
+                _plot_instrument_data(
+                    ax, field, name, pl_source, time, fig, nc_file, ele_range, pointing
+                )
+            else:
+                ax_value = _read_ax_values(nc_file)
+                ax_value = (time, ax_value[1])
+                field, ax_value = _screen_high_altitudes(field, ax_value, max_y)
+                _set_ax(ax, max_y)
+
+                plot_type = ATTRIBUTES[name].plot_type
+                if plot_type == "mesh":
+                    _plot_colormesh_data(ax, field, name, ax_value, nc_file)
+
+        if axes[-1].get_title() != "empty":
+            if {"tb_cov_ln2", "tb_cov_amb"} & set(field_names):
+                case_date = _get_cal_date(nc_file)
+                site_name = _read_location(nc_file)
+                _add_subtitle(fig, case_date, site_name)
+                fig.set_size_inches(9.0, 7.0 * len(axes))
+            else:
+                case_date = _set_labels(fig, axes[-1], nc_file, sub_title)
+            file_name = handle_saving(
+                nc_file, image_name, save_path, show, case_date, valid_names
             )
-        else:
-            ax_value = _read_ax_values(nc_file)
-            ax_value = (time, ax_value[1])
-            field, ax_value = _screen_high_altitudes(field, ax_value, max_y)
-            _set_ax(ax, max_y)
 
-            plot_type = ATTRIBUTES[name].plot_type
-            if plot_type == "mesh":
-                _plot_colormesh_data(ax, field, name, ax_value, nc_file)
-
-    if axes[-1].get_title() == "empty":
-        return None
-    else:
-        if {"tb_cov_ln2", "tb_cov_amb"} & set(field_names):
-            case_date = _get_cal_date(nc_file)
-            site_name = _read_location(nc_file)
-            _add_subtitle(fig, case_date, site_name)
-            fig.set_size_inches(10.0, 7.5)
-        else:
-            case_date = _set_labels(fig, axes[-1], nc_file, sub_title)
-        file_name = handle_saving(
-            nc_file, image_name, save_path, show, case_date, valid_names
-        )
+    except Exception as e:
+        logging.error(f"Error in plotting: {e}.")
+    finally:
+        plt.close()
         return file_name
 
 
@@ -1922,9 +1927,9 @@ def _plot_covaraince(ax, data_in: ma.MaskedArray, name, nc_file: str):
     frequency = read_nc_fields(nc_file, "frequency")
 
     variables = ATTRIBUTES[name]
-    pl = ax.pcolormesh(data_in, cmap=variables.cbar)
+    pl = ax.pcolormesh(np.flip(data_in, axis=0), cmap=variables.cbar, vmin=0.0)
 
-    colorbar = _init_colorbar(pl, ax, size="2%", pad=0.05)
+    colorbar = _init_colorbar(pl, ax, size="4%", pad=0.05)
     locator = colorbar.ax.yaxis.get_major_locator()
     locator.set_params(nbins=10)
     colorbar.update_ticks()
@@ -1933,6 +1938,6 @@ def _plot_covaraince(ax, data_in: ma.MaskedArray, name, nc_file: str):
     ax.set_xticks(np.arange(len(frequency)) + 0.5)
     ax.set_yticks(np.arange(len(frequency)) + 0.5)
     ax.set_xticklabels(frequency.astype(str), rotation=30)
-    ax.set_yticklabels(frequency.astype(str))
+    ax.set_yticklabels(np.flip(frequency).astype(str))
     ax.set_xlabel("Frequency (GHz)")
     ax.set_ylabel("Frequency (GHz)")
