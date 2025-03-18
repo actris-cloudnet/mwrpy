@@ -15,7 +15,6 @@ classifiers = [
 ]
 dependencies = [
   "matplotlib",
-  "metpy",
   "netCDF4",
   "pandas",
   "pytz",
@@ -40,7 +39,7 @@ Changelog = "https://github.com/actris-cloudnet/mwrpy/blob/main/CHANGELOG.md"
 check_untyped_defs = true
 
 [[tool.mypy.overrides]]
-module = ["cftime.*", "metpy.*", "mpl_toolkits.*", "pandas.*", "scipy.*", "suncalc.*"]
+module = ["cftime.*", "mpl_toolkits.*", "pandas.*", "scipy.*", "suncalc.*"]
 ignore_missing_imports = true
 
 [tool.release-version]

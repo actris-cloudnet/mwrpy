@@ -1,10 +1,8 @@
 """Module for atmsopheric functions."""
 
-import metpy.calc as mpcalc
 import numpy as np
 import pandas as pd
 import scipy.constants
-from metpy.units import masked_array
 from numpy import ma
 
 import mwrpy.constants as con
@@ -26,20 +24,15 @@ def vap_pres(q: np.ndarray, T: np.ndarray) -> np.ndarray:
 
 def t_dew_rh(T: np.ndarray, rh: np.ndarray) -> np.ndarray:
     """Dew point temperature (K) from relative humidity ()."""
-    return (
-        mpcalc.dewpoint_from_relative_humidity(
-            masked_array(T, data_units="K"), masked_array(rh, data_units="")
-        ).magnitude
-        + con.T0
-    )
+    es = calc_saturation_vapor_pressure(T)
+    e = rh * es
+    return con.T0 + 243.5 * np.log(e / con.e0) / (17.67 - np.log(e / con.e0))
 
 
 def pot_tem(T: np.ndarray, q: np.ndarray, p: np.ndarray, z: np.ndarray) -> np.ndarray:
     """Potential temperature (K)."""
     p_baro = calc_p_baro(T, q, p, z)
-    return mpcalc.potential_temperature(
-        masked_array(p_baro, data_units="Pa"), masked_array(T, data_units="K")
-    ).magnitude
+    return T * (100000.0 / p_baro) ** (con.RS / con.SPECIFIC_HEAT)
 
 
 def eq_pot_tem(
@@ -82,12 +75,12 @@ def abs_hum(T: np.ndarray, rh: np.ndarray) -> np.ndarray:
 
 
 def calc_p_baro(
-    T: np.ndarray, q: np.ndarray, p: np.ndarray, z: np.ndarray
+    T: np.ndarray, a: np.ndarray, p: np.ndarray, z: np.ndarray
 ) -> np.ndarray:
     """Calculate pressure (Pa) in each level using barometric height formula."""
-    Tv = mpcalc.virtual_temperature(
-        masked_array(T, data_units="K"), masked_array(q, data_units="")
-    ).magnitude
+    e = vap_pres(a, T)
+    q = con.MW_RATIO * e / (np.broadcast_to(p, e.T.shape).T - 0.378 * e)
+    Tv = T * (1 + 0.608 * q)
     Tv_half = (Tv[:, :-1] + Tv[:, 1:]) / 2
     dz = np.diff(z)
     dp = ma.exp(-scipy.constants.g * dz / (con.RS * Tv_half))
