@@ -140,6 +140,7 @@ def generate_figure(
             "mqf",
             "hkd",
             "scan",
+            "cov",
         ):
             if pointing == 0:
                 if ax == axes[0]:
@@ -168,7 +169,13 @@ def generate_figure(
     if axes[-1].get_title() == "empty":
         return None
     else:
-        case_date = _set_labels(fig, axes[-1], nc_file, sub_title)
+        if {"tb_cov_ln2", "tb_cov_amb"} & set(field_names):
+            case_date = _get_cal_date(nc_file)
+            site_name = _read_location(nc_file)
+            _add_subtitle(fig, case_date, site_name)
+            fig.set_size_inches(10.0, 7.5)
+        else:
+            case_date = _set_labels(fig, axes[-1], nc_file, sub_title)
         file_name = handle_saving(
             nc_file, image_name, save_path, show, case_date, valid_names
         )
@@ -422,6 +429,13 @@ def _read_date(nc_file: str) -> date:
     locale.setlocale(locale.LC_TIME, "en_US.UTF-8")
     with netCDF4.Dataset(nc_file) as nc:
         case_date = datetime.strptime(nc.date, "%Y-%m-%d")
+    return case_date
+
+
+def _get_cal_date(nc_file: str) -> date:
+    """Returns calibration date."""
+    with netCDF4.Dataset(nc_file) as nc:
+        case_date = datetime.strptime(nc.date_of_last_covariance_matrix, "%Y-%m-%d")
     return case_date
 
 
@@ -690,6 +704,8 @@ def _plot_instrument_data(
         _plot_sen(ax, data, name, time, nc_file)
     elif product == "hkd":
         _plot_hkd(ax, data, name, time)
+    elif product == "cov":
+        _plot_covaraince(ax, data, name, nc_file)
 
     pos = ax.get_position()
     ax.set_position([pos.x0, pos.y0, pos.width * 0.965, pos.height])
@@ -1627,7 +1643,7 @@ def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
 def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, ax):
     """Plot for scans of integrated quantities (LWP, IWV)."""
     elevation = read_nc_fields(nc_file, "elevation_angle")
-    angles = np.unique(np.round(elevation[elevation < 89.0]))
+    angles = np.unique(np.round(elevation[(elevation > 1.0) & (elevation < 89.0)]))
     azimuth = read_nc_fields(nc_file, "azimuth_angle")
     if (
         (len(angles) == 0)
@@ -1656,7 +1672,7 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
                 np.deg2rad(90.0 - elevation_f)
             )
             time_s0 = _elevation_filter(nc_file, time, ele_range=ele_range)
-            azimuth = _elevation_filter(nc_file, azimuth, ele_range=ele_range)
+            azi_f = _elevation_filter(nc_file, azimuth, ele_range=ele_range)
             flag = _get_ret_flag(nc_file, time_s0, name.rstrip("_scan"), 1)
             data_s0 = ma.masked_where(flag > 0, data_s0)
 
@@ -1667,11 +1683,9 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
                 axt = ind
                 if ax1 == 0:
                     ax1 = ind
-                scan = pd.DataFrame(
-                    {"time": time_s0, "azimuth": azimuth, "var": data_s0}
-                )
-                az_pl = np.unique(azimuth)
-                az_pl = az_pl[np.mod(az_pl, 5) == 0]
+                scan = pd.DataFrame({"time": time_s0, "azimuth": azi_f, "var": data_s0})
+                az_pl = np.unique(azi_f)
+                az_pl = az_pl[np.mod(az_pl - az_pl[0], 5) == 0]
                 if np.diff(az_pl).all() > 0:
                     scan["blocks"] = (scan["azimuth"].diff() <= 0.0).cumsum()
                 else:
@@ -1731,9 +1745,9 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
                                 (time_i >= gtim[ig, 0]) & (time_i <= gtim[ig, 1])
                             )
                             data_g[xind, :] = 1.0
-                        for ip in range(2):
+                        for segi in range(2):
                             _plot_segment_data(
-                                axi[ip],
+                                axi[segi],
                                 ma.MaskedArray(data_g),
                                 "tb_missing",
                                 (time_i, np.linspace(0, 360, 2)),
@@ -1902,3 +1916,24 @@ def _plot_sta(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
             (time_i, np.linspace(vmin, vmax, 2)),
             nc_file,
         )
+
+
+def _plot_covaraince(ax, data_in: ma.MaskedArray, name, nc_file: str):
+    """Plot for covariance."""
+    frequency = read_nc_fields(nc_file, "frequency")
+
+    variables = ATTRIBUTES[name]
+    pl = ax.pcolormesh(data_in, cmap=variables.cbar)
+
+    colorbar = _init_colorbar(pl, ax, size="2%", pad=0.05)
+    locator = colorbar.ax.yaxis.get_major_locator()
+    locator.set_params(nbins=10)
+    colorbar.update_ticks()
+    colorbar.set_label(variables.clabel, fontsize=13)
+
+    ax.set_xticks(np.arange(len(frequency)) + 0.5)
+    ax.set_yticks(np.arange(len(frequency)) + 0.5)
+    ax.set_xticklabels(frequency.astype(str), rotation=30)
+    ax.set_yticklabels(frequency.astype(str))
+    ax.set_xlabel("Frequency (GHz)")
+    ax.set_ylabel("Frequency (GHz)")

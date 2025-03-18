@@ -84,6 +84,7 @@ def lev1_to_nc(
     mwr.data = get_data_attributes(mwr.data, data_type)
     if output_file is not None:
         global_attributes = read_config(site, "global_specs")
+        _update_calibration_attributes(rpg_bin, global_attributes)
         if data_type != "1C01":
             update_lev1_attributes(global_attributes, data_type)
         rpg_mwr.save_rpg(mwr, output_file, global_attributes, data_type)
@@ -192,6 +193,22 @@ def prepare_data(
             rpg_bin.data["azimuth_angle"] = (
                 rpg_bin.data["azimuth_angle"] + params["const_azi"]
             ) % 360
+
+        file_list_abscal = get_file_list(params["path_to_cal"], "LOG")
+        for cal in ["ln2", "amb"]:
+            file_list_type = [s for s in file_list_abscal if cal in s.lower()]
+            if len(file_list_type) > 0:
+                rpg_log = RpgBin(file_list_type, time_offset)
+                ind_cal = np.argmin(
+                    np.abs(rpg_bin.data["time"][0] - rpg_log.data["cal_date"])
+                )
+                rpg_bin.data["date_of_last_covariance_matrix"] = rpg_log.data[
+                    "cal_date"
+                ][ind_cal]
+                rpg_bin.data["calibration_status"] = rpg_log.data["status"][ind_cal, :]
+                rpg_bin.data[f"tb_cov_{cal}"] = np.atleast_3d(
+                    rpg_log.data["covariance_matrix"]
+                ).T[ind_cal, :, :]
 
         if data_type == "1C01":
             if params["ir_flag"]:
@@ -628,6 +645,37 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict) -> None:
             else:
                 brt.data[var[0]] = brt.data[var[0]][ind]
         brt.header["n"] = len(brt.data["time"])
+
+
+def _update_calibration_attributes(rpg_bin: RpgBin, global_attributes: dict) -> None:
+    global_attributes["type_of_automatic_calibrations"] = (
+        "calibration with ambient temperature target and noise diode with high-frequency noise switching"
+        if global_attributes["instrument_generation"] == "G5"
+        else "calibration with ambient temperature target and noise diode"
+    )
+
+    if "date_of_last_covariance_matrix" in rpg_bin.data:
+        global_attributes["date_of_last_covariance_matrix"] = (
+            datetime.datetime.fromtimestamp(
+                int(rpg_bin.data["date_of_last_covariance_matrix"]),
+                tz=datetime.timezone.utc,
+            )
+            .date()
+            .isoformat()
+        )
+
+    if "calibration_status" in rpg_bin.data:
+        for irec in range(2):
+            if np.all(
+                rpg_bin.data["calibration_status"][rpg_bin.data["receiver"] == irec + 1]
+                == 1
+            ):
+                global_attributes[
+                    f"receiver{irec + 1}_date_of_last_absolute_calibration"
+                ] = global_attributes["date_of_last_covariance_matrix"]
+                global_attributes[
+                    f"receiver{irec + 1}_type_of_last_absolute_calibration"
+                ] = "LN2"
 
 
 def _azi_correction(brt: dict, params: dict) -> None:

@@ -322,6 +322,8 @@ def get_coeff_list(site: str | None, prefix: str, coeff_files: list | None) -> l
 
 def get_file_list(path_to_files: str, extension: str):
     """Returns file list for specified path."""
+    if path_to_files is None:
+        return []
     f_list = sorted(glob.glob(path_to_files + "/*." + extension))
     if len(f_list) == 0:
         f_list = sorted(glob.glob(path_to_files + "/*." + extension.lower()))

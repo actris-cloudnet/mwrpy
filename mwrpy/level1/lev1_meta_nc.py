@@ -183,11 +183,15 @@ ATTRIBUTES_1B01 = {
         "calibration plus instrument noise levels (ACTRIS work), \n"
         "currently literature values (Maschwitz et al. for RPG, ? for radiometrics)",
     ),
-    "tb_cov": MetaData(
-        long_name="Error covariance matrix of brightness temperature channels",
+    "tb_cov_amb": MetaData(
+        long_name="Error covariance matrix of brightness temperature channels on ambient target.",
         units="K*K",
-        comment="the covariance matrix has been determined using the xxx method\n"
-        "from observations at a blackbody target of temperature t_amb",
+        comment="Brightness temperature error covariance matrix determined on ambient target.",
+    ),
+    "tb_cov_ln2": MetaData(
+        long_name="Error covariance matrix of brightness temperature channels on LN2 target.",
+        units="K*K",
+        comment="Brightness temperature error covariance matrix determined during absolute calibration on LN2 target.",
     ),
     "quality_flag": MetaData(
         long_name="Quality flag",
@@ -236,10 +240,6 @@ ATTRIBUTES_1B01 = {
         long_name="Retrieved brightness temperature spectrum",
         units="K",
     ),
-    # 'tn': MetaData(
-    #     long_name='Receiver noise temperature',
-    #     units='K',
-    # )
 }
 
 
