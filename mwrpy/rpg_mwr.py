@@ -240,6 +240,12 @@ def _write_vars2nc(nc_file: netCDF4.Dataset, mwr_variables: dict) -> None:
         fill_value = netCDF4.default_fillvals[obj.data_type]
 
         size = obj.dimensions or _get_dimensions(nc_file, obj.data)
+        if (
+            size == ("time", "time")
+            and "height" in nc_file.dimensions
+            and nc_file.dimensions["time"].size == nc_file.dimensions["height"].size
+        ):
+            size = ("time", "height")
         if obj.name == "time_bnds":
             size = ("time", "bnds")
         if obj.name == "receiver_nb":
