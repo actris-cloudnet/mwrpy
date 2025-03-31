@@ -221,44 +221,12 @@ def init_file(
     return nc_file
 
 
-def _get_dimensions(nc_file: netCDF4.Dataset, data: np.ndarray) -> tuple | tuple[str]:
-    """Finds correct dimensions for a variable."""
-    if utils.isscalar(data):
-        return ()
-    file_dims = nc_file.dimensions
-    array_dims = data.shape
-    dim_names = []
-    for length in array_dims:
-        dim = [key for key in file_dims.keys() if file_dims[key].size == length][0]
-        dim_names.append(dim)
-    return tuple(dim_names)
-
-
 def _write_vars2nc(nc_file: netCDF4.Dataset, mwr_variables: dict) -> None:
     """Iterates over RPG instances and write to netCDF file."""
     for obj in mwr_variables.values():
         fill_value = netCDF4.default_fillvals[obj.data_type]
-
-        size = obj.dimensions or _get_dimensions(nc_file, obj.data)
-        if (
-            size == ("time", "time")
-            and "height" in nc_file.dimensions
-            and nc_file.dimensions["time"].size == nc_file.dimensions["height"].size
-        ):
-            size = ("time", "height")
-        if obj.name == "time_bnds":
-            size = ("time", "bnds")
-        if obj.name == "receiver_nb":
-            size = "receiver_nb"
-        if obj.name == "irt":
-            size = ("time", "ir_wavelength")
-        if obj.name == "ir_wavelength":
-            size = "ir_wavelength"
-        if obj.name == "t_amb":
-            size = ("time", "t_amb_nb")
-
         nc_variable = nc_file.createVariable(
-            obj.name, obj.data_type, size, zlib=True, fill_value=fill_value
+            obj.name, obj.data_type, obj.dimensions, zlib=True, fill_value=fill_value
         )
         nc_variable[:] = obj.data
         for attr in obj.fetch_attributes():
