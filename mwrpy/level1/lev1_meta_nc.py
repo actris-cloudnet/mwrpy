@@ -253,6 +253,10 @@ ATTRIBUTES_1B01 = {
         units="K",
         dimensions=("time", "frequency"),
     ),
+    # 'tn': MetaData(
+    #     long_name='Receiver noise temperature',
+    #     units='K',
+    # )
 }
 
 
