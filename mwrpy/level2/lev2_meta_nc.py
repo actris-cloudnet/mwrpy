@@ -100,36 +100,43 @@ ATTRIBUTES_COM = {
         long_name="Time (UTC) of the measurement",
         units="seconds since 1970-01-01 00:00:00.000",
         comment="Time indication of samples is at end of integration-time",
+        dimensions=("time",),
     ),
     "time_bnds": MetaData(
         long_name="Start and end time (UTC) of the measurements",
         units="seconds since 1970-01-01 00:00:00.000",
+        dimensions=("time", "bnds"),
     ),
     "latitude": MetaData(
         long_name="Latitude of measurement station",
         standard_name="latitude",
         units="degree_north",
+        dimensions=("time",),
     ),
     "longitude": MetaData(
         long_name="Longitude of measurement station",
         standard_name="longitude",
         units="degree_east",
+        dimensions=("time",),
     ),
     "altitude": MetaData(
         long_name="Altitude above mean sea level of measurement station",
         standard_name="altitude",
         units="m",
+        dimensions=("time",),
     ),
     "azimuth_angle": MetaData(
         long_name="Azimuth angle",
         standard_name="sensor_azimuth_angle",
         units="degree",
         comment="0=North, 90=East, 180=South, 270=West",
+        dimensions=("time",),
     ),
     "elevation_angle": MetaData(
         long_name="Sensor elevation angle",
         units="degree",
         comment="0=horizon, 90=zenith",
+        dimensions=("time",),
     ),
 }
 
@@ -139,6 +146,7 @@ ATTRIBUTES_2P01 = {
         long_name="Height above mean sea level",
         standard_name="height_above_mean_sea_level",
         units="m",
+        dimensions=("height",),
     ),
     "temperature": MetaData(
         long_name="Temperature",
@@ -146,16 +154,19 @@ ATTRIBUTES_2P01 = {
         standard_name="air_temperature",
         units="K",
         retrieval_type="",
+        dimensions=("time", "height"),
     ),
     "temperature_random_error": MetaData(
         long_name="Random uncertainty of retrieved\n"
         "temperature profile (single pointing)",
         units="K",
+        dimensions=("time",),
     ),
     "temperature_systematic_error": MetaData(
         long_name="Systematic uncertainty of retrieved\n"
         "temperature profile (single pointing)",
         units="K",
+        dimensions=("time",),
     ),
     "temperature_quality_flag": MetaData(
         long_name="Temperature quality flag",
@@ -163,6 +174,7 @@ ATTRIBUTES_2P01 = {
         definition=DEFINITIONS_COM["quality_flag"],
         comment="0 indicates data with good quality according to applied tests.\n"
         "The list of (not) applied tests is encoded in quality_flag_status",
+        dimensions=("time",),
     ),
     "temperature_quality_flag_status": MetaData(
         long_name="Temperature quality flag status",
@@ -170,6 +182,7 @@ ATTRIBUTES_2P01 = {
         definition=DEFINITIONS_COM["quality_flag_status"],
         comment="Checks not executed in determination of quality_flag.\n"
         "0 indicates quality check has been applied.",
+        dimensions=("time",),
     ),
 }
 
@@ -179,6 +192,7 @@ ATTRIBUTES_2P02 = {
         long_name="Height above mean sea level",
         standard_name="height_above_mean_sea_level",
         units="m",
+        dimensions=("height",),
     ),
     "temperature": MetaData(
         long_name="Temperature",
@@ -186,16 +200,22 @@ ATTRIBUTES_2P02 = {
         standard_name="air_temperature",
         units="K",
         retrieval_type="",
+        dimensions=(
+            "time",
+            "height",
+        ),
     ),
     "temperature_random_error": MetaData(
         long_name="Random uncertainty of retrieved\n"
         "temperature profile (multiple pointing)",
         units="K",
+        dimensions=("time",),
     ),
     "temperature_systematic_error": MetaData(
         long_name="Systematic uncertainty of retrieved\n"
         "temperature profile (multiple pointing)",
         units="K",
+        dimensions=("time",),
     ),
     "temperature_quality_flag": MetaData(
         long_name="Temperature quality flag",
@@ -203,6 +223,7 @@ ATTRIBUTES_2P02 = {
         definition=DEFINITIONS_COM["quality_flag"],
         comment="0 indicates data with good quality according to applied tests.\n"
         "The list of (not) applied tests is encoded in quality_flag_status",
+        dimensions=("time",),
     ),
     "temperature_quality_flag_status": MetaData(
         long_name="Temperature quality flag status",
@@ -210,6 +231,7 @@ ATTRIBUTES_2P02 = {
         definition=DEFINITIONS_COM["quality_flag_status"],
         comment="Checks not executed in determination of quality_flag.\n"
         "0 indicates quality check has been applied.",
+        dimensions=("time",),
     ),
 }
 
@@ -219,19 +241,23 @@ ATTRIBUTES_2P03 = {
         long_name="Height above mean sea level",
         standard_name="height_above_mean_sea_level",
         units="m",
+        dimensions=("height",),
     ),
     "absolute_humidity": MetaData(
         long_name="Absolute humidity",
         units="kg m-3",
         retrieval_type="",
+        dimensions=("time", "height"),
     ),
     "absolute_humidity_random_error": MetaData(
         long_name="Random uncertainty of absolute humidity",
         units="kg m-3",
+        dimensions=("time",),
     ),
     "absolute_humidity_systematic_error": MetaData(
         long_name="Systematic uncertainty of absolute humidity",
         units="kg m-3",
+        dimensions=("time",),
     ),
     "absolute_humidity_quality_flag": MetaData(
         long_name="Absolute humidity quality flag",
@@ -239,6 +265,7 @@ ATTRIBUTES_2P03 = {
         definition=DEFINITIONS_COM["quality_flag"],
         comment="0 indicates data with good quality according to applied tests.\n"
         "The list of (not) applied tests is encoded in quality_flag_status",
+        dimensions=("time",),
     ),
     "absolute_humidity_quality_flag_status": MetaData(
         long_name="Absolute humidity quality flag status",
@@ -246,6 +273,7 @@ ATTRIBUTES_2P03 = {
         definition=DEFINITIONS_COM["quality_flag_status"],
         comment="Checks not executed in determination of quality_flag.\n"
         "0 indicates quality check has been applied.",
+        dimensions=("time",),
     ),
 }
 
@@ -255,20 +283,24 @@ ATTRIBUTES_2P04 = {
         long_name="Height above mean sea level",
         standard_name="height_above_mean_sea_level",
         units="m",
+        dimensions=("height",),
     ),
     "relative_humidity": MetaData(
         long_name="Relative humidity",
         standard_name="relative_humidity",
         units="1",
         retrieval_type="",
+        dimensions=("time", "height"),
     ),
     "relative_humidity_random_error": MetaData(
         long_name="Random uncertainty of relative humidity",
         units="1",
+        dimensions=("time",),
     ),
     "relative_humidity_systematic_error": MetaData(
         long_name="Systematic uncertainty of relative humidity",
         units="1",
+        dimensions=("time",),
     ),
 }
 
@@ -278,20 +310,27 @@ ATTRIBUTES_2P07 = {
         long_name="Height above mean sea level",
         standard_name="height_above_mean_sea_level",
         units="m",
+        dimensions=("height",),
     ),
     "potential_temperature": MetaData(
         long_name="Potential temperature",
         standard_name="air_potential_temperature",
         units="K",
         retrieval_type="",
+        dimensions=(
+            "time",
+            "height",
+        ),
     ),
     "potential_temperature_random_error": MetaData(
         long_name="Random uncertainty of potential temperature",
         units="K",
+        dimensions=("time",),
     ),
     "potential_temperature_systematic_error": MetaData(
         long_name="Systematic uncertainty of potential temperature",
         units="K",
+        dimensions=("time",),
     ),
 }
 
@@ -301,20 +340,27 @@ ATTRIBUTES_2P08 = {
         long_name="Height above mean sea level",
         standard_name="height_above_mean_sea_level",
         units="m",
+        dimensions=("height",),
     ),
     "equivalent_potential_temperature": MetaData(
         long_name="Equivalent potential temperature",
         standard_name="air_equivalent_potential_temperature",
         units="K",
         retrieval_type="",
+        dimensions=(
+            "time",
+            "height",
+        ),
     ),
     "equivalent_potential_temperature_random_error": MetaData(
         long_name="Random uncertainty of equivalent potential temperature",
         units="K",
+        dimensions=("time",),
     ),
     "equivalent_potential_temperature_systematic_error": MetaData(
         long_name="Systematic uncertainty of equivalent potential temperature",
         units="K",
+        dimensions=("time",),
     ),
 }
 
@@ -325,20 +371,24 @@ ATTRIBUTES_2I01 = {
         standard_name="atmosphere_cloud_liquid_water_content",
         units="kg m-2",
         retrieval_type="",
+        dimensions=("time",),
     ),
     "lwp_random_error": MetaData(
         long_name="Random uncertainty of retrieved\n"
         "column-integrated liquid water path",
         units="kg m-2",
+        dimensions=("time",),
     ),
     "lwp_systematic_error": MetaData(
         long_name="Systematic uncertainty of retrieved\n"
         "column-integrated liquid water path",
         units="kg m-2",
+        dimensions=("time",),
     ),
     "lwp_offset": MetaData(
         long_name="Subtracted offset correction of liquid water path",
         units="kg m-2",
+        dimensions=("time",),
     ),
     "lwp_quality_flag": MetaData(
         long_name="Liquid water path quality flag",
@@ -346,6 +396,7 @@ ATTRIBUTES_2I01 = {
         definition=DEFINITIONS_COM["quality_flag"],
         comment="0 indicates data with good quality according to applied tests.\n"
         "The list of (not) applied tests is encoded in quality_flag_status",
+        dimensions=("time",),
     ),
     "lwp_quality_flag_status": MetaData(
         long_name="Liquid water path quality flag status",
@@ -353,6 +404,7 @@ ATTRIBUTES_2I01 = {
         definition=DEFINITIONS_COM["quality_flag_status"],
         comment="Checks not executed in determination of quality_flag.\n"
         "0 indicates quality check has been applied.",
+        dimensions=("time",),
     ),
 }
 
@@ -363,14 +415,17 @@ ATTRIBUTES_2I02 = {
         standard_name="atmosphere_mass_content_of_water_vapor",
         units="kg m-2",
         retrieval_type="",
+        dimensions=("time",),
     ),
     "iwv_random_error": MetaData(
         long_name="Random uncertainty of retrieved column-integrated water vapour",
         units="kg m-2",
+        dimensions=("time",),
     ),
     "iwv_systematic_error": MetaData(
         long_name="Systematic uncertainty of retrieved column-integrated water vapour",
         units="kg m-2",
+        dimensions=("time",),
     ),
     "iwv_quality_flag": MetaData(
         long_name="Integrated water vapour quality flag",
@@ -378,6 +433,7 @@ ATTRIBUTES_2I02 = {
         definition=DEFINITIONS_COM["quality_flag"],
         comment="0 indicates data with good quality according to applied tests.\n"
         "The list of (not) applied tests is encoded in quality_flag_status",
+        dimensions=("time",),
     ),
     "iwv_quality_flag_status": MetaData(
         long_name="Integrated water vapour quality flag status",
@@ -385,39 +441,34 @@ ATTRIBUTES_2I02 = {
         definition=DEFINITIONS_COM["quality_flag_status"],
         comment="Checks not executed in determination of quality_flag.\n"
         "0 indicates quality check has been applied.",
+        dimensions=("time",),
     ),
 }
 
 ATTRIBUTES_2I06 = {
     "lifted_index": MetaData(
-        long_name="Lifted index",
-        units="1",
-        retrieval_type="",
+        long_name="Lifted index", units="1", retrieval_type="", dimensions=("time",)
     ),
     "ko_index": MetaData(
-        long_name="KO index",
-        units="1",
-        retrieval_type="",
+        long_name="KO index", units="1", retrieval_type="", dimensions=("time",)
     ),
     "total_totals": MetaData(
         long_name="Total totals index",
         units="1",
         retrieval_type="",
+        dimensions=("time",),
     ),
     "k_index": MetaData(
-        long_name="K index",
-        units="1",
-        retrieval_type="",
+        long_name="K index", units="1", retrieval_type="", dimensions=("time",)
     ),
     "showalter_index": MetaData(
-        long_name="Showalter index",
-        units="1",
-        retrieval_type="",
+        long_name="Showalter index", units="1", retrieval_type="", dimensions=("time",)
     ),
     "cape": MetaData(
         long_name="Convective available potential energy",
         units="1",
         retrieval_type="",
+        dimensions=("time",),
     ),
     "stability_quality_flag": MetaData(
         long_name="Quality flag for stability products",
@@ -425,6 +476,7 @@ ATTRIBUTES_2I06 = {
         definition=DEFINITIONS_COM["quality_flag"],
         comment="0 indicates data with good quality according to applied tests.\n"
         "The list of (not) applied tests is encoded in quality_flag_status",
+        dimensions=("time",),
     ),
     "stability_quality_flag_status": MetaData(
         long_name="Quality flag status for stability products",
@@ -432,6 +484,7 @@ ATTRIBUTES_2I06 = {
         definition=DEFINITIONS_COM["quality_flag_status"],
         comment="Checks not executed in determination of quality_flag.\n"
         "0 indicates quality check has been applied.",
+        dimensions=("time",),
     ),
 }
 
