@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.2 – 2025-03-31
+
+- Specify dimensions explicitly for each variable
+
 ## 1.2.1 – 2025-03-26
 
 - Quick fix for duplicated dimension
