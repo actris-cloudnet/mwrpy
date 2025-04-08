@@ -97,7 +97,13 @@ def get_products(
     lev1 = {key: value[:] for key, value in nclev1.variables.items()}
     if "elevation_angle" not in lev1:
         lev1["elevation_angle"] = 90 - lev1["zenith_angle"][:]
-    lev1["time"] = _read_time(nclev1["time"])
+    tf = TimezoneFinder()
+    timezone_str = tf.timezone_at(
+        lng=float(ma.median(lev1["longitude"])),
+        lat=float(ma.median(lev1["latitude"])),
+    )
+    assert timezone_str is not None
+    lev1["time"] = _read_time(nclev1["time"], timezone_str)
 
     rpg_dat: dict = {}
     coeff, index, scan_time = (
@@ -494,8 +500,8 @@ def get_products(
         coeff["retrieval_type"] = "derived product"
         coeff["dependencies"] = temp_file + ", " + hum_file
 
-        hum_time = _read_time(hum_dat.variables["time"])
-        tem_time = _read_time(tem_dat.variables["time"])
+        hum_time = _read_time(hum_dat.variables["time"], timezone_str)
+        tem_time = _read_time(tem_dat.variables["time"], timezone_str)
 
         if len(hum_dat.variables["height"][:]) == len(tem_dat.variables["height"][:]):
             hum_int = interpol_2d(
@@ -774,11 +780,11 @@ def _format_attribute_array(array: np.ndarray | list) -> np.ndarray:
     return np.round(np.sort(np.unique(array)), 2)
 
 
-def _read_time(ncvar: nc.Variable) -> np.ndarray:
+def _read_time(ncvar: nc.Variable, timezone_str: str) -> np.ndarray:
     """Read netCDF time in Unix time."""
     return np.array(
         [
-            dt.timestamp()
+            dt.replace(tzinfo=pytz.timezone(timezone_str)).timestamp()
             for dt in num2pydate(
                 ncvar[:],
                 units=ncvar.units,
