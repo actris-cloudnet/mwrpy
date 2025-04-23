@@ -211,8 +211,10 @@ def process_product(prod: str, date: datetime.date, site: str):
         and (os.path.isfile(offset_current))
     ):
         output = nc.Dataset(output_file)
-        if (round(float(output["lwp_offset"][:].mean()), 5) not in lwp_offset) and (
-            round(float(output["lwp_offset"][:].mean()), 5) != 0.0
+        if (
+            (round(float(output["lwp_offset"][:].mean()), 5) not in lwp_offset)
+            and (round(float(output["lwp_offset"][:].mean()), 5) != 0.0)
+            and (abs(round(float(output["lwp_offset"][:].mean()), 5)) < 0.1)
         ):
             csv_off = pd.read_csv(offset_current, usecols=["date", "offset"])
             csv_off = pd.concat(
@@ -236,7 +238,9 @@ def process_product(prod: str, date: datetime.date, site: str):
         and (not os.path.isfile(offset_current))
     ):
         output = nc.Dataset(output_file)
-        if round(float(output["lwp_offset"][:].mean()), 5) != 0.0:
+        if (round(float(output["lwp_offset"][:].mean()), 5) != 0.0) and (
+            abs(round(float(output["lwp_offset"][:].mean()), 5)) < 0.1
+        ):
             csv_off = pd.DataFrame(
                 {
                     "date": date.strftime("%m-%d"),
