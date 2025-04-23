@@ -74,7 +74,7 @@ def correct_lwp_offset(
     ] = np.nan
     if not np.isnan(lwp).all():
         lwp[
-            (np.abs(lwp - np.nanmedian(lwp)) > 0.005)
+            (np.abs(lwp - np.nanmedian(lwp)) > 0.01)
             & (lwp_min["Lwp"].values - np.nanmedian(lwp) > -0.01)
         ] = np.nan
 
@@ -102,7 +102,7 @@ def correct_lwp_offset(
     if (
         (offset_xd[0] is not None)
         and not (np.isnan(lwp_offset.values).all())
-        and (np.abs(offset_xd[0] - np.nanmedian(lwp)) < 0.005)
+        and (np.abs(offset_xd[0] - np.nanmedian(lwp)) < 0.01)
         and (
             (lwp_offset.first_valid_index() - lwp_offset.index[0]).total_seconds()
             > 12 * 3600
@@ -112,7 +112,7 @@ def correct_lwp_offset(
     if (
         (offset_xd[1] is not None)
         and not (np.isnan(lwp_offset.values).all())
-        and (np.abs(offset_xd[1] - np.nanmedian(lwp)) < 0.005)
+        and (np.abs(offset_xd[1] - np.nanmedian(lwp)) < 0.01)
         and (
             (lwp_offset.index[-1] - lwp_offset.last_valid_index()).total_seconds()
             > 12 * 3600
