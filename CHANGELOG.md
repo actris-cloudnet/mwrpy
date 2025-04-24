@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.2 – 2025-03-31
+
+- Specify dimensions explicitly for each variable
+
+## 1.2.1 – 2025-03-26
+
+- Quick fix for duplicated dimension
+- Provide date in lev1 and change plotting average
+- Fix for local time handling
+
 ## 1.2.0 – 2025-02-07
 
 - Handle local time in `lev1_to_nc`

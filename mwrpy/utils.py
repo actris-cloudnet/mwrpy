@@ -25,6 +25,7 @@ Epoch = tuple[int, int, int]
 class MetaData(NamedTuple):
     long_name: str
     units: str
+    dimensions: tuple[str, ...]
     standard_name: str | None = None
     definition: str | None = None
     comment: str | None = None
