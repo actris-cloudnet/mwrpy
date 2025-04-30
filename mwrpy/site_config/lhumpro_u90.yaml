@@ -1,11 +1,11 @@
 # Config file for all LHUMPRO U90 instruments
 
 params:
-  receiver_nb: [1, 2]
-  receiver: [1, 1, 1, 1, 1, 1, 2]
+  receiver_nb: [2, 1]
+  receiver: [2, 1, 1, 1, 1, 1, 1]
 
   # bandwidth of the central frequency in MHz (center frequency of single of upper side-band)
-  bandwidth: [200., 200., 200., 200., 400., 500., 2000.]
+  bandwidth: [2000., 200., 200., 200., 200., 400., 500.]
 
   # 56.xx +/- X +/- Y
   n_sidebands: [1, 1]

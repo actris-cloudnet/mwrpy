@@ -924,7 +924,7 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
     axs[0].set_title(ATTRIBUTES["quality_flag_0"].name)
 
     case_date = _read_date(nc_file)
-    gtim = _gap_array(time, case_date)
+    gtim = _gap_array(time, case_date, 10.0)
 
     qf1 = _get_freq_flag(data_in[:, np.array(params["receiver"]) == 1], np.array([4]))
     qf2 = _get_freq_flag(data_in[:, np.array(params["receiver"]) == 2], np.array([4]))
@@ -1086,12 +1086,19 @@ def _plot_tb(
                 color="r",
             )
 
-    if axs.ndim > 1:
+    if axs.ndim > 1 and len(frequency) == 14:
         axs[0, 0].set_title(
             "Receiver 1 Channels", fontsize=15, color=_COLORS["darkgray"], loc="right"
         )
         axs[0, 1].set_title(
             "Receiver 2 Channels", fontsize=15, color=_COLORS["darkgray"], loc="right"
+        )
+    elif axs.ndim > 1 and len(frequency) == 13:
+        axs[0, 0].set_title(
+            "Receiver 2 Channels", fontsize=15, color=_COLORS["darkgray"], loc="right"
+        )
+        axs[0, 1].set_title(
+            "Receiver 1 Channels", fontsize=15, color=_COLORS["darkgray"], loc="right"
         )
     else:
         axs[np.where(np.array(params["receiver"]) == 1)[0][0]].set_title(
@@ -1177,6 +1184,15 @@ def _plot_tb(
             axi.axis("off")
 
     # TB mean
+    receiver = np.array(params["receiver"])
+    receiver_nb = np.array(params["receiver_nb"])
+    if len(receiver) < 14:
+        tmp = np.copy(receiver)
+        receiver[tmp == 1] = 2
+        receiver[tmp == 2] = 1
+        tmp = np.copy(receiver_nb)
+        receiver_nb[tmp == 1] = 2
+        receiver_nb[tmp == 2] = 1
     axa = fig.add_subplot(121)
     axa.set_position([0.125, -0.05, 0.72, 0.125])
     axa.tick_params(axis="x", which="both", bottom=False, top=False, labelbottom=False)
@@ -1196,24 +1212,18 @@ def _plot_tb(
         axaK.set_xticklabels(axaK.get_xticks(), rotation=30)
         axaK.set_xlim(
             [
-                np.floor(np.nanmin(frequency[np.array(params["receiver"]) == 1]) - 0.1),
-                np.ceil(np.nanmax(frequency[np.array(params["receiver"]) == 1]) + 0.1),
+                np.floor(np.nanmin(frequency[receiver == 1]) - 0.1),
+                np.ceil(np.nanmax(frequency[receiver == 1]) + 0.1),
             ]
         )
-        minv = np.nanmin(
-            tb_m[np.array(params["receiver"]) == 1]
-            - tb_s[np.array(params["receiver"]) == 1]
-        )
-        maxv = np.nanmax(
-            tb_m[np.array(params["receiver"]) == 1]
-            + tb_s[np.array(params["receiver"]) == 1]
-        )
+        minv = np.nanmin(tb_m[receiver == 1] - tb_s[receiver == 1])
+        maxv = np.nanmax(tb_m[receiver == 1] + tb_s[receiver == 1])
         axaK.set_ylim([np.nanmax([0, minv - 0.05 * minv]), maxv + 0.05 * maxv])
         axaK.tick_params(axis="both", labelsize=12)
         axaK.set_facecolor(_COLORS["lightgray"])
         axaK.plot(
-            frequency[np.array(params["receiver"]) == 1],
-            tb_m[np.array(params["receiver"]) == 1],
+            frequency[receiver == 1],
+            tb_m[receiver == 1],
             "k-",
             linewidth=2,
         )
@@ -1228,24 +1238,18 @@ def _plot_tb(
         axaV.set_xticklabels(axaV.get_xticks(), rotation=30)
         axaV.set_xlim(
             [
-                np.floor(np.nanmin(frequency[np.array(params["receiver"]) == 2]) - 0.1),
-                np.ceil(np.nanmax(frequency[np.array(params["receiver"]) == 2]) + 0.1),
+                np.floor(np.nanmin(frequency[receiver == 2]) - 0.1),
+                np.ceil(np.nanmax(frequency[receiver == 2]) + 0.1),
             ]
         )
-        minv = np.nanmin(
-            tb_m[np.array(params["receiver"]) == 2]
-            - tb_s[np.array(params["receiver"]) == 2]
-        )
-        maxv = np.nanmax(
-            tb_m[np.array(params["receiver"]) == 2]
-            + tb_s[np.array(params["receiver"]) == 2]
-        )
+        minv = np.nanmin(tb_m[receiver == 2] - tb_s[receiver == 2])
+        maxv = np.nanmax(tb_m[receiver == 2] + tb_s[receiver == 2])
         axaV.set_ylim([np.nanmax([0, minv - 0.05 * minv]), maxv + 0.05 * maxv])
         axaV.tick_params(axis="both", labelsize=12)
         axaV.set_facecolor(_COLORS["lightgray"])
         axaV.plot(
-            frequency[np.array(params["receiver"]) == 2],
-            tb_m[np.array(params["receiver"]) == 2],
+            frequency[receiver == 2],
+            tb_m[receiver == 2],
             "k-",
             linewidth=2,
         )
@@ -1300,17 +1304,12 @@ def _plot_tb(
         rain_flag = _elevation_azimuth_filter(nc_file, rain_flag, ele_range)
         rain_flag = _pointing_filter(nc_file, rain_flag, ele_range, pointing)
 
-        for irec, rec in enumerate(params["receiver_nb"]):
+        for irec, rec in enumerate(receiver_nb):
             axa[irec].set_position([0.125 + irec * 0.415, -0.05, 0.36, 0.125])
-            no_flag = np.where(
-                np.sum(quality_flag[:, np.array(params["receiver"]) == rec], axis=1)
-                == 0
-            )[0]
+            no_flag = np.where(np.sum(quality_flag[:, receiver == rec], axis=1) == 0)[0]
             if len(no_flag) == 0:
                 no_flag = np.arange(len(time))
-            tbx_m[:, irec] = np.nanmean(
-                np.abs(data_in[:, np.array(params["receiver"]) == rec]), axis=1
-            )
+            tbx_m[:, irec] = np.nanmean(np.abs(data_in[:, receiver == rec]), axis=1)
             axa[irec].plot(
                 time,
                 np.ones(len(time)) * np.nanmean(tbx_m[:, irec]),

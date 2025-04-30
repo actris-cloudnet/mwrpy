@@ -103,23 +103,7 @@ def prepare_data(
         if len(brt_files) == 0:
             raise MissingInputData("No BRT files found")
         rpg_bin = RpgBin(brt_files, time_offset)
-        if len(params["receiver"]) == 7:
-            # Fix for LHUMPRO (frequency and TB order)
-            ind_receiver = np.hstack(
-                [
-                    np.where(np.array(params["receiver"]) == 2)[0],
-                    np.where(np.array(params["receiver"]) == 1)[0],
-                ]
-            )
-        else:
-            ind_receiver = np.hstack(
-                [
-                    np.where(np.array(params["receiver"]) == 1)[0],
-                    np.where(np.array(params["receiver"]) == 2)[0],
-                ]
-            )
-        rpg_bin.data["tb"] = rpg_bin.data["tb"][:, np.argsort(ind_receiver)]
-        rpg_bin.data["frequency"] = rpg_bin.header["_f"][np.argsort(ind_receiver)]
+        rpg_bin.data["frequency"] = rpg_bin.header["_f"]
         fields = [
             "bandwidth",
             "n_sidebands",
@@ -356,7 +340,7 @@ def hkd_sanity_check(status: np.ndarray, params: dict, t_amb: np.ndarray) -> np.
     t_amb[t_amb >= 350.0] = ma.masked
     status_flag = np.zeros((len(status), len(params["receiver"])), np.int32)
     # Inconsistent order of status flags for different instrument types:
-    if len(params["receiver"]) == 7:
+    if len(params["receiver"]) in (7, 13):
         receiver = np.hstack(
             [
                 np.linspace(
@@ -368,21 +352,6 @@ def hkd_sanity_check(status: np.ndarray, params: dict, t_amb: np.ndarray) -> np.
                     0,
                     -1 + len(np.where(np.array(params["receiver"]) == 1)[0]),
                     len(np.where(np.array(params["receiver"]) == 1)[0]),
-                ),
-            ]
-        )
-    elif len(params["receiver"]) == 13:
-        receiver = np.hstack(
-            [
-                np.linspace(
-                    8,
-                    7 + len(np.where(np.array(params["receiver"]) == 1)[0]),
-                    len(np.where(np.array(params["receiver"]) == 1)[0]),
-                ),
-                np.linspace(
-                    0,
-                    -1 + len(np.where(np.array(params["receiver"]) == 2)[0]),
-                    len(np.where(np.array(params["receiver"]) == 2)[0]),
                 ),
             ]
         )
