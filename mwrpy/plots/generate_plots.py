@@ -484,7 +484,7 @@ def _plot_segment_data(ax, data: ma.MaskedArray, name: str, axes: tuple, nc_file
         colorbar.set_ticks(np.arange(len(clabel)))
         if name == "quality_flag_3":
             site = _read_location(nc_file)
-            params = read_config(site, "params")
+            params = read_config(site, None, "params")
             clabel[2] = clabel[2] + " (" + str(params["TB_threshold"][1]) + " K)"
             clabel[1] = clabel[1] + " (" + str(params["TB_threshold"][0]) + " K)"
         colorbar.ax.set_yticklabels(clabel, fontsize=13)
@@ -898,7 +898,7 @@ def _plot_mqf(ax, data_in: ma.MaskedArray, time: ndarray, nc_file: str):
 def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
     """Plot for Level 1 quality flags."""
     site = _read_location(nc_file)
-    params = read_config(site, "params")
+    params = read_config(site, None, "params")
 
     fig.clear()
     nsub = 4 if params["flag_status"][3] == 0 else 3
@@ -1015,7 +1015,7 @@ def _plot_tb(
 ):
     """Plot for microwave brightness temperatures."""
     site = _read_location(nc_file)
-    params = read_config(site, "params")
+    params = read_config(site, None, "params")
     frequency = read_nc_fields(nc_file, "frequency")
     quality_flag = read_nc_fields(nc_file, "quality_flag")
     if name == "tb_spectrum":

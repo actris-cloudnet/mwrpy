@@ -381,12 +381,12 @@ def plot_product(prod: str, date, site: str):
 
 
 def _get_raw_file_path(date_in: datetime.date, site: str) -> str:
-    params = read_config(site, "params")
+    params = read_config(site, None, "params")
     return os.path.join(params["data_in"], date_in.strftime("%Y/%m/%d/"))
 
 
 def _get_lidar_file_path(date_in: datetime.date, site: str) -> str | None:
-    params, path = read_config(site, "params"), ""
+    params, path = read_config(site, None, "params"), ""
     lidar_model = params["lidar_model"] if "lidar_model" in params else "unknown"
     if "path_to_lidar" in params and params["path_to_lidar"] is not None:
         path = os.path.join(

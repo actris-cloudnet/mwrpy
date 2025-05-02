@@ -31,7 +31,7 @@ def _get_ret_flag(
     quality_flag = quality_flag[index]
     flag = np.zeros(len(time), np.int32)
     site = _read_location(nc_file)
-    params = read_config(site, "params")
+    params = read_config(site, None, "params")
 
     if params["flag_status"][3] == 0 and bits == 0:
         flag[isbit(quality_flag[:], 3) > 0] = 1
@@ -43,8 +43,8 @@ def _get_ret_flag(
 def _get_lev1(nc_file: str) -> str:
     """Returns name of lev1 file."""
     site = _read_location(nc_file)
-    global_attributes = read_config(site, "global_specs")
-    params = read_config(site, "params")
+    global_attributes = read_config(site, None, "global_specs")
+    params = read_config(site, None, "params")
     datef = datetime.strptime(nc_file[-11:-3], "%Y%m%d")
     data_out_l1 = params["data_out"] + "level1/" + datef.strftime("%Y/%m/%d/")
     lev1_file = (

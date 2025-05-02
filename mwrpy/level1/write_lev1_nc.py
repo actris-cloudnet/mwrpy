@@ -4,7 +4,7 @@ import datetime
 import logging
 from collections.abc import Callable
 from itertools import groupby
-from typing import TypeAlias
+from typing import Literal, TypeAlias
 
 import numpy as np
 from numpy import ma
@@ -37,6 +37,7 @@ def lev1_to_nc(
     instrument_config: dict | None = None,
     date: datetime.date | None = None,
     time_offset: datetime.timedelta | None = None,
+    instrument_type: Literal["hatpro", "lhatpro", "lhumpro_u90"] | None = None,
 ) -> rpg_mwr.Rpg:
     """This function reads one day of RPG MWR binary files,
     adds attributes and writes it into netCDF file.
@@ -51,6 +52,7 @@ def lev1_to_nc(
         instrument_config: Dictionary containing information about the instrument.
         date: Measurement date in UTC.
         time_offset: Time offset if instrument operated in local time.
+        instrument_type: Specific instrument type (HATPRO, LHATPRO, etc.).
 
     Raises:
         MissingInputData: if required input file is missing.
@@ -58,6 +60,7 @@ def lev1_to_nc(
     if site is None:
         assert coeff_files is not None
         assert instrument_config is not None
+        assert instrument_type is not None
 
     if coeff_files is None:
         logging.info(
@@ -69,7 +72,7 @@ def lev1_to_nc(
             f"No instrument config given, using config file in repository for {site}."
         )
 
-    params = read_config(site, "params")
+    params = read_config(site, instrument_type, "params")
     if instrument_config is not None:
         params = {**params, **instrument_config}
 
@@ -83,7 +86,7 @@ def lev1_to_nc(
     mwr.find_valid_times()
     mwr.data = get_data_attributes(mwr.data, data_type)
     if output_file is not None:
-        global_attributes = read_config(site, "global_specs")
+        global_attributes = read_config(site, instrument_type, "global_specs")
         if data_type != "1C01":
             update_lev1_attributes(global_attributes, data_type)
         rpg_mwr.save_rpg(mwr, output_file, global_attributes, data_type)

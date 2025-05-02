@@ -60,8 +60,8 @@ def lev2_to_nc(
     ):
         raise ValueError(f"Data type {data_type} not recognised")
 
-    global_attributes = read_config(site, "global_specs")
-    params = read_config(site, "params")
+    global_attributes = read_config(site, "hatpro", "global_specs")
+    params = read_config(site, "hatpro", "params")
 
     with nc.Dataset(lev1_file) as lev1:
         params["altitude"] = ma.median(lev1.variables["altitude"][:])

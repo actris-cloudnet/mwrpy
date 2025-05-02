@@ -336,8 +336,14 @@ def get_file_list(path_to_files: str, extension: str):
     return f_list
 
 
-def read_config(site: str | None, key: Literal["global_specs", "params"]) -> dict:
-    itype = _read_site_config_yaml(site)["type"] if site is not None else "hatpro"
+def read_config(
+    site: str | None,
+    instrument_type: str | None,
+    key: Literal["global_specs", "params"],
+) -> dict:
+    itype = (
+        _read_site_config_yaml(site)["type"] if site is not None else instrument_type
+    )
     data = _read_itype_config_yaml(itype)[key]
     if site is not None:
         data.update(_read_site_config_yaml(site)[key])
@@ -565,8 +571,8 @@ def get_processing_dates(args) -> tuple[str, str]:
 
 
 def _get_filename(prod: str, date_in: datetime.date, site: str) -> str:
-    global_attributes = read_config(site, "global_specs")
-    params = read_config(site, "params")
+    global_attributes = read_config(site, None, "global_specs")
+    params = read_config(site, None, "params")
     if np.char.isnumeric(prod[0]):
         level = prod[0]
     else:
