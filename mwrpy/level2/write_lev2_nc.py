@@ -640,6 +640,9 @@ def retrieval_input(lev1: dict, coeff: dict) -> np.ndarray:
     """Get retrieval input."""
     time_median = ma.median(lev1["time"][:])
 
+    lev1["frequency"][:] = np.where(
+        lev1["frequency"][:] == 89.0, 90.0, lev1["frequency"][:]
+    )
     _, freq_ind, _ = np.intersect1d(
         lev1["frequency"][:],
         coeff["FR"][:],
