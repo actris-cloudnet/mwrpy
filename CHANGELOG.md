@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0 – 2025-05-02
+
+- Save LWP offset and use value from previous day
+- Use Cloudnet lidar data for optional cloud flag
+- Add support for low humidity profilers (LHATPRO, LHUMPRO)
+
 ## 1.2.2 – 2025-03-31
 
 - Specify dimensions explicitly for each variable
