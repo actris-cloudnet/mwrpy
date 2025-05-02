@@ -341,9 +341,12 @@ def read_config(
     instrument_type: str | None,
     key: Literal["global_specs", "params"],
 ) -> dict:
-    itype = (
-        _read_site_config_yaml(site)["type"] if site is not None else instrument_type
-    )
+    if site is not None:
+        itype = _read_site_config_yaml(site)["type"]
+    elif instrument_type is not None:
+        itype = instrument_type
+    else:
+        raise ValueError("site or instrument_type is required")
     data = _read_itype_config_yaml(itype)[key]
     if site is not None:
         data.update(_read_site_config_yaml(site)[key])
