@@ -230,7 +230,7 @@ ATTRIBUTES_1B01 = {
     "liquid_cloud_flag_status": MetaData(
         long_name="Liquid cloud flag status",
         units="1",
-        comment="Flag meaning: using mwr and ir (0), using mwr only (1), other (2)",
+        comment="Flag meaning: using mwr only (0), using mwr and lidar (1), other (2)",
         dimensions=("time",),
     ),
     "pointing_flag": MetaData(

@@ -1,0 +1,231 @@
+# Config file for all LHATPRO instruments
+
+params:
+  receiver_nb: [2, 1]
+  receiver: [2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1]
+
+  # bandwidth of the central frequency in MHz (center frequency of single of upper side-band)
+  bandwidth:
+    [
+      200.,
+      200.,
+      200.,
+      200.,
+      400.,
+      500.,
+      230.,
+      230.,
+      230.,
+      230.,
+      600.,
+      1000.,
+      2000.,
+    ]
+
+  # 56.xx +/- X +/- Y
+  n_sidebands: [1, 1]
+  sideband_IF_separation: [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]
+
+  # Beam width (3 dB) of the microwave radiometer
+  beam_width: 2.
+
+  # offset correction for TBs, i.e. adjustment of observation to nominal frequency:
+  # Note: RPG offers a frequency shift within the radiometer software.
+  # This shift will modify the TBs calculated with the RPG software.
+  # Original TBs CANNOT be reconstructed, unless you have recorded the voltages & calibration parameters and possess adequate software routines to perform a re-calibration.
+  # Hence, the authors of actris_mwr_pro DO NOT recommend to apply the frequency shifts in general.
+  # If you have applied these frequency shifts, you may still give these to protocol so that they are contained in the resulting level1 netcdf files.
+  # The variable freq_shift specifies the frequency shifts applied [in MHz].
+  # Set all to 0 if no frequency shifts were applied.
+  freq_shift: [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]
+
+  # [lower, upper] bound threshold of TB quality flags in K
+  TB_threshold: [2.7, 330.]
+
+  # IRT parameters
+  ir_bandwidth: 1.9
+  ir_beamwidth: 2.64
+
+  # solar angle flagging:
+  # saf parameter lets the user determine within what angular region (in deg) around the sun the MWR TBs and products are flagged,
+  # e.g. saf = 5 means that all values with +-5 deg elevation and +-5 deg azimuth will be flagged.
+  # Note that this flag only works if radiometer position is correctly specified and the radiometer is aligned towards thebandwidth North.
+  saf: 7.
+
+  # thresholds for met quality flags
+  # air_temperature [K]
+  # relative_humidity [1]
+  # air_pressure [Pa] (unused, determined automatically from altitude)
+  # rainfall_rate [mm/h]
+  # wind_direction [°]
+  # wind_speed [m/s]
+  met_thresholds:
+    [
+      [213.15, 333.15],
+      [0., 1.],
+      [90000., 110000.],
+      [0., 300.],
+      [0., 360.],
+      [0., 100.],
+    ]
+
+  # some default values:
+  # -------------------
+
+  # path to level1 data and path for processed files
+  data_in: /tmp/data/
+  data_out: /tmp/data/
+
+  # availability of IR
+  ir_flag: True
+
+  # quality flag status for level 1 data; 0: flag active
+  # Bit 1: missing_tb
+  # Bit 2: tb_below_threshold
+  # Bit 3: tb_above_threshold
+  # Bit 4: spectral_consistency_above_threshold
+  # Bit 5: receiver_sanity_failed
+  # Bit 6: rain_detected
+  # Bit 7: sun_moon_in_beam
+  # Bit 8: tb_offset_above_threshold
+  flag_status: [0, 0, 0, 0, 0, 0, 0, 1]
+
+  # integration time of measurements in seconds
+  int_time: 1
+
+  # Azimuth angle is transformed to geographical coordinates (E=90 and W=270), currently only for RPG scanners.
+  # If you do not want to transform the coordinates set azi_cor to -999.
+  azi_cor: -999.
+
+  const_azi: -999.
+
+# Missing entries are filled with site specific config file
+global_specs:
+  # Name of the conventions followed by the dataset
+  conventions: CF-1.8
+
+  # A succinct description of what is in the dataset, composed of instrument type and site name
+  title:
+
+  # Versioning of the datasets (containing date and software version)
+  history:
+
+  # Where the original data was produced
+  institution:
+
+  # The method of production of the original data
+  source: Ground Based Remote Sensing
+
+  # Miscellaneous Information about the dataset or methods used to produce it
+  comment:
+
+  # References that describe the data or methods used to produce it
+  references:
+
+  # Name of measurement station
+  site_location:
+
+  # E-PROFILE instrument identifier. “A” if there is only one instrument on the station. Additional instruments are identified with the letters B, C, etc.
+  instrument_id:
+
+  # WIGOS Station identifier according to WIGOS convention
+  wigos_station_id:
+
+  # Department responsible for the instrument
+  principal_investigator:
+
+  # Manufacturer of the instrument
+  instrument_manufacturer: Radiometer Physics (RPG)
+
+  # Instrument model
+  instrument_model: LHATPRO
+
+  # Instrument generation
+  instrument_generation:
+
+  # Specific to mainboard
+  instrument_hw_id:
+
+  # Name of network(s) that instrument may be part of
+  network_name:
+
+  # Name of campaign instrument may collect data for
+  campaign_name:
+
+  # List of files the data set is depending on
+  dependencies:
+
+  # Data license
+  license:
+
+  # Status of instrument absolute calibration
+  instrument_calibration_status:
+
+  # Time of last (automatic or manual) absolute calibration of receiver 1
+  receiver1_date_of_last_absolute_calibration:
+
+  # Type of last (automatic or manual) absolute calibration of receiver 1
+  receiver1_type_of_last_absolute_calibration:
+
+  # Time of last (automatic or manual) absolute calibration of receiver 2
+  receiver2_date_of_last_absolute_calibration:
+
+  # Type of last (automatic or manual) absolute calibration of receiver 2
+  receiver2_type_of_last_absolute_calibration:
+
+  # Type of automatic calibrations performed for receiver 1
+  receiver1_type_of_automatic_calibrations: calibration with ambient temperature target and noise diode with high-frequency noise switching
+
+  # Type of automatic calibrations performed for receiver 2
+  receiver2_type_of_automatic_calibrations: calibration with ambient temperature target and noise diode with high-frequency noise switching
+
+  # Time of last covariance update as YYYYMMDD
+  date_of_last_covariance_matrix:
+
+  # Logbook repair/replacement work performed
+  instrument_history:
+
+  # Manufacturer of the infrared radiometer
+  ir_instrument_manufacturer: Heitronics
+
+  # Infrared radiometer model
+  ir_instrument_model: KT19.85
+
+  # Fabrication year of the infrared radiometer
+  ir_instrument_fabrication_year:
+
+  # Logbook repair/replacement work performed
+  ir_instrument_history:
+
+  # Total absolute calibration uncertainty of infrared brightness temperature, one standard deviation.
+  ir_accuracy: 1 K
+
+  # Manufacturer of the weather station
+  met_instrument_manufacturer: Vaisala
+
+  # Weather station model
+  met_instrument_model: WXT536
+
+  # Fabrication year of the weather station
+  met_instrument_fabrication_year:
+
+  # Logbook repair/replacement work performed
+  met_instrument_history:
+
+  # Air temperature accuracy. Unit: K.
+  air_temperature_accuracy: 0.3 K
+
+  # Relative humidity accuracy. Unit: 1.
+  relative_humidity_accuracy: 3-5%
+
+  # Air pressure accuracy. Unit: hPa.
+  air_pressure_accuracy: 0.5 hPa
+
+  # Rain rate accuracy. Unit: mm/h.
+  rainfall_rate_accuracy: < 5%
+
+  # Wind direction accuracy. Unit: degrees.
+  wind_direction_accuracy: 3 degrees
+
+  # Wind speed accuracy. Unit: m/s.
+  wind_speed_accuracy: 0.3 m/s

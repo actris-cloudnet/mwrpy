@@ -1,18 +1,26 @@
 """Module for processing."""
 
 import datetime
+import glob
 import logging
 import os
 import time
 
 import matplotlib.pyplot as plt
+import netCDF4 as nc
+import pandas as pd
 
 from mwrpy.level1.write_lev1_nc import lev1_to_nc
-from mwrpy.level2.lev2_collocated import generate_lev2_multi, generate_lev2_single
+from mwrpy.level2.lev2_collocated import (
+    generate_lev2_lhumpro,
+    generate_lev2_multi,
+    generate_lev2_single,
+)
 from mwrpy.level2.write_lev2_nc import lev2_to_nc
 from mwrpy.plots.generate_plots import generate_figure
 from mwrpy.utils import (
     _get_filename,
+    _read_site_config_yaml,
     date_range,
     get_processing_dates,
     isodate2date,
@@ -126,12 +134,45 @@ def process_product(prod: str, date: datetime.date, site: str):
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
 
+    lwp_offset: list[float | None] = [None, None]
+    for iday in range(3):
+        xday = [
+            date - datetime.timedelta(days=iday + 1),
+            date + datetime.timedelta(days=iday + 1),
+        ]
+        offset_file = [
+            _get_filename("lwp_offset", xday[0], site),
+            _get_filename("lwp_offset", xday[1], site),
+        ]
+        if (
+            (prod in ("2I01", "single"))
+            and (os.path.isfile(offset_file[0]))
+            and (lwp_offset[0] is None)
+        ):
+            csv_off = pd.read_csv(offset_file[0], usecols=["date", "offset"])
+            if xday[0].strftime("%m-%d") in csv_off["date"].values:
+                lwp_offset[0] = csv_off.loc[
+                    csv_off["date"] == xday[0].strftime("%m-%d"), "offset"
+                ].values[0]
+        if (
+            (prod in ("2I01", "single"))
+            and (os.path.isfile(offset_file[1]))
+            and (lwp_offset[1] is None)
+        ):
+            csv_off = pd.read_csv(offset_file[1], usecols=["date", "offset"])
+            if xday[1].strftime("%m-%d") in csv_off["date"].values:
+                lwp_offset[1] = csv_off.loc[
+                    csv_off["date"] == xday[1].strftime("%m-%d"), "offset"
+                ].values[0]
+
+    itype = _read_site_config_yaml(site)["type"]
     if prod[0] == "1":
         lev1_to_nc(
             prod,
             _get_raw_file_path(date, site),
             site=site,
             output_file=output_file,
+            lidar_path=_get_lidar_file_path(date, site),
             date=date,
         )
     elif prod[0] == "2":
@@ -150,11 +191,64 @@ def process_product(prod: str, date: datetime.date, site: str):
             site=site,
             temp_file=temp_file,
             hum_file=hum_file,
+            lwp_offset=lwp_offset,
         )
-    elif prod == "single":
-        generate_lev2_single(site, _get_filename("1C01", date, site), output_file)
+    elif prod == "single" and itype != "lhumpro_u90":
+        generate_lev2_single(
+            site, _get_filename("1C01", date, site), output_file, lwp_offset
+        )
+    elif itype == "lhumpro_u90":
+        generate_lev2_lhumpro(
+            site, _get_filename("1C01", date, site), output_file, lwp_offset
+        )
     elif prod == "multi":
         generate_lev2_multi(site, _get_filename("1C01", date, site), output_file)
+
+    offset_current = _get_filename("lwp_offset", date, site)
+    if (
+        (prod in ("2I01", "single"))
+        and (os.path.isfile(output_file))
+        and (os.path.isfile(offset_current))
+    ):
+        output = nc.Dataset(output_file)
+        if (
+            (round(float(output["lwp_offset"][:].mean()), 5) not in lwp_offset)
+            and (round(float(output["lwp_offset"][:].mean()), 5) != 0.0)
+            and (abs(round(float(output["lwp_offset"][:].mean()), 5)) < 0.1)
+        ):
+            csv_off = pd.read_csv(offset_current, usecols=["date", "offset"])
+            csv_off = pd.concat(
+                [
+                    csv_off,
+                    pd.DataFrame(
+                        {
+                            "date": date.strftime("%m-%d"),
+                            "offset": round(float(output["lwp_offset"][:].mean()), 5),
+                        },
+                        index=[0],
+                    ),
+                ]
+            )
+            csv_off = csv_off.sort_values(by=["date"])
+            csv_off = csv_off.drop_duplicates(subset=["date"])
+            csv_off.to_csv(offset_current, index=False)
+    elif (
+        (prod in ("2I01", "single"))
+        and (os.path.isfile(output_file))
+        and (not os.path.isfile(offset_current))
+    ):
+        output = nc.Dataset(output_file)
+        if (round(float(output["lwp_offset"][:].mean()), 5) != 0.0) and (
+            abs(round(float(output["lwp_offset"][:].mean()), 5)) < 0.1
+        ):
+            csv_off = pd.DataFrame(
+                {
+                    "date": date.strftime("%m-%d"),
+                    "offset": round(float(output["lwp_offset"][:].mean()), 5),
+                },
+                index=[0],
+            )
+            csv_off.to_csv(offset_current, index=False)
 
 
 def plot_product(prod: str, date, site: str):
@@ -206,6 +300,7 @@ def plot_product(prod: str, date, site: str):
                     91.0,
                 )
             )
+            pointing = 1 if prod in ("2P02", "2P04", "2P07", "2P08") else 0
             if prod == "2I06":
                 f_names = f_names_stability
                 generate_figure(
@@ -232,6 +327,7 @@ def plot_product(prod: str, date, site: str):
                     ele_range=elevation,
                     save_path=output_dir,
                     image_name=key,
+                    pointing=pointing,
                 )
 
     elif os.path.isfile(filename) and (prod in ("single", "multi")):
@@ -247,6 +343,7 @@ def plot_product(prod: str, date, site: str):
                     91.0,
                 )
             )
+            pointing = 1 if prod == "multi" else 0
             f_names = f_names_stability
             if var_name == "stability":
                 keymap = {
@@ -279,9 +376,28 @@ def plot_product(prod: str, date, site: str):
                         save_path=output_dir,
                         image_name=key,
                         title=title,
+                        pointing=pointing,
                     )
 
 
 def _get_raw_file_path(date_in: datetime.date, site: str) -> str:
     params = read_config(site, "params")
     return os.path.join(params["data_in"], date_in.strftime("%Y/%m/%d/"))
+
+
+def _get_lidar_file_path(date_in: datetime.date, site: str) -> str | None:
+    params, path = read_config(site, "params"), ""
+    lidar_model = params["lidar_model"] if "lidar_model" in params else "unknown"
+    if "path_to_lidar" in params and params["path_to_lidar"] is not None:
+        path = os.path.join(
+            params["path_to_lidar"],
+            date_in.strftime("%Y/%m/%d/"),
+            date_in.strftime("%Y%m%d") + "_" + site + "_" + lidar_model,
+        )
+    file = glob.glob(path + "*.nc")
+    if len(file) == 0:
+        logging.info(
+            "No lidar file of type " + lidar_model + " found in directory " + str(path)
+        )
+        return None
+    return file[0]

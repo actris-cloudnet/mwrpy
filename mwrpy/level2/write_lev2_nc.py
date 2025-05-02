@@ -29,6 +29,7 @@ def lev2_to_nc(
     site: str | None = None,
     temp_file: str | None = None,
     hum_file: str | None = None,
+    lwp_offset: list[float | None] = [None, None],
     coeff_files: list | None = None,
 ):
     """This function reads Level 1 files,
@@ -42,6 +43,7 @@ def lev2_to_nc(
         site: Name of site.
         temp_file: Name of temperature product file.
         hum_file: Name of humidity product file.
+        lwp_offset: Offset for LWP correction.
         coeff_files: List of coefficient files.
 
     """
@@ -72,12 +74,13 @@ def lev2_to_nc(
             coeff_files=coeff_files,
             temp_file=temp_file,
             hum_file=hum_file,
+            lwp_offset=lwp_offset,
         )
         _combine_lev1(lev1, rpg_dat, index, data_type, scan_time)
         _del_att(global_attributes)
-        hatpro = rpg_mwr.Rpg(rpg_dat)
-        hatpro.data = get_data_attributes(hatpro.data, data_type, coeff)
-        rpg_mwr.save_rpg(hatpro, output_file, global_attributes, data_type)
+        mwr = rpg_mwr.Rpg(rpg_dat)
+        mwr.data = get_data_attributes(mwr.data, data_type, coeff)
+        rpg_mwr.save_rpg(mwr, output_file, global_attributes, data_type)
 
 
 def get_products(
@@ -88,6 +91,7 @@ def get_products(
     coeff_files: list | None,
     temp_file: str | None = None,
     hum_file: str | None = None,
+    lwp_offset: list[float | None] = [None, None],
 ) -> tuple[dict, dict, np.ndarray, np.ndarray]:
     """Derive specified Level 2 products."""
     lev1 = {key: value[:] for key, value in nclev1.variables.items()}
@@ -208,12 +212,11 @@ def get_products(
             ret_product[index_ret] = tmp_product[index_ret]
             _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
             if product == "lwp":
-                freq_win = np.where((np.round(lev1["frequency"][:].data, 1) == 31.4))[0]
                 rpg_dat["lwp"], rpg_dat["lwp_offset"] = (
                     ret_product,
                     ma.masked_all(len(index)),
                 )
-                if len(freq_win) == 1 and len(index_ret) > 0:
+                if len(index_ret) > 0:
                     (
                         rpg_dat["lwp"][index_ret],
                         rpg_dat["lwp_offset"][index_ret],
@@ -222,6 +225,7 @@ def get_products(
                         ret_product[index_ret],
                         index[index_ret],
                         rpg_dat["lwp_quality_flag"][index_ret],
+                        lwp_offset,
                     )
             else:
                 rpg_dat[product] = ret_product

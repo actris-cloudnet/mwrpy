@@ -65,7 +65,7 @@ def epoch2unix(
 
     Args:
         epoch_time: 1-D array of seconds since the given epoch.
-        time_ref: HATPRO time reference (1: UTC, 0: Local Time)
+        time_ref: MWR time reference (1: UTC, 0: Local Time)
         epoch: Epoch of the input time. Default is (2001,1,1,0,0,0).
         time_offset: Time offset for local time.
 
@@ -288,10 +288,22 @@ def get_coeff_list(site: str | None, prefix: str, coeff_files: list | None) -> l
     dir_path = os.path.dirname(os.path.realpath(__file__))
     s_list = [
         glob.glob(
-            dir_path + "/site_config/" + site + "/coefficients/" + prefix.lower() + "*"
+            dir_path
+            + "/site_config/"
+            + site
+            + "/coefficients/"
+            + "*"
+            + prefix.lower()
+            + "*"
         ),
         glob.glob(
-            dir_path + "/site_config/" + site + "/coefficients/" + prefix.upper() + "*"
+            dir_path
+            + "/site_config/"
+            + site
+            + "/coefficients/"
+            + "*"
+            + prefix.upper()
+            + "*"
         ),
     ]
     c_list = [x for x in s_list if x]
@@ -325,20 +337,27 @@ def get_file_list(path_to_files: str, extension: str):
 
 
 def read_config(site: str | None, key: Literal["global_specs", "params"]) -> dict:
-    data = _read_hatpro_config_yaml()[key]
+    itype = _read_site_config_yaml(site)["type"] if site is not None else "hatpro"
+    data = _read_itype_config_yaml(itype)[key]
     if site is not None:
         data.update(_read_site_config_yaml(site)[key])
     return data
 
 
-def _read_hatpro_config_yaml() -> dict:
+def _read_itype_config_yaml(itype: str) -> dict:
+    """Reads configuration file for specific instrument type."""
     dir_name = os.path.dirname(os.path.realpath(__file__))
-    inst_file = os.path.join(dir_name, "site_config", "hatpro.yaml")
+    inst_file = os.path.join(dir_name, "site_config", itype + ".yaml")
+    if not os.path.isfile(inst_file):
+        raise NotImplementedError(
+            f"Error: config file for instrument type {itype} not found"
+        )
     with open(inst_file, "r", encoding="utf8") as f:
         return yaml.load(f, Loader=SafeLoader)
 
 
 def _read_site_config_yaml(site: str) -> dict:
+    """Reads configuration file for specific site."""
     dir_name = os.path.dirname(os.path.realpath(__file__))
     site_file = os.path.join(dir_name, "site_config", site, "config.yaml")
     if not os.path.isfile(site_file):
@@ -420,6 +439,35 @@ def read_nc_fields(nc_file: str, name: str) -> np.ndarray:
         return nc.variables[name][:]
 
 
+def read_lidar(path_to_lidar: str) -> dict:
+    """Reads lidar data."""
+    data, names = {}, ["time", "height", "beta"]
+    with netCDF4.Dataset(path_to_lidar) as nc:
+        for key in names:
+            data[key] = nc.variables[key][:].data
+            if key == "time":
+                epoch = datetime.datetime.strptime(
+                    nc.variables[key].units, "hours since %Y-%m-%d %H:%M:%S +00:00"
+                ).date()
+                data[key] = epoch2unix(
+                    (data[key] * 3600.0).astype(np.int32),
+                    1,
+                    (epoch.year, epoch.month, epoch.day),
+                )
+            if key == "beta":
+                data[key][data[key] == nc.variables[key].get_fill_value()] = np.nan
+
+    return data
+
+
+def n_elements(array: np.ndarray, dist: float, var: str | None = None) -> int:
+    """Returns the number of elements that cover certain distance. Adapted from CloudnetPy."""
+    n = dist / float(ma.median(ma.diff(array)))
+    if var == "time":
+        n = n / 60
+    return int(np.round(n))
+
+
 def append_data(data_in: dict, key: str, array: ma.MaskedArray) -> dict:
     """Appends data to a dictionary field (creates the field if not yet present).
 
@@ -485,7 +533,7 @@ def date_string_to_date(date_string: str) -> datetime.date:
 
 def get_time() -> str:
     """Returns current UTC-time."""
-    return f"{datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} +00:00"
+    return f"{datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} +00:00"
 
 
 def get_date_from_past(n: int, reference_date: str | None = None) -> str:
@@ -523,11 +571,17 @@ def _get_filename(prod: str, date_in: datetime.date, site: str) -> str:
         level = prod[0]
     else:
         level = "2"
-    data_out_dir = os.path.join(
-        params["data_out"], f"level{level}", date_in.strftime("%Y/%m/%d")
-    )
-    wigos_id = global_attributes["wigos_station_id"]
-    filename = f"MWR_{prod}_{wigos_id}_{date_in.strftime('%Y%m%d')}.nc"
+    if prod == "lwp_offset":
+        data_out_dir = os.path.join(
+            params["data_out"], f"level{level}", date_in.strftime("%Y")
+        )
+        filename = f"{site}_{prod}_{date_in.strftime('%Y')}.csv"
+    else:
+        data_out_dir = os.path.join(
+            params["data_out"], f"level{level}", date_in.strftime("%Y/%m/%d")
+        )
+        wigos_id = global_attributes["wigos_station_id"]
+        filename = f"MWR_{prod}_{wigos_id}_{date_in.strftime('%Y%m%d')}.nc"
     return os.path.join(data_out_dir, filename)
 
 
@@ -543,7 +597,7 @@ def date_range(
         yield start_date + datetime.timedelta(n)
 
 
-def time_to_datetime_index(time_array: np.ndarray) -> pd.DatetimeIndex:
+def time_to_datetime_index(time_array: np.ndarray) -> pd.Series:
     time_units = "s" if max(time_array) > 25 else "h"
     return pd.to_datetime(time_array, unit=time_units)
 

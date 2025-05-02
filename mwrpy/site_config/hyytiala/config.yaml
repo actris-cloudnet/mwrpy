@@ -8,7 +8,11 @@ params:
   latitude: 61.844
 
   # path to ABSCAL.HIS file
-  path_to_cal: /home/tmarke/Dokumente/ACTRIS/mwr_pro_actris/
+  path_to_cal:
+
+  # path to Cloudnet lidar file and lidar model (optional)
+  path_to_lidar: /tmp/data/
+  lidar_model: cl61d
 
 global_specs:
   # A succinct description of what is in the dataset, composed of instrument type and site name

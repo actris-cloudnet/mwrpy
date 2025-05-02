@@ -132,23 +132,19 @@ def generate_figure(
         if image_name and "_scan" in image_name:
             name = image_name
         pl_source = ATTRIBUTES[name].source
-        if (
-            not is_height
-            and "angle" not in name
-            and pl_source
-            not in (
-                "met",
-                "met2",
-                "irt",
-                "qf",
-                "mqf",
-                "hkd",
-                "scan",
-            )
+        if "angle" not in name and pl_source not in (
+            "met",
+            "met2",
+            "irt",
+            "qf",
+            "mqf",
+            "hkd",
+            "scan",
         ):
-            if ax == axes[0]:
-                time = _elevation_azimuth_filter(nc_file, time, ele_range)
-            field = _elevation_azimuth_filter(nc_file, field, ele_range)
+            if pointing == 0:
+                if ax == axes[0]:
+                    time = _elevation_azimuth_filter(nc_file, time, ele_range)
+                field = _elevation_azimuth_filter(nc_file, field, ele_range)
         elif pl_source in ("met", "met2", "irt", "qf", "mqf", "hkd"):
             if ax == axes[0]:
                 time = _elevation_filter(nc_file, time, ele_range)
@@ -610,11 +606,10 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
         time, data = _mark_gaps(axes[0][:], ma.MaskedArray(data), 35)
     else:
         data_in[(flag > 0) | (hum_flag > 0), :] = np.nan
-        val, cnt = np.unique(np.round(np.diff(axes[0][:]), 2), return_counts=True)
         time, data = _mark_gaps(
             axes[0][:],
             ma.MaskedArray(data_in),
-            np.max(val[cnt > 10]) * 60.0 * 2,
+            60.1,
         )
 
     if variables.cbar_ext in ("neither", "max"):
@@ -929,7 +924,7 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
     axs[0].set_title(ATTRIBUTES["quality_flag_0"].name)
 
     case_date = _read_date(nc_file)
-    gtim = _gap_array(time, case_date)
+    gtim = _gap_array(time, case_date, 10.0)
 
     qf1 = _get_freq_flag(data_in[:, np.array(params["receiver"]) == 1], np.array([4]))
     qf2 = _get_freq_flag(data_in[:, np.array(params["receiver"]) == 2], np.array([4]))
@@ -1035,13 +1030,13 @@ def _plot_tb(
     quality_flag = _pointing_filter(nc_file, quality_flag, ele_range, pointing)
 
     fig.clear()
+    col = 2 if len(frequency) > 7 else 1
     fig, axs = plt.subplots(
         7,
-        len(frequency) % 6,
+        col,
         figsize=(13, 16),
         facecolor="w",
         edgecolor="k",
-        sharex="col",
         dpi=120,
     )
     assert not isinstance(axs, Axes)
@@ -1059,7 +1054,7 @@ def _plot_tb(
             rotation="vertical",
             fontsize=20,
         )
-        if len(frequency) % 6 == 2:
+        if len(frequency) == 14:
             fig.text(0.445, 0.09, "flagged data", va="center", fontsize=20, color="r")
         else:
             fig.text(0.795, 0.09, "flagged data", va="center", fontsize=20, color="r")
@@ -1072,7 +1067,7 @@ def _plot_tb(
             rotation="vertical",
             fontsize=20,
         )
-        if len(frequency) % 6 == 2:
+        if len(frequency) == 14:
             fig.text(
                 0.37,
                 0.085,
@@ -1091,12 +1086,19 @@ def _plot_tb(
                 color="r",
             )
 
-    if axs.ndim > 1:
+    if axs.ndim > 1 and len(frequency) == 14:
         axs[0, 0].set_title(
             "Receiver 1 Channels", fontsize=15, color=_COLORS["darkgray"], loc="right"
         )
         axs[0, 1].set_title(
             "Receiver 2 Channels", fontsize=15, color=_COLORS["darkgray"], loc="right"
+        )
+    elif axs.ndim > 1 and len(frequency) == 13:
+        axs[0, 0].set_title(
+            "Receiver 2 Channels", fontsize=15, color=_COLORS["darkgray"], loc="right"
+        )
+        axs[0, 1].set_title(
+            "Receiver 1 Channels", fontsize=15, color=_COLORS["darkgray"], loc="right"
         )
     else:
         axs[np.where(np.array(params["receiver"]) == 1)[0][0]].set_title(
@@ -1123,58 +1125,74 @@ def _plot_tb(
     tb_s: np.ndarray = np.array([])
 
     for i, axi in enumerate(axs.T.flatten()):
-        no_flag = np.where(quality_flag[:, i] == 0)[0]
-        if len(np.array(no_flag)) == 0:
-            no_flag = np.arange(len(time))
-        tb_m = np.append(tb_m, [ma.mean(data_in[no_flag, i])])  # TB mean
-        tb_s = np.append(tb_s, [ma.std(data_in[no_flag, i])])  # TB std
-        axi.plot(
-            time,
-            np.ones(len(time)) * tb_m[i],
-            "--",
-            color=_COLORS["darkgray"],
-            linewidth=1,
-        )
-        axi.plot(time, data_in[:, i], "ko", markersize=0.75, fillstyle="full")
-        flag = np.where(quality_flag[:, i] > 0)[0]
-        axi.plot(time[flag], data_in[flag, i], "ro", markersize=0.75, fillstyle="full")
-        axi.set_facecolor(_COLORS["lightgray"])
-        if len(data_in) > 0:
-            dif = np.nanmax(data_in[no_flag, i]) - np.nanmin(data_in[no_flag, i])
-            _set_ax(
-                axi,
-                np.nanmax(data_in[no_flag, i]) + 0.25 * dif,
-                "",
-                np.nanmin(data_in[no_flag, i]) - 0.25 * dif,
+        if i < len(frequency):
+            no_flag = np.where(quality_flag[:, i] == 0)[0]
+            if len(np.array(no_flag)) == 0:
+                no_flag = np.arange(len(time))
+            tb_m = np.append(tb_m, [ma.mean(data_in[no_flag, i])])  # TB mean
+            tb_s = np.append(tb_s, [ma.std(data_in[no_flag, i])])  # TB std
+            axi.plot(
+                time,
+                np.ones(len(time)) * tb_m[i],
+                "--",
+                color=_COLORS["darkgray"],
+                linewidth=1,
+            )
+            axi.plot(time, data_in[:, i], "ko", markersize=0.75, fillstyle="full")
+            flag = np.where(quality_flag[:, i] > 0)[0]
+            axi.plot(
+                time[flag], data_in[flag, i], "ro", markersize=0.75, fillstyle="full"
+            )
+            axi.set_facecolor(_COLORS["lightgray"])
+            if len(data_in) > 0:
+                dif = np.nanmax(data_in[no_flag, i]) - np.nanmin(data_in[no_flag, i])
+                _set_ax(
+                    axi,
+                    np.nanmax(data_in[no_flag, i]) + 0.25 * dif,
+                    "",
+                    np.nanmin(data_in[no_flag, i]) - 0.25 * dif,
+                )
+            else:
+                _set_ax(
+                    axi,
+                    100.0,
+                    "",
+                    0.0,
+                )
+            if i in (
+                len(np.where(np.array(params["receiver"]) == 1)[0]) - 1,
+                len(params["receiver"]) - 1,
+            ):
+                _set_labels(fig, axi, nc_file)
+            axi.text(
+                0.05,
+                0.9,
+                str(frequency[i]) + " GHz",
+                transform=axi.transAxes + trans,
+                color=_COLORS["darkgray"],
+                fontweight="bold",
+            )
+            axi.text(
+                0.55,
+                0.9,
+                str(round(tb_m[i], 2)) + " +/- " + str(round(tb_s[i], 2)) + " K",
+                transform=axi.transAxes + trans,
+                color=_COLORS["darkgray"],
+                fontweight="bold",
             )
         else:
-            _set_ax(
-                axi,
-                100.0,
-                "",
-                0.0,
-            )
-
-        if i in (6, 13):
-            _set_labels(fig, axi, nc_file)
-        axi.text(
-            0.05,
-            0.9,
-            str(frequency[i]) + " GHz",
-            transform=axi.transAxes + trans,
-            color=_COLORS["darkgray"],
-            fontweight="bold",
-        )
-        axi.text(
-            0.55,
-            0.9,
-            str(round(tb_m[i], 2)) + " +/- " + str(round(tb_s[i], 2)) + " K",
-            transform=axi.transAxes + trans,
-            color=_COLORS["darkgray"],
-            fontweight="bold",
-        )
+            axi.axis("off")
 
     # TB mean
+    receiver = np.array(params["receiver"])
+    receiver_nb = np.array(params["receiver_nb"])
+    if len(receiver) < 14:
+        tmp = np.copy(receiver)
+        receiver[tmp == 1] = 2
+        receiver[tmp == 2] = 1
+        tmp = np.copy(receiver_nb)
+        receiver_nb[tmp == 1] = 2
+        receiver_nb[tmp == 2] = 1
     axa = fig.add_subplot(121)
     axa.set_position([0.125, -0.05, 0.72, 0.125])
     axa.tick_params(axis="x", which="both", bottom=False, top=False, labelbottom=False)
@@ -1194,24 +1212,18 @@ def _plot_tb(
         axaK.set_xticklabels(axaK.get_xticks(), rotation=30)
         axaK.set_xlim(
             [
-                np.floor(np.nanmin(frequency[np.array(params["receiver"]) == 1]) - 0.1),
-                np.ceil(np.nanmax(frequency[np.array(params["receiver"]) == 1]) + 0.1),
+                np.floor(np.nanmin(frequency[receiver == 1]) - 0.1),
+                np.ceil(np.nanmax(frequency[receiver == 1]) + 0.1),
             ]
         )
-        minv = np.nanmin(
-            tb_m[np.array(params["receiver"]) == 1]
-            - tb_s[np.array(params["receiver"]) == 1]
-        )
-        maxv = np.nanmax(
-            tb_m[np.array(params["receiver"]) == 1]
-            + tb_s[np.array(params["receiver"]) == 1]
-        )
+        minv = np.nanmin(tb_m[receiver == 1] - tb_s[receiver == 1])
+        maxv = np.nanmax(tb_m[receiver == 1] + tb_s[receiver == 1])
         axaK.set_ylim([np.nanmax([0, minv - 0.05 * minv]), maxv + 0.05 * maxv])
         axaK.tick_params(axis="both", labelsize=12)
         axaK.set_facecolor(_COLORS["lightgray"])
         axaK.plot(
-            frequency[np.array(params["receiver"]) == 1],
-            tb_m[np.array(params["receiver"]) == 1],
+            frequency[receiver == 1],
+            tb_m[receiver == 1],
             "k-",
             linewidth=2,
         )
@@ -1226,24 +1238,18 @@ def _plot_tb(
         axaV.set_xticklabels(axaV.get_xticks(), rotation=30)
         axaV.set_xlim(
             [
-                np.floor(np.nanmin(frequency[np.array(params["receiver"]) == 2]) - 0.1),
-                np.ceil(np.nanmax(frequency[np.array(params["receiver"]) == 2]) + 0.1),
+                np.floor(np.nanmin(frequency[receiver == 2]) - 0.1),
+                np.ceil(np.nanmax(frequency[receiver == 2]) + 0.1),
             ]
         )
-        minv = np.nanmin(
-            tb_m[np.array(params["receiver"]) == 2]
-            - tb_s[np.array(params["receiver"]) == 2]
-        )
-        maxv = np.nanmax(
-            tb_m[np.array(params["receiver"]) == 2]
-            + tb_s[np.array(params["receiver"]) == 2]
-        )
+        minv = np.nanmin(tb_m[receiver == 2] - tb_s[receiver == 2])
+        maxv = np.nanmax(tb_m[receiver == 2] + tb_s[receiver == 2])
         axaV.set_ylim([np.nanmax([0, minv - 0.05 * minv]), maxv + 0.05 * maxv])
         axaV.tick_params(axis="both", labelsize=12)
         axaV.set_facecolor(_COLORS["lightgray"])
         axaV.plot(
-            frequency[np.array(params["receiver"]) == 2],
-            tb_m[np.array(params["receiver"]) == 2],
+            frequency[receiver == 2],
+            tb_m[receiver == 2],
             "k-",
             linewidth=2,
         )
@@ -1298,17 +1304,12 @@ def _plot_tb(
         rain_flag = _elevation_azimuth_filter(nc_file, rain_flag, ele_range)
         rain_flag = _pointing_filter(nc_file, rain_flag, ele_range, pointing)
 
-        for irec, rec in enumerate(params["receiver_nb"]):
+        for irec, rec in enumerate(receiver_nb):
             axa[irec].set_position([0.125 + irec * 0.415, -0.05, 0.36, 0.125])
-            no_flag = np.where(
-                np.sum(quality_flag[:, np.array(params["receiver"]) == rec], axis=1)
-                == 0
-            )[0]
+            no_flag = np.where(np.sum(quality_flag[:, receiver == rec], axis=1) == 0)[0]
             if len(no_flag) == 0:
                 no_flag = np.arange(len(time))
-            tbx_m[:, irec] = np.nanmean(
-                np.abs(data_in[:, np.array(params["receiver"]) == rec]), axis=1
-            )
+            tbx_m[:, irec] = np.nanmean(np.abs(data_in[:, receiver == rec]), axis=1)
             axa[irec].plot(
                 time,
                 np.ones(len(time)) * np.nanmean(tbx_m[:, irec]),
@@ -1625,8 +1626,13 @@ def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
 def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, ax):
     """Plot for scans of integrated quantities (LWP, IWV)."""
     elevation = read_nc_fields(nc_file, "elevation_angle")
-    angles = np.unique(np.round(elevation[elevation < 89.0]))
-    if (len(angles) == 0) | (data_in[np.isin(np.round(elevation), angles)].mask.all()):
+    angles = np.unique(np.round(elevation[(elevation > 1.0) & (elevation < 89.0)]))
+    azimuth = read_nc_fields(nc_file, "azimuth_angle")
+    if (
+        (len(angles) == 0)
+        | (data_in[np.isin(np.round(elevation), angles)].mask.all())
+        | (len(np.unique(np.round(azimuth[elevation < 89.0]))) < 2)
+    ):
         ax.set_title("empty")
     else:
         fig, axs = plt.subplots(
@@ -1649,8 +1655,7 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
                 np.deg2rad(90.0 - elevation_f)
             )
             time_s0 = _elevation_filter(nc_file, time, ele_range=ele_range)
-            azimuth = read_nc_fields(nc_file, "azimuth_angle")
-            azimuth = _elevation_filter(nc_file, azimuth, ele_range=ele_range)
+            azi_f = _elevation_filter(nc_file, azimuth, ele_range=ele_range)
             flag = _get_ret_flag(nc_file, time_s0, name.rstrip("_scan"), 1)
             data_s0 = ma.masked_where(flag > 0, data_s0)
 
@@ -1661,11 +1666,9 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
                 axt = ind
                 if ax1 == 0:
                     ax1 = ind
-                scan = pd.DataFrame(
-                    {"time": time_s0, "azimuth": azimuth, "var": data_s0}
-                )
-                az_pl = np.unique(azimuth)
-                az_pl = az_pl[np.mod(az_pl, 5) == 0]
+                scan = pd.DataFrame({"time": time_s0, "azimuth": azi_f, "var": data_s0})
+                az_pl = np.unique(azi_f)
+                az_pl = az_pl[np.mod(az_pl - az_pl[0], 5) == 0]
                 if np.diff(az_pl).all() > 0:
                     scan["blocks"] = (scan["azimuth"].diff() <= 0.0).cumsum()
                 else:
@@ -1725,9 +1728,9 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
                                 (time_i >= gtim[ig, 0]) & (time_i <= gtim[ig, 1])
                             )
                             data_g[xind, :] = 1.0
-                        for ip in range(2):
+                        for segi in range(2):
                             _plot_segment_data(
-                                axi[ip],
+                                axi[segi],
                                 ma.MaskedArray(data_g),
                                 "tb_missing",
                                 (time_i, np.linspace(0, 360, 2)),

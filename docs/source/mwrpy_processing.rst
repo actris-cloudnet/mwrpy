@@ -6,7 +6,7 @@ In this tutorial `MWRpy <https://github.com/actris-cloudnet/mwrpy/>`_ products a
 quality control and visualization. This example utilizes files taken from the ACTRIS site
 `Hyytiala <https://cloudnet.fmi.fi/site/hyytiala>`_:
 
-- RPG-HATPRO microwave radiometer:
+- RPG microwave radiometer:
     - Brightness temperatures: `230406.BRT <https://github.com/actris-cloudnet/mwrpy/blob/main/tests/data/hyytiala/230406.BRT>`_
     - Housekeeping data: `230406.HKD <https://github.com/actris-cloudnet/mwrpy/blob/main/tests/data/hyytiala/230406.HKD>`_
     - Elevation scans: `230406.BLB <https://github.com/actris-cloudnet/mwrpy/blob/main/tests/data/hyytiala/230406.BLB>`_
@@ -20,7 +20,7 @@ quality control and visualization. This example utilizes files taken from the AC
 Level 1c
 ~~~~~~~~~
 
-First we convert RPG-HATPRO microwave radiometer (MWR) binary files, including brightness temperature (TB) and
+First we convert RPG microwave radiometer (MWR) binary files, including brightness temperature (TB) and
 housekeeping data (\*.BRT, \*.HKD), into a Level 1c netCDF file. Data from optional elevation scans (\*.BLB, \*.BLS),
 weather station (\*.MET) and infrared radiometer (\*.IRT) are combined in this process and the following quality
 flags are derived:
@@ -50,7 +50,7 @@ flag status variable contains information whether the flag is active.
     PACKAGE_DIR = os.getcwd()
     DATA_DIR = f"{PACKAGE_DIR}/tests/data/{SITE}"
 
-    hatpro_raw = lev1_to_nc(
+    mwr_raw = lev1_to_nc(
         "1C01",
         DATA_DIR,
         site=SITE,
@@ -82,7 +82,7 @@ are applied to generate the Level 2 single pointing product:
 .. code-block:: python
 
     from mwrpy.level2.lev2_collocated import generate_lev2_single
-    hatpro_prod = generate_lev2_single("hyytiala", "mwr_1c.nc", "mwr-single.nc")
+    mwr_prod = generate_lev2_single("hyytiala", "mwr_1c.nc", "mwr-single.nc")
 
 Variables such as integrated water vapor
 (`IWV <https://vocabulary.actris.nilu.no/skosmos/actris_vocab/en/page/watervapourtotalcolumncontent>`_)
@@ -107,7 +107,7 @@ product:
 .. code-block:: python
 
     from mwrpy.level2.lev2_collocated import generate_lev2_multi
-    hatpro_prod = generate_lev2_multi("hyytiala", "mwr_1c.nc", "mwr-multi.nc")
+    mwr_prod = generate_lev2_multi("hyytiala", "mwr_1c.nc", "mwr-multi.nc")
 
 Variables such as temperature profiles can be plotted from the newly generated file.
 

@@ -11,6 +11,7 @@ def generate_lev2_single(
     site: str | None,
     mwr_l1c_file: str,
     output_file: str,
+    lwp_offset: list[float | None] = [None, None],
     coeff_files: list[str] | None = None,
 ):
     with (
@@ -46,6 +47,7 @@ def generate_lev2_single(
                 hum_file=abs_hum_file.name
                 if prod in ("2P04", "2P07", "2P08")
                 else None,
+                lwp_offset=lwp_offset,
                 coeff_files=coeff_files,
             )
 
@@ -156,6 +158,7 @@ def generate_lev2_single(
                         hum_file=abs_hum_file.name
                         if prod in ("2P04", "2P07", "2P08")
                         else None,
+                        lwp_offset=[None, None],
                         coeff_files=coeff_files,
                     )
                     with netCDF4.Dataset(stability_file.name, "r") as nc_sta:
@@ -175,6 +178,96 @@ def generate_lev2_single(
 
             except IndexError:
                 logging.warning("No coefficient files for product " + prod)
+
+        return nc_output
+
+
+def generate_lev2_lhumpro(
+    site: str | None,
+    mwr_l1c_file: str,
+    output_file: str,
+    lwp_offset: list[float | None] = [None, None],
+    coeff_files: list[str] | None = None,
+):
+    with (
+        NamedTemporaryFile() as lwp_file,
+        NamedTemporaryFile() as iwv_file,
+        NamedTemporaryFile() as abs_hum_file,
+    ):
+        for prod, file in zip(
+            ("2I01", "2I02", "2P03"),
+            (
+                lwp_file.name,
+                iwv_file.name,
+                abs_hum_file.name,
+            ),
+            strict=True,
+        ):
+            lev2_to_nc(
+                prod,
+                mwr_l1c_file,
+                output_file=file,
+                site=site,
+                temp_file=None,
+                hum_file=None,
+                lwp_offset=lwp_offset,
+                coeff_files=coeff_files,
+            )
+
+        with (
+            netCDF4.Dataset(output_file, "w", format="NETCDF4_CLASSIC") as nc_output,
+            netCDF4.Dataset(lwp_file.name, "r") as nc_lwp,
+            netCDF4.Dataset(iwv_file.name, "r") as nc_iwv,
+            netCDF4.Dataset(abs_hum_file.name, "r") as nc_abs_hum,
+        ):
+            nc_output.createDimension("height", len(nc_abs_hum.variables["height"][:]))
+            nc_output.createDimension("time", len(nc_lwp.variables["time"][:]))
+            nc_output.createDimension("bnds", 2)
+
+            for source, variables in (
+                (
+                    nc_iwv,
+                    (
+                        "iwv",
+                        "iwv_random_error",
+                        "iwv_systematic_error",
+                        "iwv_quality_flag",
+                        "iwv_quality_flag_status",
+                    ),
+                ),
+                (
+                    nc_abs_hum,
+                    (
+                        "height",
+                        "absolute_humidity",
+                        "absolute_humidity_random_error",
+                        "absolute_humidity_systematic_error",
+                        "absolute_humidity_quality_flag",
+                        "absolute_humidity_quality_flag_status",
+                    ),
+                ),
+                (
+                    nc_lwp,
+                    (
+                        "time",
+                        "time_bnds",
+                        "latitude",
+                        "longitude",
+                        "altitude",
+                        "lwp",
+                        "lwp_offset",
+                        "lwp_random_error",
+                        "lwp_systematic_error",
+                        "elevation_angle",
+                        "azimuth_angle",
+                        "lwp_quality_flag",
+                        "lwp_quality_flag_status",
+                    ),
+                ),
+            ):
+                copy_variables(source, nc_output, variables)
+
+            copy_global(nc_lwp, nc_output, nc_lwp.ncattrs())
 
         return nc_output
 
@@ -212,6 +305,7 @@ def generate_lev2_multi(
                 if prod not in ("2P02", "2P03")
                 else None,
                 hum_file=abs_hum_file.name if prod not in ("2P02", "2P03") else None,
+                lwp_offset=[None, None],
                 coeff_files=coeff_files,
             )
 

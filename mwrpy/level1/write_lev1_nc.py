@@ -32,6 +32,7 @@ def lev1_to_nc(
     path_to_files: str,
     site: str | None = None,
     output_file: str | None = None,
+    lidar_path: str | None = None,
     coeff_files: list | None = None,
     instrument_config: dict | None = None,
     date: datetime.date | None = None,
@@ -45,6 +46,7 @@ def lev1_to_nc(
         path_to_files: Folder containing one day of RPG MWR binary files.
         site: Name of site.
         output_file: Output file name.
+        lidar_path: Path to (optional) lidar file
         coeff_files: List of coefficient files.
         instrument_config: Dictionary containing information about the instrument.
         date: Measurement date in UTC.
@@ -71,27 +73,28 @@ def lev1_to_nc(
     if instrument_config is not None:
         params = {**params, **instrument_config}
 
-    rpg_bin = prepare_data(path_to_files, data_type, params, time_offset)
+    rpg_bin = prepare_data(path_to_files, data_type, params, lidar_path, time_offset)
 
     if data_type in ("1B01", "1C01"):
         apply_qc(site, rpg_bin, params, coeff_files)
     if data_type in ("1B21", "1C01"):
         apply_met_qc(rpg_bin.data, params)
-    hatpro = rpg_mwr.Rpg(rpg_bin.data, date)
-    hatpro.find_valid_times()
-    hatpro.data = get_data_attributes(hatpro.data, data_type)
+    mwr = rpg_mwr.Rpg(rpg_bin.data, date)
+    mwr.find_valid_times()
+    mwr.data = get_data_attributes(mwr.data, data_type)
     if output_file is not None:
         global_attributes = read_config(site, "global_specs")
         if data_type != "1C01":
             update_lev1_attributes(global_attributes, data_type)
-        rpg_mwr.save_rpg(hatpro, output_file, global_attributes, data_type)
-    return hatpro
+        rpg_mwr.save_rpg(mwr, output_file, global_attributes, data_type)
+    return mwr
 
 
 def prepare_data(
     path_to_files: str,
     data_type: str,
     params: dict,
+    lidar_path: str | None,
     time_offset: datetime.timedelta | None = None,
 ) -> RpgBin:
     """Load and prepare data for netCDF writing."""
@@ -100,9 +103,7 @@ def prepare_data(
         if len(brt_files) == 0:
             raise MissingInputData("No BRT files found")
         rpg_bin = RpgBin(brt_files, time_offset)
-        ind_bandwidth = np.argsort(params["bandwidth"])
-        rpg_bin.data["tb"] = rpg_bin.data["tb"][:, ind_bandwidth]
-        rpg_bin.data["frequency"] = rpg_bin.header["_f"][ind_bandwidth]
+        rpg_bin.data["frequency"] = rpg_bin.header["_f"]
         fields = [
             "bandwidth",
             "n_sidebands",
@@ -122,7 +123,7 @@ def prepare_data(
             (
                 rpg_bin.data["liquid_cloud_flag"],
                 rpg_bin.data["liquid_cloud_flag_status"],
-            ) = atmos.find_lwcl_free(rpg_bin.data)
+            ) = atmos.find_lwcl_free(rpg_bin.data, lidar_path)
         else:
             (
                 rpg_bin.data["liquid_cloud_flag"],
@@ -204,7 +205,7 @@ def prepare_data(
             (
                 rpg_bin.data["liquid_cloud_flag"],
                 rpg_bin.data["liquid_cloud_flag_status"],
-            ) = atmos.find_lwcl_free(rpg_bin.data)
+            ) = atmos.find_lwcl_free(rpg_bin.data, lidar_path)
 
             file_list_met = get_file_list(path_to_files, "MET")
             if len(file_list_met) == 0:
@@ -338,9 +339,28 @@ def hkd_sanity_check(status: np.ndarray, params: dict, t_amb: np.ndarray) -> np.
     """Perform sanity checks for .HKD data."""
     t_amb[t_amb >= 350.0] = ma.masked
     status_flag = np.zeros((len(status), len(params["receiver"])), np.int32)
+    # Inconsistent order of status flags for different instrument types:
+    if len(params["receiver"]) in (7, 13):
+        receiver = np.hstack(
+            [
+                np.linspace(
+                    8,
+                    7 + len(np.where(np.array(params["receiver"]) == 2)[0]),
+                    len(np.where(np.array(params["receiver"]) == 2)[0]),
+                ),
+                np.linspace(
+                    0,
+                    -1 + len(np.where(np.array(params["receiver"]) == 1)[0]),
+                    len(np.where(np.array(params["receiver"]) == 1)[0]),
+                ),
+            ]
+        )
+    else:
+        receiver = np.hstack([np.linspace(0, 6, 7), np.linspace(8, 14, 7)])
+
     for irec, nrec in enumerate(params["receiver"]):
         # status flags for individual channels
-        status_flag[~isbit(status, irec + (nrec - 1)), irec] = 1
+        status_flag[~isbit(status, int(receiver[irec])), irec] = 1
         if nrec == 1:
             # receiver 1 thermal stability & ambient target stability & noise diode
             if np.all(ma.is_masked(t_amb[:, 0])) | np.all(ma.is_masked(t_amb[:, 1])):
