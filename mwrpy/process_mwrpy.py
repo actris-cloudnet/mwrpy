@@ -267,7 +267,7 @@ def plot_product(prod: str, date, site: str):
             "hkd": ["t_amb", "t_rec", "t_sta"],
             "cov": ["tb_cov_ln2", "tb_cov_amb"],
         }
-        params = read_config(site, "params")
+        params = read_config(site, None, "params")
         for key in PRODUCT_NAME[prod]:
             variables = keymap[key]
             out_dir = params["path_to_cal"] if key == "cov" else output_dir
