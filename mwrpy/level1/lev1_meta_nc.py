@@ -23,16 +23,6 @@ def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
         from level1.lev1_meta_nc import get_data_attributes
         att = get_data_attributes('data','data_type')
     """
-    if data_type not in (
-        "1B01",
-        "1B11",
-        "1B21",
-        "1C01",
-    ):
-        raise RuntimeError(
-            ["Data type " + data_type + " not supported for file writing."]
-        )
-
     if data_type in ("1B01", "1B11", "1B21"):
         read_att = att_reader[data_type]
         attributes = dict(ATTRIBUTES_COM, **read_att)
@@ -40,6 +30,10 @@ def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
     elif data_type == "1C01":
         attributes = dict(
             ATTRIBUTES_COM, **ATTRIBUTES_1B01, **ATTRIBUTES_1B11, **ATTRIBUTES_1B21
+        )
+    else:
+        raise RuntimeError(
+            ["Data type " + data_type + " not supported for file writing."]
         )
 
     for key in list(rpg_variables):

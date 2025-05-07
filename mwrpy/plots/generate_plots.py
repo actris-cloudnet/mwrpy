@@ -491,6 +491,8 @@ def _plot_segment_data(ax, data: ma.MaskedArray, name: str, axes: tuple, nc_file
         variables = ATTRIBUTES[name]
         assert variables.clabel is not None
         clabel = [x[0] for x in variables.clabel]
+        if "receiver1_sanity_failed" in clabel and data.shape[1] < 14:
+            clabel.reverse()
         cbar = [x[1] for x in variables.clabel]
         cmap = ListedColormap(cbar)
         x, y = axes[0], axes[1]
@@ -920,6 +922,11 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
     """Plot for Level 1 quality flags."""
     site = _read_location(nc_file)
     params = read_config(site, None, "params")
+    receiver = np.array(params["receiver"])
+    if len(receiver) < 14:
+        tmp = np.copy(receiver)
+        receiver[tmp == 1] = 2
+        receiver[tmp == 2] = 1
 
     fig.clear()
     nsub = 4 if params["flag_status"][3] == 0 else 3
@@ -947,8 +954,8 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
     case_date = _read_date(nc_file)
     gtim = _gap_array(time, case_date, 10.0)
 
-    qf1 = _get_freq_flag(data_in[:, np.array(params["receiver"]) == 1], np.array([4]))
-    qf2 = _get_freq_flag(data_in[:, np.array(params["receiver"]) == 2], np.array([4]))
+    qf1 = _get_freq_flag(data_in[:, receiver == 1], np.array([4]))
+    qf2 = _get_freq_flag(data_in[:, receiver == 2], np.array([4]))
     qf = np.column_stack((qf1 - 1, qf2 + 1))
     _plot_segment_data(
         axs[1],
@@ -1018,7 +1025,7 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
         ind1, ind2 = axs[i].get_xlim()
         axs[i].plot(
             np.linspace(ind1, ind2, len(time)),
-            np.ones(len(time)) * np.sum(np.array(params["receiver"]) == 1),
+            np.ones(len(time)) * np.sum(receiver == 1),
             "k-",
             linewidth=1,
         )
@@ -1358,9 +1365,7 @@ def _plot_tb(
                 fillstyle="full",
             )
             axa[irec].set_facecolor(_COLORS["lightgray"])
-            flag = np.where(
-                np.sum(quality_flag[:, np.array(params["receiver"]) == rec], axis=1) > 0
-            )[0]
+            flag = np.where(np.sum(quality_flag[:, receiver == rec], axis=1) > 0)[0]
             axa[irec].plot(
                 time[flag], tbx_m[flag, irec], "ro", markersize=0.75, fillstyle="full"
             )
