@@ -156,13 +156,13 @@ def get_mvr_coeff(
 
         def f_lin(x):
             ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
-            return coeff["TL"][ind]
+            return coeff["TL"][:, np.newaxis][:, ind].T
 
         if coeff["RT"] in (1, -1):
 
             def f_quad(x):
                 ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
-                return coeff["TQ"][ind]
+                return coeff["TQ"][:, np.newaxis][:, ind].T
 
     elif (coeff["RT"] < 2) and (len(coeff["AL"]) > 1) and (prefix != "tpb"):
 
@@ -314,14 +314,23 @@ def _parse_lines(prefix: str, lines: list) -> np.ndarray:
 
 def _reshape_array(data: list, n_rows: int, prefix: str) -> np.ndarray:
     data_squeezed: list[str] | list[list[str]]
-    if len(data) == 1 and isinstance(data[0], list) and len(data[0]) == 1:
-        data_squeezed = data[0]
+    if len(data) == 301 and prefix == "TL=":
+        tmp = np.zeros((301, 6), dtype=np.float32)
+        for i, line in enumerate(data):
+            if len(line) == 6:
+                tmp[i, :] = np.array(line).astype(np.float32)
+            else:
+                tmp[i, :] = np.array(line + [0.0] * (6 - len(line)))
+        array = np.transpose(np.reshape(tmp, (7, 43, 6)), (1, 2, 0))
     else:
-        data_squeezed = data
-    try:
-        array = np.array(data_squeezed).astype(np.float32)
-    except ValueError:
-        array = np.array(data_squeezed).astype(str)
+        if len(data) == 1 and isinstance(data[0], list) and len(data[0]) == 1:
+            data_squeezed = data[0]
+        else:
+            data_squeezed = data
+        try:
+            array = np.array(data_squeezed).astype(np.float32)
+        except ValueError:
+            array = np.array(data_squeezed).astype(str)
     if len(array) > n_rows and prefix not in ("TL=", "TQ="):
         array = np.reshape(array, (n_rows, -1, array.shape[1]))
         array = np.transpose(array, (1, 2, 0))
