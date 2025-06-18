@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.2 – 2025-06-18
+
+- Fix for UFS retrieval coefficients
+
 ## 1.3.1 – 2025-05-05
 
 - Fix inconsistency in reported frequencies for LHUMPRO
