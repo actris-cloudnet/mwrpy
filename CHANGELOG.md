@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.3 – 2025-07-23
+
+- Handle different array shapes from .ret and .nc
+
 ## 1.3.2 – 2025-06-18
 
 - Fix for UFS retrieval coefficients
