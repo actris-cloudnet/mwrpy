@@ -156,13 +156,13 @@ def get_mvr_coeff(
 
         def f_lin(x):
             ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
-            return coeff["TL"][:, np.newaxis][:, ind].T
+            return coeff["TL"][ind]
 
         if coeff["RT"] in (1, -1):
 
             def f_quad(x):
                 ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
-                return coeff["TQ"][:, np.newaxis][:, ind].T
+                return coeff["TQ"][ind]
 
     elif (coeff["RT"] < 2) and (len(coeff["AL"]) > 1) and (prefix != "tpb"):
 
@@ -334,7 +334,7 @@ def _reshape_array(data: list, n_rows: int, prefix: str) -> np.ndarray:
     if len(array) > n_rows and prefix not in ("TL=", "TQ="):
         array = np.reshape(array, (n_rows, -1, array.shape[1]))
         array = np.transpose(array, (1, 2, 0))
-    if array.ndim == 2 and array.shape[0] == 1:
+    if array.ndim == 2 and array.shape[0] == 1 and prefix not in ("TL=", "TQ="):
         array = np.squeeze(array)
     if array.ndim == 3 and array.shape[1] == 1:
         array = np.squeeze(array, axis=1)
