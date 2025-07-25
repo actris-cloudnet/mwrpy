@@ -1,8 +1,7 @@
-"""Module for atmsopheric functions."""
+"""Module for atmospheric functions."""
 
 import numpy as np
 import pandas as pd
-import scipy.constants
 from numpy import ma
 
 import mwrpy.constants as con
@@ -83,7 +82,7 @@ def calc_p_baro(
     Tv = T * (1 + 0.608 * q)
     Tv_half = (Tv[:, :-1] + Tv[:, 1:]) / 2
     dz = np.diff(z)
-    dp = ma.exp(-scipy.constants.g * dz / (con.RS * Tv_half))
+    dp = ma.exp(-con.g0 * dz / (con.RS * Tv_half))
     tmp = np.insert(dp, 0, p, axis=1)
     p_baro = np.cumprod(tmp, axis=1)
     return p_baro
