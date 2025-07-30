@@ -48,3 +48,5 @@ def apply_met_qc(data: dict, params: dict) -> None:
             threshold_low, threshold_high = params["met_thresholds"][bit]
         ind = (data[name][:] < threshold_low) | (data[name][:] > threshold_high)
         data["met_quality_flag"][ind] = setbit(data["met_quality_flag"][ind], bit)
+        if name == "rainfall_rate" and np.all(data[name][:] * 1000.0 * 3600.0 > 60.0):
+            data["met_quality_flag"][:] = setbit(data["met_quality_flag"][:], bit)

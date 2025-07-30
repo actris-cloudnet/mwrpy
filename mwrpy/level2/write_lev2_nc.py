@@ -18,6 +18,7 @@ from mwrpy.level2.lwp_offset import correct_lwp_offset
 from mwrpy.utils import (
     interpol_2d,
     interpolate_2d,
+    isbit,
     read_config,
 )
 
@@ -218,6 +219,22 @@ def get_products(
             ret_product[index_ret] = tmp_product[index_ret]
             _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
             if product == "lwp":
+                if params["flag_status"][3] == 0 and np.all(
+                    isbit(lev1["met_quality_flag"][index], 3)
+                ):
+                    qf = np.zeros(len(index), np.int32)
+                    _, freq_ind, _ = np.intersect1d(
+                        lev1["frequency"][:],
+                        coeff["FR"][:],
+                        assume_unique=False,
+                        return_indices=True,
+                    )
+                    quality_flag = np.bitwise_or.reduce(
+                        lev1["quality_flag"][np.ix_(index, freq_ind)], axis=1
+                    )
+                    qf[isbit(quality_flag, 3)] = 1
+                else:
+                    qf = rpg_dat["lwp_quality_flag"]
                 rpg_dat["lwp"], rpg_dat["lwp_offset"] = (
                     ret_product,
                     ma.masked_all(len(index)),
@@ -230,7 +247,7 @@ def get_products(
                         lev1,
                         ret_product[index_ret],
                         index[index_ret],
-                        rpg_dat["lwp_quality_flag"][index_ret],
+                        qf[index_ret],
                         lwp_offset,
                     )
             else:
