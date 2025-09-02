@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.4 – 2025-09-02
+
+- Allow `PathLike` arguments
+
 ## 1.3.3 – 2025-07-23
 
 - Handle different array shapes from .ret and .nc
