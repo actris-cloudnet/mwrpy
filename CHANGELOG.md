@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.5 – 2025-09-02
+
+- Fix fetching of coefficient files
+
 ## 1.3.4 – 2025-09-02
 
 - Allow `PathLike` arguments
