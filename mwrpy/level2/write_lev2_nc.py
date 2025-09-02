@@ -1,6 +1,8 @@
 """Module for writing Level 2 netCDF files."""
 
+from collections.abc import Sequence
 from datetime import datetime
+from os import PathLike
 
 import netCDF4 as nc
 import numpy as np
@@ -24,13 +26,13 @@ from mwrpy.utils import (
 
 def lev2_to_nc(
     data_type: str,
-    lev1_file: str,
-    output_file: str,
+    lev1_file: str | PathLike,
+    output_file: str | PathLike,
     site: str | None = None,
-    temp_file: str | None = None,
-    hum_file: str | None = None,
+    temp_file: str | PathLike | None = None,
+    hum_file: str | PathLike | None = None,
     lwp_offset: list[float | None] = [None, None],
-    coeff_files: list | None = None,
+    coeff_files: Sequence[str | PathLike] | None = None,
 ):
     """This function reads Level 1 files,
     applies retrieval coefficients for Level 2 products
@@ -88,9 +90,9 @@ def get_products(
     nclev1: nc.Dataset,
     data_type: str,
     params: dict,
-    coeff_files: list | None,
-    temp_file: str | None = None,
-    hum_file: str | None = None,
+    coeff_files: Sequence[str | PathLike] | None,
+    temp_file: str | PathLike | None = None,
+    hum_file: str | PathLike | None = None,
     lwp_offset: list[float | None] = [None, None],
 ) -> tuple[dict, dict, np.ndarray, np.ndarray]:
     """Derive specified Level 2 products."""
@@ -492,7 +494,7 @@ def get_products(
         )
 
         coeff["retrieval_type"] = "derived product"
-        coeff["dependencies"] = temp_file + ", " + hum_file
+        coeff["dependencies"] = str(temp_file) + ", " + str(hum_file)
 
         hum_time = _read_time(hum_dat.variables["time"])
         tem_time = _read_time(tem_dat.variables["time"])
@@ -621,7 +623,7 @@ def _del_att(global_attributes: dict) -> None:
             del global_attributes[name]
 
 
-def load_product(filename: str):
+def load_product(filename: str | PathLike):
     """Load existing lev2 file for deriving other products."""
     file = nc.Dataset(filename)
     return file

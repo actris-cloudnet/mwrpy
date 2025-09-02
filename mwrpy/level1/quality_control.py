@@ -2,6 +2,8 @@
 
 import datetime
 import logging
+from collections.abc import Sequence
+from os import PathLike
 
 import netCDF4 as nc
 import numpy as np
@@ -17,7 +19,10 @@ from mwrpy.utils import get_coeff_list, setbit
 
 
 def apply_qc(
-    site: str | None, data_in: RpgBin, params: dict, coeff_files: list | None
+    site: str | None,
+    data_in: RpgBin,
+    params: dict,
+    coeff_files: Sequence[str | PathLike] | None,
 ) -> None:
     """This function performs the quality control of level 1 data.
 
@@ -179,7 +184,7 @@ def orbpos(data: dict, params: dict) -> np.ndarray:
 
 
 def spectral_consistency(
-    data: dict, site: str | None, coeff_files: list | None
+    data: dict, site: str | None, coeff_files: Sequence[str | PathLike] | None
 ) -> np.ndarray:
     """Applies spectral consistency coefficients for given frequency index,
     writes 2S02 product and returns indices to be flagged.

@@ -2,8 +2,9 @@
 
 import datetime
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from itertools import groupby
+from os import PathLike
 from typing import Literal, TypeAlias
 
 import numpy as np
@@ -29,11 +30,11 @@ FuncType: TypeAlias = Callable[[str], np.ndarray]
 
 def lev1_to_nc(
     data_type: str,
-    path_to_files: str,
+    path_to_files: str | PathLike,
     site: str | None = None,
-    output_file: str | None = None,
-    lidar_path: str | None = None,
-    coeff_files: list | None = None,
+    output_file: str | PathLike | None = None,
+    lidar_path: str | PathLike | None = None,
+    coeff_files: Sequence[str | PathLike] | None = None,
     instrument_config: dict | None = None,
     date: datetime.date | None = None,
     time_offset: datetime.timedelta | None = None,
@@ -94,10 +95,10 @@ def lev1_to_nc(
 
 
 def prepare_data(
-    path_to_files: str,
+    path_to_files: str | PathLike,
     data_type: str,
     params: dict,
-    lidar_path: str | None,
+    lidar_path: str | PathLike | None,
     time_offset: datetime.timedelta | None = None,
 ) -> RpgBin:
     """Load and prepare data for netCDF writing."""

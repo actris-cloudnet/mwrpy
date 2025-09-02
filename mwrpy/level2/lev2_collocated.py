@@ -1,4 +1,6 @@
 import logging
+from collections.abc import Sequence
+from os import PathLike
 from tempfile import NamedTemporaryFile
 
 import netCDF4
@@ -9,10 +11,10 @@ from mwrpy.utils import copy_global, copy_variables
 
 def generate_lev2_single(
     site: str | None,
-    mwr_l1c_file: str,
-    output_file: str,
+    mwr_l1c_file: str | PathLike,
+    output_file: str | PathLike,
     lwp_offset: list[float | None] = [None, None],
-    coeff_files: list[str] | None = None,
+    coeff_files: Sequence[str | PathLike] | None = None,
 ):
     with (
         NamedTemporaryFile() as lwp_file,
@@ -184,10 +186,10 @@ def generate_lev2_single(
 
 def generate_lev2_lhumpro(
     site: str | None,
-    mwr_l1c_file: str,
-    output_file: str,
+    mwr_l1c_file: str | PathLike,
+    output_file: str | PathLike,
     lwp_offset: list[float | None] = [None, None],
-    coeff_files: list[str] | None = None,
+    coeff_files: Sequence[str | PathLike] | None = None,
 ):
     with (
         NamedTemporaryFile() as lwp_file,
@@ -274,9 +276,9 @@ def generate_lev2_lhumpro(
 
 def generate_lev2_multi(
     site: str | None,
-    mwr_l1c_file: str,
-    output_file: str,
-    coeff_files: list[str] | None = None,
+    mwr_l1c_file: str | PathLike,
+    output_file: str | PathLike,
+    coeff_files: Sequence[str | PathLike] | None = None,
 ):
     with (
         NamedTemporaryFile() as temperature_file,

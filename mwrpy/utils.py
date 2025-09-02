@@ -4,7 +4,8 @@ import datetime
 import glob
 import logging
 import os
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Sequence
+from os import PathLike
 from typing import Any, Literal, NamedTuple
 
 import netCDF4
@@ -274,29 +275,32 @@ def add_time_bounds(time_arr: np.ndarray, int_time: int) -> np.ndarray:
     return time_bounds
 
 
-def get_coeff_list(site: str | None, prefix: str, coeff_files: list | None) -> list:
+def get_coeff_list(
+    site: str | None, prefix: str, coeff_files: Sequence[str | PathLike] | None
+) -> list[str]:
     """Returns list of .nc coefficient file(s)."""
     if coeff_files is not None:
         c_list = []
         for file in coeff_files:
-            if f"{prefix.lower()}_" in file.lower():
-                logging.debug("Using coefficient file: " + file)
-                c_list.append(file)
+            basename = os.path.basename(file)
+            if basename.lower().startswith(prefix.lower() + "_"):
+                logging.debug("Using coefficient file: %s", file)
+                c_list.append(str(file))
         return sorted(c_list)
 
     assert isinstance(site, str)
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    s_list = [
-        glob.glob(
-            dir_path
-            + "/site_config/"
-            + site
-            + "/coefficients/"
-            + "*"
-            + prefix.lower()
-            + "*"
-        ),
-        glob.glob(
+    c_list = glob.glob(
+        dir_path
+        + "/site_config/"
+        + site
+        + "/coefficients/"
+        + "*"
+        + prefix.lower()
+        + "*"
+    )
+    if len(c_list) == 0:
+        c_list = glob.glob(
             dir_path
             + "/site_config/"
             + site
@@ -304,12 +308,10 @@ def get_coeff_list(site: str | None, prefix: str, coeff_files: list | None) -> l
             + "*"
             + prefix.upper()
             + "*"
-        ),
-    ]
-    c_list = [x for x in s_list if x]
+        )
 
     if len(c_list) > 0:
-        return sorted(c_list[0])
+        return sorted(c_list)
     logging.warning(
         "No coefficient files for product "
         + prefix
@@ -321,17 +323,17 @@ def get_coeff_list(site: str | None, prefix: str, coeff_files: list | None) -> l
     return c_list
 
 
-def get_file_list(path_to_files: str, extension: str):
+def get_file_list(path_to_files: str | PathLike, extension: str) -> list[str]:
     """Returns file list for specified path."""
-    f_list = sorted(glob.glob(path_to_files + "/*." + extension))
+    f_list = sorted(glob.glob(str(path_to_files) + "/*." + extension))
     if len(f_list) == 0:
-        f_list = sorted(glob.glob(path_to_files + "/*." + extension.lower()))
+        f_list = sorted(glob.glob(str(path_to_files) + "/*." + extension.lower()))
     if len(f_list) == 0:
         logging.warning(
             "No binary files with extension "
             + extension
             + " found in directory "
-            + path_to_files
+            + str(path_to_files)
         )
     return f_list
 
@@ -448,7 +450,7 @@ def read_nc_fields(nc_file: str, name: str) -> np.ndarray:
         return nc.variables[name][:]
 
 
-def read_lidar(path_to_lidar: str) -> dict:
+def read_lidar(path_to_lidar: str | PathLike) -> dict:
     """Reads lidar data."""
     data, names = {}, ["time", "height", "beta"]
     with netCDF4.Dataset(path_to_lidar) as nc:

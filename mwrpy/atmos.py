@@ -1,5 +1,7 @@
 """Module for atmsopheric functions."""
 
+from os import PathLike
+
 import metpy.calc as mpcalc
 import numpy as np
 import pandas as pd
@@ -142,7 +144,7 @@ def dir_avg(
 
 
 def find_lwcl_free(
-    lev1: dict, path_to_lidar: str | None
+    lev1: dict, path_to_lidar: str | PathLike | None
 ) -> tuple[np.ndarray, np.ndarray]:
     """Identifying liquid water cloud free periods using 31.4 GHz TB variability.
     Uses water vapor channel as proxy for a humidity dependent threshold.

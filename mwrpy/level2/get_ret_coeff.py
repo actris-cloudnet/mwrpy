@@ -1,5 +1,8 @@
 """Module to load in retrieval coefficient files."""
 
+from collections.abc import Sequence
+from os import PathLike
+
 import netCDF4 as nc
 import numpy as np
 from numpy import ma
@@ -8,7 +11,10 @@ from mwrpy.utils import get_coeff_list
 
 
 def get_mvr_coeff(
-    site: str | None, prefix: str, freq: np.ndarray, coeff_files: list | None
+    site: str | None,
+    prefix: str,
+    freq: np.ndarray,
+    coeff_files: Sequence[str | PathLike] | None,
 ):
     """This function extracts retrieval coefficients for given files.
 
