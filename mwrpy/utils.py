@@ -283,7 +283,7 @@ def get_coeff_list(
         c_list = []
         for file in coeff_files:
             basename = os.path.basename(file)
-            if basename.lower().startswith(prefix.lower() + "_"):
+            if f"{prefix.lower()}_" in basename.lower():
                 logging.debug("Using coefficient file: %s", file)
                 c_list.append(str(file))
         return sorted(c_list)
