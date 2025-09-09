@@ -31,7 +31,7 @@ def lev2_to_nc(
     site: str | None = None,
     temp_file: str | PathLike | None = None,
     hum_file: str | PathLike | None = None,
-    lwp_offset: list[float | None] = [None, None],
+    lwp_offset: tuple[float | None, float | None] = (None, None),
     coeff_files: Sequence[str | PathLike] | None = None,
 ):
     """This function reads Level 1 files,
@@ -45,7 +45,7 @@ def lev2_to_nc(
         site: Name of site.
         temp_file: Name of temperature product file.
         hum_file: Name of humidity product file.
-        lwp_offset: Offset for LWP correction.
+        lwp_offset: LWP offset with the previous day's last and next day's first reliable values.
         coeff_files: List of coefficient files.
 
     """
@@ -93,7 +93,7 @@ def get_products(
     coeff_files: Sequence[str | PathLike] | None,
     temp_file: str | PathLike | None = None,
     hum_file: str | PathLike | None = None,
-    lwp_offset: list[float | None] = [None, None],
+    lwp_offset: tuple[float | None, float | None] = (None, None),
 ) -> tuple[dict, dict, np.ndarray, np.ndarray]:
     """Derive specified Level 2 products."""
     lev1 = {key: value[:] for key, value in nclev1.variables.items()}

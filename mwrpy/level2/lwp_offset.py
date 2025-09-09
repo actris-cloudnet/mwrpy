@@ -13,7 +13,7 @@ def correct_lwp_offset(
     lwp_org: np.ndarray,
     index: np.ndarray,
     qf: np.ndarray,
-    offset_xd: list[float | None] = [None, None],
+    offset_xd: tuple[float | None, float | None] = (None, None),
 ) -> tuple[np.ndarray, np.ndarray]:
     """This function corrects Lwp offset using the
     2min Lwp standard deviation and the water vapor

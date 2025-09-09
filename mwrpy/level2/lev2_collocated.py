@@ -13,7 +13,7 @@ def generate_lev2_single(
     site: str | None,
     mwr_l1c_file: str | PathLike,
     output_file: str | PathLike,
-    lwp_offset: list[float | None] = [None, None],
+    lwp_offset: tuple[float | None, float | None] = (None, None),
     coeff_files: Sequence[str | PathLike] | None = None,
 ):
     with (
@@ -160,7 +160,7 @@ def generate_lev2_single(
                         hum_file=abs_hum_file.name
                         if prod in ("2P04", "2P07", "2P08")
                         else None,
-                        lwp_offset=[None, None],
+                        lwp_offset=(None, None),
                         coeff_files=coeff_files,
                     )
                     with netCDF4.Dataset(stability_file.name, "r") as nc_sta:
@@ -188,7 +188,7 @@ def generate_lev2_lhumpro(
     site: str | None,
     mwr_l1c_file: str | PathLike,
     output_file: str | PathLike,
-    lwp_offset: list[float | None] = [None, None],
+    lwp_offset: tuple[float | None, float | None] = (None, None),
     coeff_files: Sequence[str | PathLike] | None = None,
 ):
     with (
@@ -307,7 +307,7 @@ def generate_lev2_multi(
                 if prod not in ("2P02", "2P03")
                 else None,
                 hum_file=abs_hum_file.name if prod not in ("2P02", "2P03") else None,
-                lwp_offset=[None, None],
+                lwp_offset=(None, None),
                 coeff_files=coeff_files,
             )
 

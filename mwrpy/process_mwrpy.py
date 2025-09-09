@@ -164,6 +164,7 @@ def process_product(prod: str, date: datetime.date, site: str):
                 lwp_offset[1] = csv_off.loc[
                     csv_off["date"] == xday[1].strftime("%m-%d"), "offset"
                 ].values[0]
+    lwp_offset_tuple = (lwp_offset[0], lwp_offset[1])
 
     itype = _read_site_config_yaml(site)["type"]
     if prod[0] == "1":
@@ -191,15 +192,15 @@ def process_product(prod: str, date: datetime.date, site: str):
             site=site,
             temp_file=temp_file,
             hum_file=hum_file,
-            lwp_offset=lwp_offset,
+            lwp_offset=lwp_offset_tuple,
         )
     elif prod == "single" and itype != "lhumpro_u90":
         generate_lev2_single(
-            site, _get_filename("1C01", date, site), output_file, lwp_offset
+            site, _get_filename("1C01", date, site), output_file, lwp_offset_tuple
         )
     elif itype == "lhumpro_u90":
         generate_lev2_lhumpro(
-            site, _get_filename("1C01", date, site), output_file, lwp_offset
+            site, _get_filename("1C01", date, site), output_file, lwp_offset_tuple
         )
     elif prod == "multi":
         generate_lev2_multi(site, _get_filename("1C01", date, site), output_file)
