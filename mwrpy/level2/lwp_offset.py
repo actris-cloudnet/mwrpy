@@ -1,5 +1,6 @@
 """Module for LWP offset correction."""
 
+import logging
 from itertools import groupby
 
 import numpy as np
@@ -108,6 +109,7 @@ def correct_lwp_offset(
             > 12 * 3600
         )
     ):
+        logging.info("Applying LWP offset from previous day.")
         lwp_offset.loc[lwp_offset.index[0], "Lwp"] = offset_xd[0]
     if (
         (offset_xd[1] is not None)
@@ -118,6 +120,7 @@ def correct_lwp_offset(
             > 12 * 3600
         )
     ):
+        logging.info("Applying LWP offset from next day.")
         lwp_offset.loc[lwp_offset.index[-1], "Lwp"] = offset_xd[1]
     if (np.isnan(lwp_offset.values).all()) and any(offset_xd):
         lwp_offset.iloc[0] = np.nanmean(np.array(offset_xd).astype(float))
