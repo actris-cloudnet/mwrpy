@@ -3,7 +3,7 @@
 import glob
 import locale
 import logging
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 import matplotlib.pyplot as plt
 import netCDF4
@@ -93,6 +93,8 @@ def generate_figure(
     image_name: str | None = None,
     sub_title: bool = True,
     title: bool = True,
+    cov_data: dict | None = None,
+    site: str | None = None,
 ) -> str | None:
     """Generates a mwrpy figure.
 
@@ -111,6 +113,8 @@ def generate_figure(
             Overrides the *save_path* option. Default is None.
         sub_title (bool, optional): Add subtitle to image. Default is True.
         title (bool, optional): Add title to image. Default is True.
+        cov_data (dict, optional): Covariance data. Default is None.
+        site (str, optional): Site name for covariance plot. Default is None.
 
     Returns:
         Dimensions of the generated figure in pixels.
@@ -120,7 +124,34 @@ def generate_figure(
         >>> from mwrpy.plots import generate_figure
         >>> generate_figure('lev2_file.nc', ['lwp'])
     """
-    valid_fields, valid_names = _find_valid_fields(nc_file, field_names)
+    if nc_file == "" and cov_data is not None and site is not None:
+        valid_fields, valid_names = (
+            [cov_data[field_names[0]][0], cov_data[field_names[1]][0]],
+            field_names,
+        )
+        time = cov_data["time"]
+        fig, axes = _initialize_figure(len(valid_fields), dpi)
+        for ax, field, name in zip(axes, valid_fields, valid_names):
+            ax.set_facecolor(_COLORS["lightgray"])
+            _plot_covariance(ax, field, name, cov_data["frequency"])
+        c_date = datetime.strptime(
+            datetime.fromtimestamp(
+                int(time),
+                tz=timezone.utc,
+            )
+            .date()
+            .isoformat(),
+            "%Y-%m-%d",
+        )
+        _add_subtitle(fig, c_date, site)
+        fig.set_size_inches(9.0, 7.0 * len(axes))
+        f_name = handle_saving(
+            nc_file, image_name, save_path, show, c_date, valid_names, site=site
+        )
+        return f_name
+
+    else:
+        valid_fields, valid_names = _find_valid_fields(nc_file, field_names)
     if len(valid_fields) == 0:
         return None
     file_name = None
@@ -241,10 +272,11 @@ def handle_saving(
     case_date: date,
     field_names: list,
     fix: str = "",
+    site: str | None = None,
 ) -> str:
     """Returns file name of plot."""
     file_name = ""
-    site_name = _read_location(nc_file)
+    site_name = _read_location(nc_file) if nc_file != "" else site
     if image_name:
         date_string = case_date.strftime("%Y%m%d")
         file_name = f"{save_path}{date_string}_{site_name}_{image_name}.png"
@@ -712,7 +744,7 @@ def _plot_instrument_data(
     elif product == "hkd":
         _plot_hkd(ax, data, name, time)
     elif product == "cov":
-        _plot_covaraince(ax, data, name, nc_file)
+        _plot_covariance(ax, data, name, nc_file)
 
     pos = ax.get_position()
     ax.set_position([pos.x0, pos.y0, pos.width * 0.965, pos.height])
@@ -1927,10 +1959,14 @@ def _plot_sta(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
         )
 
 
-def _plot_covaraince(ax, data_in: ma.MaskedArray, name, nc_file: str):
+def _plot_covariance(ax, data_in: ma.MaskedArray, name, f_instance: str | ndarray):
     """Plot for covariance."""
-    frequency = read_nc_fields(nc_file, "frequency")
-
+    if isinstance(f_instance, str):
+        frequency = read_nc_fields(f_instance, "frequency")
+        receiver = read_nc_fields(f_instance, "receiver")
+        frequency = frequency[np.argsort(receiver)]
+    else:
+        frequency = f_instance
     variables = ATTRIBUTES[name]
     pl = ax.pcolormesh(np.flip(data_in, axis=0), cmap=variables.cbar, vmin=0.0)
 

@@ -9,7 +9,7 @@ import time
 import netCDF4 as nc
 import pandas as pd
 
-from mwrpy.level1.write_lev1_nc import lev1_to_nc
+from mwrpy.level1.write_lev1_nc import lev1_to_nc, prepare_data
 from mwrpy.level2.lev2_collocated import (
     generate_lev2_lhumpro,
     generate_lev2_multi,
@@ -95,6 +95,7 @@ f_names_stability = list(
 
 
 def main(args):
+    """Main function for processing and plotting MWR data."""
     logging.basicConfig(level="INFO")
     _start_date, _stop_date = get_processing_dates(args)
     start_date = isodate2date(_start_date)
@@ -126,11 +127,25 @@ def main(args):
 
 
 def process_product(prod: str, date: datetime.date, site: str):
+    """Process a given product for a specific date and site.
+    This function handles the processing of different products based on their type
+    (level 1, level 2, single, multi) and manages the necessary file
+    operations and directory structures.
+
+    Args:
+        prod: Product code (e.g., '1C01', '2I01', 'single', 'multi').
+        date: Date for which the product is to be processed.
+        site: Site identifier.
+
+    Returns:
+        None
+    """
     output_file = _get_filename(prod, date, site)
     output_dir = os.path.dirname(output_file)
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
 
+    # Check for LWP offset from previous/next days
     lwp_offset: list[float | None] = [None, None]
     for iday in range(3):
         xday = [
@@ -163,6 +178,7 @@ def process_product(prod: str, date: datetime.date, site: str):
                 ].values[0]
 
     itype = _read_site_config_yaml(site)["type"]
+    # Process level 1 data
     if prod[0] == "1":
         lev1_to_nc(
             prod,
@@ -172,6 +188,8 @@ def process_product(prod: str, date: datetime.date, site: str):
             lidar_path=_get_lidar_file_path(date, site),
             date=date,
         )
+
+    # Process level 2 single products
     elif prod[0] == "2":
         if prod in ("2P04", "2P07", "2P08"):
             temp_file = _get_filename("2P02", date, site)
@@ -190,6 +208,8 @@ def process_product(prod: str, date: datetime.date, site: str):
             hum_file=hum_file,
             lwp_offset=lwp_offset,
         )
+
+    # Process level 2 combined products
     elif prod == "single" and itype != "lhumpro_u90":
         generate_lev2_single(
             site, _get_filename("1C01", date, site), output_file, lwp_offset
@@ -201,6 +221,7 @@ def process_product(prod: str, date: datetime.date, site: str):
     elif prod == "multi":
         generate_lev2_multi(site, _get_filename("1C01", date, site), output_file)
 
+    # Update LWP offset file if necessary
     offset_current = _get_filename("lwp_offset", date, site)
     if (
         (prod in ("2I01", "single"))
@@ -248,12 +269,23 @@ def process_product(prod: str, date: datetime.date, site: str):
             csv_off.to_csv(offset_current, index=False)
 
 
-def plot_product(prod: str, date, site: str):
+def plot_product(prod: str, date: datetime.date, site: str):
+    """Plot a given product for a specific date and site.
+    Plotting covariance data without 1C01 file is supported.
+
+    Args:
+        prod: Product code (e.g., '1C01', '2I01', 'single', 'multi').
+        date: Date for which the product is to be plotted.
+        site: Site identifier.
+
+    Returns:
+        None
+    """
     filename = _get_filename(prod, date, site)
-    if not os.path.isfile(filename):
-        logging.warning("Nothing to plot for product " + prod)
+    params = read_config(site, None, "params")
     output_dir = f"{os.path.dirname(filename)}/"
 
+    # Plot level 1 data
     if os.path.isfile(filename) and prod[0] == "1":
         keymap = {
             "tb": ["tb"],
@@ -267,7 +299,6 @@ def plot_product(prod: str, date, site: str):
             "hkd": ["t_amb", "t_rec", "t_sta"],
             "cov": ["tb_cov_ln2", "tb_cov_amb"],
         }
-        params = read_config(site, None, "params")
         for key in PRODUCT_NAME[prod]:
             variables = keymap[key]
             out_dir = params["path_to_cal"] if key == "cov" else output_dir
@@ -287,6 +318,7 @@ def plot_product(prod: str, date, site: str):
                 image_name=key,
             )
 
+    # Plot level 2 single products
     elif os.path.isfile(filename) and (prod[0] == "2"):
         for key in PRODUCT_NAME[prod]:
             elevation = (
@@ -330,6 +362,7 @@ def plot_product(prod: str, date, site: str):
                     pointing=pointing,
                 )
 
+    # Plot level 2 combined products
     elif os.path.isfile(filename) and (prod in ("single", "multi")):
         for var_name in PRODUCT_NAME[prod]:
             elevation = (
@@ -379,13 +412,52 @@ def plot_product(prod: str, date, site: str):
                         pointing=pointing,
                     )
 
+    # Plot covariance data if 1C01 file is not available
+    elif prod == "1C01" and not os.path.isfile(filename):
+        cov_data = prepare_data(
+            "", "cov", params, None, date=time.mktime(date.timetuple())
+        )
+        assert isinstance(cov_data, dict)
+        if len(cov_data) > 0:
+            generate_figure(
+                "",
+                ["tb_cov_ln2", "tb_cov_amb"],
+                save_path=params["path_to_cal"],
+                image_name="cov",
+                cov_data=cov_data,
+                site=site,
+            )
+        else:
+            logging.warning("No to plot for product " + prod)
+
+    else:
+        logging.warning("Nothing to plot for product " + prod)
+
 
 def _get_raw_file_path(date_in: datetime.date, site: str) -> str:
+    """Get the raw file path for a given date and site.
+
+    Args:
+        date_in: Date for which the raw file path is needed.
+        site: Site identifier.
+
+    Returns:
+        The raw file path as a string.
+    """
     params = read_config(site, None, "params")
     return os.path.join(params["data_in"], date_in.strftime("%Y/%m/%d/"))
 
 
 def _get_lidar_file_path(date_in: datetime.date, site: str) -> str | None:
+    """Get the lidar file path for a given date and site.
+
+    Args:
+        date_in: Date for which the lidar file path is needed.
+        site: Site identifier.
+
+    Returns:
+        The lidar file path as a string or None if not found.
+    """
     params, path = read_config(site, None, "params"), ""
     lidar_model = params["lidar_model"] if "lidar_model" in params else "unknown"
     if "path_to_lidar" in params and params["path_to_lidar"] is not None:

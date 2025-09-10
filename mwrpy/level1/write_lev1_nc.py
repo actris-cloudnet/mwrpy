@@ -77,6 +77,7 @@ def lev1_to_nc(
         params = {**params, **instrument_config}
 
     rpg_bin = prepare_data(path_to_files, data_type, params, lidar_path, time_offset)
+    assert isinstance(rpg_bin, RpgBin)
 
     if data_type in ("1B01", "1C01"):
         apply_qc(site, rpg_bin, params, coeff_files)
@@ -100,7 +101,8 @@ def prepare_data(
     params: dict,
     lidar_path: str | None,
     time_offset: datetime.timedelta | None = None,
-) -> RpgBin:
+    date: float | None = None,
+) -> RpgBin | dict:
     """Load and prepare data for netCDF writing."""
     if data_type in ("1B01", "1C01"):
         brt_files = get_file_list(path_to_files, "BRT")
@@ -186,9 +188,10 @@ def prepare_data(
             file_list_type = [s for s in file_list_abscal if cal in s.lower()]
             if len(file_list_type) > 0:
                 rpg_log = RpgBin(file_list_type, time_offset)
-                ind_cal = np.argmin(
+                ind_cal = np.where(
                     np.abs(rpg_bin.data["time"][0] - rpg_log.data["cal_date"])
-                )
+                    < 24 * 3600
+                )[0][-1]
                 rpg_bin.data["date_of_last_covariance_matrix"] = rpg_log.data[
                     "cal_date"
                 ][ind_cal]
@@ -288,6 +291,23 @@ def prepare_data(
             rpg_bin.data["air_pressure"] *= 100
         if "rainfall_rate" in rpg_bin.data:
             rpg_bin.data["rainfall_rate"] /= 3.6e6
+
+    elif data_type == "cov" and date is not None:
+        rpg_cov = {}
+        file_list_abscal = get_file_list(params["path_to_cal"], "LOG")
+        for cal in ["ln2", "amb"]:
+            file_list_type = [s for s in file_list_abscal if cal in s.lower()]
+            if len(file_list_type) > 0:
+                rpg_log = RpgBin(file_list_type, time_offset)
+                ind_cal = np.where(np.abs(date - rpg_log.data["cal_date"]) < 24 * 3600)[
+                    0
+                ][-1]
+                rpg_cov[f"tb_cov_{cal}"] = rpg_log.data["covariance_matrix"][
+                    ind_cal, :, :
+                ]
+                rpg_cov["frequency"] = rpg_log.header["_f"]
+                rpg_cov["time"] = rpg_log.data["cal_date"][ind_cal]
+        return rpg_cov
 
     else:
         raise RuntimeError(
