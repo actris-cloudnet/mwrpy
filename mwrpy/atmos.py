@@ -139,7 +139,9 @@ def find_lwcl_free(
     """Identifying liquid water cloud free periods using 31.4 GHz TB variability.
     Uses water vapor channel as proxy for a humidity dependent threshold.
     """
+    # Index meaning: no liquid cloud(0), liquid cloud present(1), undefined (2)
     index = np.ones(len(lev1["time"]), dtype=np.int32)
+    # Status meaning: using mwr only (0), using mwr and lidar (1), other (2)
     status = np.zeros(len(lev1["time"]), dtype=np.int32)
 
     # Different frequencies for window and water vapor channels depending on instrument type
@@ -225,6 +227,6 @@ def find_lwcl_free(
         df = df.bfill(limit=120)
         df = df.ffill(limit=120)
         index = np.array(df["index"])
-        index[(lev1["elevation_angle"][:] < 89.0) & (index != 0)] = 2
+        index[(lev1["pointing_flag"][:] == 1) | (lev1["elevation_angle"][:] < 89.0)] = 2
 
     return index, status

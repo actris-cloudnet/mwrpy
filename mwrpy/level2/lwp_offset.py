@@ -31,6 +31,8 @@ def correct_lwp_offset(
     lwp = np.copy(lwp_org)
     lwp[(lev1["elevation_angle"][index] < 89.0) | (qf > 0)] = np.nan
     lwp_df = pd.DataFrame({"Lwp": lwp}, index=ind)
+
+    # Calculate rolling statistics
     offset = "3min" if np.nanmean(np.diff(lev1["time"])) < 1.8 else "10min"
     lwp_std = lwp_df.rolling(
         pd.tseries.frequencies.to_offset(offset), center=True, min_periods=50
@@ -62,6 +64,7 @@ def correct_lwp_offset(
         pd.tseries.frequencies.to_offset(offset), center=True, min_periods=100
     ).max()
 
+    # Apply filtering criteria
     lwp[
         ((lwcl_i == 1) & (lev1["liquid_cloud_flag_status"][:][index] == 1))
         | (
@@ -72,10 +75,13 @@ def correct_lwp_offset(
         | (lwp > 0.06)
         | (lwp_max["Lwp"] > (tb_max["Tb"] * 0.0035))
     ] = np.nan
+
+    # Remove spikes and small cloud segments
     if not np.isnan(lwp).all():
         lwp[
             (np.abs(lwp - np.nanmedian(lwp)) > 0.015)
             & (lwp_min["Lwp"].values - np.nanmedian(lwp) > -0.01)
+            & (lwp_max["Lwp"] > (tb_max["Tb"] * 0.0025 / 1.5))
         ] = np.nan
 
     seqs_all = [(key, len(list(val))) for key, val in groupby(np.isfinite(lwp))]
@@ -95,6 +101,7 @@ def correct_lwp_offset(
             ):
                 lwp[seqs[sec, 1] : seqs[sec, 1] + seqs[sec, 2] - 1] = np.nan
 
+    # Calculate offset
     lwp_df = pd.DataFrame({"Lwp": lwp}, index=ind)
     lwp_offset = lwp_df.rolling(
         pd.tseries.frequencies.to_offset("60min"), center=True, min_periods=10
