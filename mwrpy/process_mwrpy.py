@@ -5,7 +5,9 @@ import glob
 import logging
 import os
 import time
+from typing import Literal
 
+import matplotlib.pyplot as plt
 import netCDF4 as nc
 import pandas as pd
 
@@ -19,7 +21,7 @@ from mwrpy.level2.write_lev2_nc import lev2_to_nc
 from mwrpy.plots.generate_plots import generate_figure
 from mwrpy.utils import (
     _get_filename,
-    _read_site_config_yaml,
+    _get_filename_cloudnet,
     date_range,
     get_processing_dates,
     isodate2date,
@@ -93,6 +95,7 @@ f_names_stability = list(
         "ko_index",
     ]
 )
+IType = Literal["hatpro", "lhatpro", "lhumpro_u90"]
 
 
 def main(args):
@@ -107,27 +110,60 @@ def main(args):
             if product not in PRODUCT_NAME:
                 logging.error(f"Product {product} not recognised")
                 continue
+            if args.format == "cloudnet":
+                if product not in ("1C01", "single", "multi"):
+                    logging.error(
+                        f"Product {product} not available in cloudnet format. Skipping."
+                    )
+                    continue
+                if args.altitude is None:
+                    logging.info("Site altitude not provided. Taking default of 0 m.")
             start = time.process_time()
             if args.command != "plot":
                 logging.info(f"Processing {product} product, {args.site} {date}")
                 if args.command == "reprocess":
                     try:
-                        process_product(product, date, args.site)
+                        process_product(
+                            product,
+                            date,
+                            args.site,
+                            args.format,
+                            args.instrument,
+                            args.altitude,
+                        )
                     except Exception as e:
                         logging.error(
                             f"Error in processing products: {e}. Incomplete or no processing for {date}."
                         )
                 else:
-                    process_product(product, date, args.site)
+                    process_product(
+                        product,
+                        date,
+                        args.site,
+                        args.format,
+                        args.instrument,
+                        args.altitude,
+                    )
             if args.command != "no-plot":
                 logging.info(f"Plotting {product} product, {args.site} {date}")
-                plot_product(product, date, args.site)
-
+                try:
+                    plot_product(product, date, args.site, args.format, args.instrument)
+                except Exception as e:
+                    logging.error(f"Error in plotting product {product}: {e}.")
+                finally:
+                    plt.close()
             elapsed_time = time.process_time() - start
             logging.info(f"Processing took {elapsed_time:.1f} seconds")
 
 
-def process_product(prod: str, date: datetime.date, site: str):
+def process_product(
+    prod: str,
+    date: datetime.date,
+    site: str,
+    data_format: str,
+    instrument: IType,
+    altitude: float,
+):
     """Process a given product for a specific date and site.
     This function handles the processing of different products based on their type
     (level 1, level 2, single, multi) and manages the necessary file
@@ -137,11 +173,18 @@ def process_product(prod: str, date: datetime.date, site: str):
         prod: Product code (e.g., '1C01', '2I01', 'single', 'multi').
         date: Date for which the product is to be processed.
         site: Site identifier.
+        data_format: Data format of the netCDF file (cloudnet, e-profile).
+        instrument: Specific instrument type (hatpro, lhatpro, etc.).
+        altitude: Altitude of the site in meters above mean sea level.
 
     Returns:
         None
     """
-    output_file = _get_filename(prod, date, site)
+    output_file = (
+        _get_filename(prod, date, site)
+        if data_format == "e-profile"
+        else _get_filename_cloudnet(prod, date, site, instrument)
+    )
     output_dir = os.path.dirname(output_file)
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
@@ -179,16 +222,18 @@ def process_product(prod: str, date: datetime.date, site: str):
                 ].values[0]
     lwp_offset_tuple = (lwp_offset[0], lwp_offset[1])
 
-    itype = _read_site_config_yaml(site)["type"]
     # Process level 1 data
     if prod[0] == "1":
         lev1_to_nc(
             prod,
             _get_raw_file_path(date, site),
+            data_format,
             site=site,
             output_file=output_file,
             lidar_path=_get_lidar_file_path(date, site),
             date=date,
+            instrument_type=instrument,
+            altitude=altitude,
         )
 
     # Process level 2 single products
@@ -212,11 +257,11 @@ def process_product(prod: str, date: datetime.date, site: str):
         )
 
     # Process level 2 combined products
-    elif prod == "single" and itype != "lhumpro_u90":
+    elif prod == "single" and instrument != "lhumpro_u90":
         generate_lev2_single(
             site, _get_filename("1C01", date, site), output_file, lwp_offset_tuple
         )
-    elif itype == "lhumpro_u90":
+    elif instrument == "lhumpro_u90":
         generate_lev2_lhumpro(
             site, _get_filename("1C01", date, site), output_file, lwp_offset_tuple
         )
@@ -271,7 +316,7 @@ def process_product(prod: str, date: datetime.date, site: str):
             csv_off.to_csv(offset_current, index=False)
 
 
-def plot_product(prod: str, date: datetime.date, site: str):
+def plot_product(prod: str, date, site: str, data_format: str, instrument: IType):
     """Plot a given product for a specific date and site.
     Plotting covariance data without 1C01 file is supported.
 
@@ -279,12 +324,19 @@ def plot_product(prod: str, date: datetime.date, site: str):
         prod: Product code (e.g., '1C01', '2I01', 'single', 'multi').
         date: Date for which the product is to be plotted.
         site: Site identifier.
+        data_format: Data format of the netCDF file (cloudnet, e-profile).
+        instrument: Specific instrument type (hatpro, lhatpro, etc.).
 
     Returns:
         None
     """
-    filename = _get_filename(prod, date, site)
-    params = read_config(site, None, "params")
+    filename = (
+        _get_filename(prod, date, site)
+        if data_format == "e-profile"
+        else _get_filename_cloudnet(prod, date, site, instrument)
+    )
+    if not os.path.isfile(filename):
+        logging.warning("Nothing to plot for product " + prod)
     output_dir = f"{os.path.dirname(filename)}/"
 
     # Plot level 1 data

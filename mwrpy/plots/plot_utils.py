@@ -168,7 +168,7 @@ def _dir_avg(
 def _read_location(nc_file: str) -> str:
     """Returns site name."""
     with netCDF4.Dataset(nc_file) as nc:
-        site_name = nc.site_location
+        site_name = nc.site_location if "site_location" in nc.ncattrs() else nc.location
     return site_name
 
 

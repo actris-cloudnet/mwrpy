@@ -8,7 +8,7 @@ import numpy as np
 from numpy import ma
 
 from mwrpy import utils, version
-from mwrpy.utils import MetaData
+from mwrpy.utils import MetaData, seconds2hours
 
 
 class RpgArray:
@@ -129,6 +129,29 @@ class Rpg:
                 ind[time_i] = 1
         self._screen(np.where(ind == 1)[0])
 
+    def add_zenith_angle(self):
+        """Adds zenith angle to data if not present."""
+        for key in ("elevation_angle", "ir_elevation_angle"):
+            if key not in self.data:
+                continue
+            zenith_angle = 90 - self.data[key][:]
+            new_key = key.replace("elevation", "zenith")
+            self.data[new_key] = RpgArray(zenith_angle, new_key)
+            self.data[new_key].dimensions = ("time",)
+
+    def convert_time_to_hours(self):
+        """Converts time from seconds since epoch to hours since midnight."""
+        time = self.data["time"].data[:]
+        time_hours = seconds2hours(time)
+        self.data["time"] = RpgArray(
+            time_hours,
+            "time",
+            "hours since " + self.date.strftime("%Y-%m-%d %H:%M:%S") + " +00:00",
+        )
+        self.data["time"].dimensions = ("time",)
+        if "time_bnds" in self.data:
+            del self.data["time_bnds"]
+
     def _screen(self, ind: np.ndarray):
         if len(ind) < 1:
             raise RuntimeError(
@@ -144,8 +167,17 @@ class Rpg:
                     self.data[key].data = self.data[key].data[ind, :]
 
 
-def save_rpg(rpg: Rpg, output_file: str | PathLike, att: dict, data_type: str) -> None:
+def save_rpg(
+    rpg: Rpg,
+    output_file: str | PathLike,
+    att: dict,
+    data_type: str,
+    data_format: str = "e-profile",
+) -> None:
     """Saves the RPG MWR file."""
+    if data_format == "cloudnet":
+        Rpg.convert_time_to_hours(rpg)
+        Rpg.add_zenith_angle(rpg)
     if data_type == "1B01":
         dims = {
             "time": len(rpg.data["time"][:]),
@@ -199,12 +231,22 @@ def save_rpg(rpg: Rpg, output_file: str | PathLike, att: dict, data_type: str) -
             ["Data type " + data_type + " not supported for file writing."]
         )
 
-    with init_file(output_file, dims, rpg.data, att) as rootgrp:
-        setattr(rootgrp, "date", rpg.date.isoformat())
+    with init_file(output_file, dims, rpg.data, att, data_format, data_type) as rootgrp:
+        if data_format == "e-profile":
+            setattr(rootgrp, "date", rpg.date.isoformat())
+        else:
+            setattr(rootgrp, "year", rpg.date.strftime("%Y"))
+            setattr(rootgrp, "month", rpg.date.strftime("%m"))
+            setattr(rootgrp, "day", rpg.date.strftime("%d"))
 
 
 def init_file(
-    file_name: str | PathLike, dimensions: dict, rpg_arrays: dict, att_global: dict
+    file_name: str | PathLike,
+    dimensions: dict,
+    rpg_arrays: dict,
+    att_global: dict,
+    data_format: str,
+    data_type: str,
 ) -> netCDF4.Dataset:
     """Initializes an RPG MWR file for writing.
 
@@ -213,12 +255,18 @@ def init_file(
         dimensions: Dictionary containing dimension for this file.
         rpg_arrays: Dictionary containing :class:`RpgArray` instances.
         att_global: Dictionary containing site specific global attributes
+        data_format: Data format to be used (cloudnet, e-profile).
+        data_type: Data type to be used (1B01, 1C01, 2I02, etc).
     """
     nc_file = netCDF4.Dataset(file_name, "w", format="NETCDF4_CLASSIC")
     for key, dimension in dimensions.items():
         nc_file.createDimension(key, dimension)
     _write_vars2nc(nc_file, rpg_arrays)
-    _add_standard_global_attributes(nc_file, att_global)
+    _add_cloudnet_global_attributes(
+        nc_file, att_global, data_type
+    ) if data_format == "cloudnet" else (
+        _add_standard_global_attributes(nc_file, att_global)
+    )
     return nc_file
 
 
@@ -244,3 +292,30 @@ def _add_standard_global_attributes(nc_file: netCDF4.Dataset, att_global) -> Non
         if value is None:
             value = ""
         setattr(nc_file, name, value)
+
+
+def _add_cloudnet_global_attributes(
+    nc_file: netCDF4.Dataset, add_global, data_type
+) -> None:
+    t_zone = datetime.timezone.utc
+    form = "%Y-%m-%d %H:%M:%S"
+    instrument = add_global["instrument"].upper()
+    site = add_global["site"]
+    att_global = {
+        "Conventions": "CF-1.8",
+        "mwrpy_version": version.__version__,
+        "location": add_global["site"],
+        "source": f"RPG-Radiometer Physics {instrument}",
+        "references": "https://doi.org/10.21105/joss.06733",
+        "mwrpy_file_type": data_type,
+        "title": f"{instrument} microwave radiometer Level 1c from {site}",
+        "history": f"{datetime.datetime.now(tz=t_zone).strftime(form)} +00:00"
+        + " - "
+        + data_type
+        + " file created",
+    }
+    for name, value in att_global.items():
+        if value is None:
+            value = ""
+        setattr(nc_file, name, value)
+    nc_file.mwrpy_coefficients = ", ".join(add_global["coeff_files"])

@@ -20,6 +20,7 @@ from mwrpy.level1.rpg_bin import RpgBin
 from mwrpy.utils import (
     add_interpol1d,
     add_time_bounds,
+    get_coeff_list,
     get_file_list,
     isbit,
     read_config,
@@ -32,6 +33,7 @@ FuncType: TypeAlias = Callable[[str], np.ndarray]
 def lev1_to_nc(
     data_type: str,
     path_to_files: str | PathLike,
+    data_format: str,
     site: str | None = None,
     output_file: str | PathLike | None = None,
     lidar_path: str | PathLike | None = None,
@@ -40,6 +42,7 @@ def lev1_to_nc(
     date: datetime.date | None = None,
     time_offset: datetime.timedelta | None = None,
     instrument_type: Literal["hatpro", "lhatpro", "lhumpro_u90"] | None = None,
+    altitude: float | None = None,
 ) -> rpg_mwr.Rpg:
     """This function reads one day of RPG MWR binary files,
     adds attributes and writes it into netCDF file.
@@ -47,6 +50,7 @@ def lev1_to_nc(
     Args:
         data_type: Data type of the netCDF file.
         path_to_files: Folder containing one day of RPG MWR binary files.
+        data_format: Data format of the netCDF file (cloudnet, e-profile).
         site: Name of site.
         output_file: Output file name.
         lidar_path: Path to (optional) lidar file
@@ -55,6 +59,7 @@ def lev1_to_nc(
         date: Measurement date in UTC.
         time_offset: Time offset if instrument operated in local time.
         instrument_type: Specific instrument type (HATPRO, LHATPRO, etc.).
+        altitude: Altitude of the site in meters above mean sea level.
 
     Raises:
         MissingInputData: if required input file is missing.
@@ -69,31 +74,54 @@ def lev1_to_nc(
             f"No coefficient files given, using files in repository for {site}."
         )
 
-    if instrument_config is None:
+    if data_format == "e-profile" and instrument_config is None:
         logging.info(
             f"No instrument config given, using config file in repository for {site}."
         )
 
-    params = read_config(site, instrument_type, "params")
+    params = (
+        read_config(site, instrument_type, "params")
+        if data_format == "e-profile"
+        else read_config(None, instrument_type, "params")
+    )
     if instrument_config is not None:
         params = {**params, **instrument_config}
 
-    rpg_bin = prepare_data(path_to_files, data_type, params, lidar_path, time_offset)
+    rpg_bin = prepare_data(
+        path_to_files, data_type, params, lidar_path, time_offset, altitude
+    )
     assert isinstance(rpg_bin, RpgBin)
 
     if data_type in ("1B01", "1C01"):
         apply_qc(site, rpg_bin, params, coeff_files)
     if data_type in ("1B21", "1C01"):
-        apply_met_qc(rpg_bin.data, params)
+        apply_met_qc(rpg_bin.data, params, altitude)
     mwr = rpg_mwr.Rpg(rpg_bin.data, date)
     mwr.find_valid_times()
-    mwr.data = get_data_attributes(mwr.data, data_type)
+    mwr.data = get_data_attributes(mwr.data, data_type, data_format)
     if output_file is not None:
-        global_attributes = read_config(site, instrument_type, "global_specs")
+        if data_format == "cloudnet":
+            c_files = (
+                get_coeff_list(
+                    site,
+                    ["spc", "ins", "lwp", "iwv", "hpt", "tpt", "tpb"],
+                    None,
+                    params.get("coeff_path", None),
+                )
+                if (coeff_files is None)
+                else (coeff_files)
+            )
+            global_attributes = {
+                "site": site,
+                "instrument": instrument_type,
+                "coeff_files": c_files,
+            }
+        else:
+            global_attributes = read_config(site, instrument_type, "global_specs")
         _update_calibration_attributes(rpg_bin, global_attributes)
         if data_type != "1C01":
             update_lev1_attributes(global_attributes, data_type)
-        rpg_mwr.save_rpg(mwr, output_file, global_attributes, data_type)
+        rpg_mwr.save_rpg(mwr, output_file, global_attributes, data_type, data_format)
     return mwr
 
 
@@ -103,6 +131,7 @@ def prepare_data(
     params: dict,
     lidar_path: str | PathLike | None,
     time_offset: datetime.timedelta | None = None,
+    altitude: float | None = None,
     date: float | None = None,
 ) -> RpgBin | dict:
     """Load and prepare data for netCDF writing."""
@@ -396,9 +425,9 @@ def prepare_data(
 
     file_list_hkd = get_file_list(path_to_files, "HKD")
     _append_hkd(file_list_hkd, rpg_bin, data_type, params, time_offset)
-    rpg_bin.data["altitude"] = (
-        np.ones(len(rpg_bin.data["time"]), np.float32) * params["altitude"]
-    )
+    alt = params.get("altitude", altitude)
+    alt = ma.masked if alt is None else alt
+    rpg_bin.data["altitude"] = np.ones(len(rpg_bin.data["time"]), np.float32) * alt
 
     return rpg_bin
 
@@ -412,11 +441,13 @@ def _append_hkd(
 ) -> None:
     """Append hkd data on same time grid and perform TB sanity check."""
     hkd = RpgBin(file_list_hkd, time_offset)
+    lat = params.get("latitude", ma.masked)
+    lon = params.get("longitude", ma.masked)
 
     if "latitude" not in hkd.data:
         add_interpol1d(
             rpg_bin.data,
-            np.ones(len(hkd.data["time"])) * params["latitude"],
+            np.ones(len(hkd.data["time"])) * lat,
             hkd.data["time"],
             "latitude",
         )
@@ -431,7 +462,7 @@ def _append_hkd(
     if "longitude" not in hkd.data:
         add_interpol1d(
             rpg_bin.data,
-            np.ones(len(hkd.data["time"])) * params["longitude"],
+            np.ones(len(hkd.data["time"])) * lon,
             hkd.data["time"],
             "longitude",
         )

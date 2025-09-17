@@ -15,6 +15,7 @@ def get_mvr_coeff(
     prefix: str,
     freq: np.ndarray,
     coeff_files: Sequence[str | PathLike] | None,
+    coeff_dir: str | None = None,
 ):
     """This function extracts retrieval coefficients for given files.
 
@@ -23,12 +24,13 @@ def get_mvr_coeff(
         prefix: Identifier for type of product.
         freq: Frequencies of observations.
         coeff_files: List of coefficient files.
+        coeff_dir: Directory where coefficient files are stored.
 
     Examples:
         >>> from mwrpy.level2.get_ret_coeff import get_mvr_coeff
         >>> get_mvr_coeff('site_name', 'lwp', np.array([22, 31.4]))
     """
-    c_list = get_coeff_list(site, prefix, coeff_files)
+    c_list = get_coeff_list(site, prefix, coeff_files, coeff_dir)
 
     coeff: dict = {}
 
