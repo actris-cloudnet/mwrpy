@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.6 – 2025-09-17
+
+- Generate plots without site config
+- Change `lwp_offset` to tuple
+
 ## 1.3.5 – 2025-09-02
 
 - Fix fetching of coefficient files
