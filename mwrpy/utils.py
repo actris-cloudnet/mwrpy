@@ -21,6 +21,7 @@ SECONDS_PER_MINUTE = 60
 SECONDS_PER_HOUR = 3600
 SECONDS_PER_DAY = 86400
 Epoch = tuple[int, int, int]
+IType = Literal["hatpro", "lhatpro", "lhumpro_u90"]
 
 
 class MetaData(NamedTuple):
@@ -35,6 +36,8 @@ class MetaData(NamedTuple):
     retrieval_frequencies: str | None = None
     retrieval_auxiliary_input: str | None = None
     retrieval_description: str | None = None
+    axis: str | None = None
+    calendar: str | None = None
 
 
 def seconds2hours(time_in_seconds: np.ndarray) -> np.ndarray:
@@ -276,10 +279,14 @@ def add_time_bounds(time_arr: np.ndarray, int_time: int) -> np.ndarray:
 
 
 def get_coeff_list(
-    site: str | None, prefix: str, coeff_files: Sequence[str | PathLike] | None
+    site: str | None,
+    prefix: str | list,
+    coeff_files: Sequence[str | PathLike] | None,
+    coeff_dir: str | None = None,
 ) -> list[str]:
     """Returns list of .nc coefficient file(s)."""
     if coeff_files is not None:
+        assert isinstance(prefix, str)
         c_list = []
         for file in coeff_files:
             basename = os.path.basename(file)
@@ -289,32 +296,38 @@ def get_coeff_list(
         return sorted(c_list)
 
     assert isinstance(site, str)
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    c_list = glob.glob(
-        dir_path
-        + "/site_config/"
-        + site
-        + "/coefficients/"
-        + "*"
-        + prefix.lower()
-        + "*"
-    )
-    if len(c_list) == 0:
-        c_list = glob.glob(
-            dir_path
+    if coeff_dir is not None:
+        dir_path = coeff_dir
+    else:
+        dir_path = (
+            os.path.dirname(os.path.realpath(__file__))
             + "/site_config/"
             + site
             + "/coefficients/"
-            + "*"
-            + prefix.upper()
-            + "*"
         )
+    if isinstance(prefix, str):
+        prefix = [prefix]
+    c_list = []
+    for p in prefix:
+        tmp = glob.glob(dir_path + "*" + p.lower() + "*")
+        if len(c_list) == 0:
+            tmp = glob.glob(dir_path + "*" + p.upper() + "*")
+        c_list = c_list + tmp
 
     if len(c_list) > 0:
+        if "spc" in c_list and "ins" in c_list:
+            c_list.remove("spc")
         return sorted(c_list)
     logging.warning(
         "No coefficient files for product "
-        + prefix
+        + str(prefix)
+        + " found in directory "
+        + "/site_config/"
+        + site
+        + "/coefficients/"
+    ) if len(prefix) == 1 else logging.warning(
+        "No coefficient files for products "
+        + ", ".join(prefix)
         + " found in directory "
         + "/site_config/"
         + site
@@ -593,6 +606,23 @@ def _get_filename(prod: str, date_in: datetime.date, site: str) -> str:
         )
         wigos_id = global_attributes["wigos_station_id"]
         filename = f"MWR_{prod}_{wigos_id}_{date_in.strftime('%Y%m%d')}.nc"
+    return os.path.join(data_out_dir, filename)
+
+
+def _get_filename_cloudnet(
+    prod: str, date_in: datetime.date, site: str, instrument: IType
+) -> str:
+    if np.char.isnumeric(prod[0]):
+        level = prod[0]
+        name = "l1c"
+    else:
+        level = "2"
+        name = prod
+    params = read_config(None, instrument, "params")
+    data_out_dir = os.path.join(
+        params["data_out"], f"level{level}", date_in.strftime("%Y/%m/%d")
+    )
+    filename = f"{date_in.strftime('%Y%m%d')}_{site}_{instrument}-{name}.nc"
     return os.path.join(data_out_dir, filename)
 
 

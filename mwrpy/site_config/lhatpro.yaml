@@ -1,6 +1,38 @@
 # Config file for all LHATPRO instruments
 
 params:
+  # path to level1 data and path for processed files
+  data_in: /tmp/data/
+  data_out: /tmp/data/
+
+  # path to retrieval coefficients
+  coeff_path:
+
+  # availability of IR
+  ir_flag: True
+
+  # quality flag status for level 1 data; 0: flag active
+  # Bit 1: missing_tb
+  # Bit 2: tb_below_threshold
+  # Bit 3: tb_above_threshold
+  # Bit 4: spectral_consistency_above_threshold
+  # Bit 5: receiver_sanity_failed
+  # Bit 6: rain_detected
+  # Bit 7: sun_moon_in_beam
+  # Bit 8: tb_offset_above_threshold
+  flag_status: [0, 0, 0, 0, 0, 0, 0, 1]
+
+  # integration time of measurements in seconds
+  int_time: 1
+
+  # Azimuth angle is transformed to geographical coordinates (E=90 and W=270), currently only for RPG scanners.
+  # If you do not want to transform the coordinates set azi_cor to -999.
+  azi_cor: -999.
+
+  const_azi: -999.
+
+  # some default values:
+  # -------------------
   receiver_nb: [2, 1]
   receiver: [2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1]
 
@@ -68,36 +100,6 @@ params:
       [0., 360.],
       [0., 100.],
     ]
-
-  # some default values:
-  # -------------------
-
-  # path to level1 data and path for processed files
-  data_in: /tmp/data/
-  data_out: /tmp/data/
-
-  # availability of IR
-  ir_flag: True
-
-  # quality flag status for level 1 data; 0: flag active
-  # Bit 1: missing_tb
-  # Bit 2: tb_below_threshold
-  # Bit 3: tb_above_threshold
-  # Bit 4: spectral_consistency_above_threshold
-  # Bit 5: receiver_sanity_failed
-  # Bit 6: rain_detected
-  # Bit 7: sun_moon_in_beam
-  # Bit 8: tb_offset_above_threshold
-  flag_status: [0, 0, 0, 0, 0, 0, 0, 1]
-
-  # integration time of measurements in seconds
-  int_time: 1
-
-  # Azimuth angle is transformed to geographical coordinates (E=90 and W=270), currently only for RPG scanners.
-  # If you do not want to transform the coordinates set azi_cor to -999.
-  azi_cor: -999.
-
-  const_azi: -999.
 
 # Missing entries are filled with site specific config file
 global_specs:

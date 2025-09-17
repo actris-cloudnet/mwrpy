@@ -5,6 +5,7 @@ import glob
 import logging
 import os
 import time
+from typing import Literal
 
 import matplotlib.pyplot as plt
 import netCDF4 as nc
@@ -20,7 +21,7 @@ from mwrpy.level2.write_lev2_nc import lev2_to_nc
 from mwrpy.plots.generate_plots import generate_figure
 from mwrpy.utils import (
     _get_filename,
-    _read_site_config_yaml,
+    _get_filename_cloudnet,
     date_range,
     get_processing_dates,
     isodate2date,
@@ -92,6 +93,7 @@ f_names_stability = list(
         "ko_index",
     ]
 )
+IType = Literal["hatpro", "lhatpro", "lhumpro_u90"]
 
 
 def main(args):
@@ -104,22 +106,44 @@ def main(args):
             if product not in PRODUCT_NAME:
                 logging.error(f"Product {product} not recognised")
                 continue
+            if args.format == "cloudnet":
+                if product not in ("1C01", "single", "multi"):
+                    logging.error(
+                        f"Product {product} not available in cloudnet format. Skipping."
+                    )
+                    continue
+                if args.altitude is None:
+                    logging.info("Site altitude not provided. Taking default of 0 m.")
             start = time.process_time()
             if args.command != "plot":
                 logging.info(f"Processing {product} product, {args.site} {date}")
                 if args.command == "reprocess":
                     try:
-                        process_product(product, date, args.site)
+                        process_product(
+                            product,
+                            date,
+                            args.site,
+                            args.format,
+                            args.instrument,
+                            args.altitude,
+                        )
                     except Exception as e:
                         logging.error(
                             f"Error in processing products: {e}. Incomplete or no processing for {date}."
                         )
                 else:
-                    process_product(product, date, args.site)
+                    process_product(
+                        product,
+                        date,
+                        args.site,
+                        args.format,
+                        args.instrument,
+                        args.altitude,
+                    )
             if args.command != "no-plot":
                 logging.info(f"Plotting {product} product, {args.site} {date}")
                 try:
-                    plot_product(product, date, args.site)
+                    plot_product(product, date, args.site, args.format, args.instrument)
                 except Exception as e:
                     logging.error(f"Error in plotting product {product}: {e}.")
                 finally:
@@ -128,8 +152,19 @@ def main(args):
             logging.info(f"Processing took {elapsed_time:.1f} seconds")
 
 
-def process_product(prod: str, date: datetime.date, site: str):
-    output_file = _get_filename(prod, date, site)
+def process_product(
+    prod: str,
+    date: datetime.date,
+    site: str,
+    data_format: str,
+    instrument: IType,
+    altitude: float,
+):
+    output_file = (
+        _get_filename(prod, date, site)
+        if data_format == "e-profile"
+        else _get_filename_cloudnet(prod, date, site, instrument)
+    )
     output_dir = os.path.dirname(output_file)
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
@@ -165,15 +200,17 @@ def process_product(prod: str, date: datetime.date, site: str):
                     csv_off["date"] == xday[1].strftime("%m-%d"), "offset"
                 ].values[0]
 
-    itype = _read_site_config_yaml(site)["type"]
     if prod[0] == "1":
         lev1_to_nc(
             prod,
             _get_raw_file_path(date, site),
+            data_format,
             site=site,
             output_file=output_file,
             lidar_path=_get_lidar_file_path(date, site),
             date=date,
+            instrument_type=instrument,
+            altitude=altitude,
         )
     elif prod[0] == "2":
         if prod in ("2P04", "2P07", "2P08"):
@@ -193,11 +230,11 @@ def process_product(prod: str, date: datetime.date, site: str):
             hum_file=hum_file,
             lwp_offset=lwp_offset,
         )
-    elif prod == "single" and itype != "lhumpro_u90":
+    elif prod == "single" and instrument != "lhumpro_u90":
         generate_lev2_single(
             site, _get_filename("1C01", date, site), output_file, lwp_offset
         )
-    elif itype == "lhumpro_u90":
+    elif instrument == "lhumpro_u90":
         generate_lev2_lhumpro(
             site, _get_filename("1C01", date, site), output_file, lwp_offset
         )
@@ -251,8 +288,12 @@ def process_product(prod: str, date: datetime.date, site: str):
             csv_off.to_csv(offset_current, index=False)
 
 
-def plot_product(prod: str, date, site: str):
-    filename = _get_filename(prod, date, site)
+def plot_product(prod: str, date, site: str, data_format: str, instrument: IType):
+    filename = (
+        _get_filename(prod, date, site)
+        if data_format == "e-profile"
+        else _get_filename_cloudnet(prod, date, site, instrument)
+    )
     if not os.path.isfile(filename):
         logging.warning("Nothing to plot for product " + prod)
     output_dir = f"{os.path.dirname(filename)}/"

@@ -3,16 +3,18 @@
 import metpy.calc as mpcalc
 import numpy as np
 from metpy.units import masked_array
+from numpy import ma
 
 from mwrpy.utils import setbit
 
 
-def apply_met_qc(data: dict, params: dict) -> None:
+def apply_met_qc(data: dict, params: dict, altitude: float | None) -> None:
     """This function performs quality control of meteorological sensor data.
 
     Args:
         data: Level 1 data.
         params: Site specific parameters.
+        altitude: Altitude of the site in meters.
 
     Returns:
         None
@@ -39,7 +41,9 @@ def apply_met_qc(data: dict, params: dict) -> None:
         if name not in data:
             continue
         if name == "air_pressure":
-            altitude = masked_array(params["altitude"], data_units="m")
+            alt = params.get("altitude", altitude)
+            alt = ma.masked if alt is None else alt
+            altitude = masked_array(alt, data_units="m")
             pressure = mpcalc.height_to_pressure_std(altitude).to("pascal").magnitude
             threshold_low = pressure - 10000
             threshold_high = pressure + 10000

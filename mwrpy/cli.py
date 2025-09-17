@@ -65,6 +65,27 @@ def _parse_args(args):
         metavar="YYYY-MM-DD",
         help="Single date to be processed.",
     )
+    group.add_argument(
+        "-i",
+        "--instrument",
+        type=str,
+        help="Instrument to be processed (hatpro, lhatpro, lhumpro_u90).",
+        default="hatpro",
+    )
+    group.add_argument(
+        "-f",
+        "--format",
+        type=str,
+        help="Data format to be used (cloudnet, e-profile).",
+        default="e-profile",
+    )
+    group.add_argument(
+        "-a",
+        "--altitude",
+        type=float,
+        help="Altitude above mean sea level of site (m).",
+        default=0.0,
+    )
     return parser.parse_args(args)
 
 

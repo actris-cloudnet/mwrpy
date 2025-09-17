@@ -387,7 +387,7 @@ def _read_time_vector(nc_file: str) -> ndarray:
     """Converts time vector to fraction hour."""
     with netCDF4.Dataset(nc_file) as nc:
         time = nc.variables["time"][:]
-    return seconds2hours(time)
+    return seconds2hours(time) if time.max() > 24 else time
 
 
 def _screen_high_altitudes(data_field: ndarray, ax_values: tuple, max_y: int) -> tuple:
@@ -439,7 +439,11 @@ def _read_date(nc_file: str) -> date:
     """Returns measurement date."""
     locale.setlocale(locale.LC_TIME, "en_US.UTF-8")
     with netCDF4.Dataset(nc_file) as nc:
-        case_date = datetime.strptime(nc.date, "%Y-%m-%d")
+        case_date = (
+            datetime.strptime(nc.date, "%Y-%m-%d")
+            if "date" in nc.ncattrs()
+            else datetime.strptime(f"{nc.year}-{nc.month}-{nc.day}", "%Y-%m-%d")
+        )
     return case_date
 
 

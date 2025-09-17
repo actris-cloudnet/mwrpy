@@ -6,12 +6,13 @@ from typing import TypeAlias
 from mwrpy.utils import MetaData
 
 
-def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
+def get_data_attributes(rpg_variables: dict, data_type: str, data_format: str) -> dict:
     """Adds Metadata for RPG MWR Level 1 variables for NetCDF file writing.
 
     Args:
         rpg_variables: RpgArray instances.
         data_type: Data type of the netCDF file.
+        data_format: Data format of the netCDF file (cloudnet, e-profile).
 
     Returns:
         Dictionary
@@ -41,6 +42,9 @@ def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
         attributes = dict(
             ATTRIBUTES_COM, **ATTRIBUTES_1B01, **ATTRIBUTES_1B11, **ATTRIBUTES_1B21
         )
+        if data_format == "cloudnet":
+            attributes.pop("time")
+            attributes = dict(ATTRIBUTES_CN, **attributes)
 
     for key in list(rpg_variables):
         if key in attributes:
@@ -54,6 +58,18 @@ def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
     )
 
     return rpg_variables
+
+
+ATTRIBUTES_CN = {
+    "time": MetaData(
+        units="hours since ",
+        long_name="Time UTC",
+        standard_name="time",
+        axis="T",
+        calendar="standard",
+        dimensions=("time",),
+    ),
+}
 
 
 ATTRIBUTES_COM = {
@@ -185,6 +201,13 @@ ATTRIBUTES_1B01 = {
         comment="0=horizon, 90=zenith",
         dimensions=("time",),
     ),
+    "zenith_angle": MetaData(
+        units="degree",
+        long_name="Zenith angle",
+        standard_name="zenith_angle",
+        comment="Angle to the local vertical. A value of zero is directly overhead.",
+        dimensions=("time",),
+    ),
     # "tb_accuracy": MetaData(
     #     long_name="Total absolute calibration uncertainty of brightness temperature,\n"
     #     "one standard deviation",
@@ -301,6 +324,12 @@ ATTRIBUTES_1B11 = {
         long_name="Infrared sensor elevation angle",
         units="degree",
         comment="0=horizon, 90=zenith",
+        dimensions=("time",),
+    ),
+    "ir_zenith_angle": MetaData(
+        units="degree",
+        long_name="Infrared sensor elevation angle",
+        comment="90=horizon, 0=zenith",
         dimensions=("time",),
     ),
 }
