@@ -287,7 +287,7 @@ def spectral_consistency(
             )
             tb_diff.iloc[~np.isin(range(len(ret_rm)), ele_ind)] = np.nan
             f_mean = [25.0, 55.0, 90.0, 185.0]  # mean frequency for each band
-            fact = [2.0, 4.0, 3.0, 2.5]  # factor for receiver retrieval uncertainty
+            fact = [4.0, 4.0, 3.0, 2.5]  # factor for receiver retrieval uncertainty
             # flag for individual channels based on channel retrieval uncertainty
             flag_ind[
                 np.where(
@@ -312,11 +312,16 @@ def spectral_consistency(
                 data["tb"][ele_ind, ifreq] - data["tb_spectrum"][ele_ind, ifreq]
             )
 
-            # flag for elevation scans (only receiver 2)
+            # flag for elevation scans (only for upper 4 V-band channels)
             ele_s = ele_retrieval(
                 data["elevation_angle"][:], data["pointing_flag"][:], coeff
             )
-            if (len(ele_s) > 0) and (data["receiver"][ifreq] == 2):
+            if (
+                (len(ele_s) > 0)
+                and (data["receiver"][ifreq] == 2)
+                and (data["frequency"][ifreq] > 54.0)
+                and (data["frequency"][ifreq] < 59.0)
+            ):
                 tb_diff = pd.DataFrame(
                     {
                         "Tb": np.abs(
@@ -328,15 +333,12 @@ def spectral_consistency(
                 tb_diff = tb_diff[~tb_diff.index.duplicated()].reindex(
                     pd.to_datetime(data["time"][:], unit="s"), method="nearest"
                 )
-                tb_diff.loc[
-                    (data["elevation_angle"][:] > 89.5)
-                    | (data["pointing_flag"][:] == 0)
-                ] = np.nan
+                tb_diff.loc[data["pointing_flag"][:] == 0] = np.nan
                 # flag for individual channels based on channel retrieval uncertainty
                 flag_ind[
                     np.where(
                         np.abs(tb_diff["Tb"].values)
-                        > ret_rm[:, ifreq] * 2.5 * cos_ele[:]
+                        > ret_rm[:, ifreq] * 5.0 * cos_ele[:]
                     )[0],
                     ifreq,
                 ] = True
@@ -445,7 +447,7 @@ def spectral_consistency(
 
 
 def ele_retrieval(ele_obs: np.ndarray, pointing: np.ndarray, coeff: dict) -> np.ndarray:
-    """Extracts elevation angles used in retrieval."""
+    """Extracts elevation angles above 10 degrees used in retrieval."""
     ele_ret = coeff["AG"]
     if ele_ret.shape == ():
         ele_ret = np.array([ele_ret])
@@ -453,7 +455,9 @@ def ele_retrieval(ele_obs: np.ndarray, pointing: np.ndarray, coeff: dict) -> np.
         [
             i
             for i, v in enumerate(ele_obs)
-            if np.min(np.abs(v - ele_ret)) < 0.5 and pointing[i] == 1
+            if np.min(np.abs(v - ele_ret)) < 0.5
+            and pointing[i] == 1
+            and ele_obs[i] > 10.0
         ]
     )
 

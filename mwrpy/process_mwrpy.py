@@ -388,14 +388,16 @@ def _get_raw_file_path(date_in: datetime.date, site: str) -> str:
 
 def _get_lidar_file_path(date_in: datetime.date, site: str) -> str | None:
     params, path = read_config(site, None, "params"), ""
-    lidar_model = params["lidar_model"] if "lidar_model" in params else "unknown"
+    lidar_model = params.get("lidar_model", "unknown")
+    lidar_model = "unknown" if lidar_model is None else lidar_model.lower()
     if "path_to_lidar" in params and params["path_to_lidar"] is not None:
         path = os.path.join(
             params["path_to_lidar"],
             date_in.strftime("%Y/%m/%d/"),
-            date_in.strftime("%Y%m%d") + "_" + site + "_" + lidar_model,
         )
-    file = glob.glob(path + "*.nc")
+    file = glob.glob(
+        path + date_in.strftime("%Y%m%d") + "_" + site + "_" + lidar_model + "*.nc"
+    )
     if len(file) == 0:
         logging.info(
             "No lidar file of type " + lidar_model + " found in directory " + str(path)
