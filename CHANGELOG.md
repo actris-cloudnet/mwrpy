@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.0 – 2025-09-19
+
+- Fix spectral consistency check for scanning data
+- Fix lidar file path in CLI
+
 ## 1.3.6 – 2025-09-17
 
 - Generate plots without site config
