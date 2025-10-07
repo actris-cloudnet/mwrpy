@@ -53,6 +53,7 @@ PRODUCT_NAME = {
         "met_quality_flag",
         "hkd",
         "cov",
+        "his",
     ],
     "2I01": ["lwp", "lwp_scan"],
     "2I02": ["iwv", "iwv_scan"],
@@ -298,10 +299,11 @@ def plot_product(prod: str, date: datetime.date, site: str):
             "met_quality_flag": ["met_quality_flag"],
             "hkd": ["t_amb", "t_rec", "t_sta"],
             "cov": ["tb_cov_ln2", "tb_cov_amb"],
+            "his": ["tb_cov_ln2", "tb_cov_amb", "Gain"],
         }
         for key in PRODUCT_NAME[prod]:
             variables = keymap[key]
-            out_dir = params["path_to_cal"] if key == "cov" else output_dir
+            out_dir = params["path_to_cal"] if key in ("his", "cov") else output_dir
             ele_range = (
                 (
                     89.0,
@@ -310,13 +312,30 @@ def plot_product(prod: str, date: datetime.date, site: str):
                 if key in ("tb", "tb_spectrum", "irt")
                 else (-1.0, 91.0)
             )
-            generate_figure(
-                filename,
-                variables,
-                ele_range=ele_range,
-                save_path=out_dir,
-                image_name=key,
-            )
+            if key != "his":
+                generate_figure(
+                    filename,
+                    variables,
+                    ele_range=ele_range,
+                    save_path=out_dir,
+                    image_name=key,
+                )
+            else:
+                his_data = prepare_data(
+                    "", key, params, None, date=time.mktime(date.timetuple())
+                )
+                assert isinstance(his_data, dict)
+                if len(his_data) > 0:
+                    generate_figure(
+                        "",
+                        variables,
+                        save_path=out_dir,
+                        image_name=key,
+                        cov_data=his_data,
+                        site=site,
+                    )
+                else:
+                    logging.warning("No to plot for product " + prod)
 
     # Plot level 2 single products
     elif os.path.isfile(filename) and (prod[0] == "2"):
@@ -412,7 +431,7 @@ def plot_product(prod: str, date: datetime.date, site: str):
                         pointing=pointing,
                     )
 
-    # Plot covariance data if 1C01 file is not available
+    # Plot covariance data and calibration history if 1C01 file is not available
     elif prod == "1C01" and not os.path.isfile(filename):
         cov_data = prepare_data(
             "", "cov", params, None, date=time.mktime(date.timetuple())
@@ -429,7 +448,21 @@ def plot_product(prod: str, date: datetime.date, site: str):
             )
         else:
             logging.warning("No to plot for product " + prod)
-
+        his_data = prepare_data(
+            "", "his", params, None, date=time.mktime(date.timetuple())
+        )
+        assert isinstance(his_data, dict)
+        if len(his_data) > 0:
+            generate_figure(
+                "",
+                ["tb_cov_ln2", "tb_cov_amb", "Gain"],
+                save_path=params["path_to_cal"],
+                image_name="his",
+                cov_data=his_data,
+                site=site,
+            )
+        else:
+            logging.warning("No to plot for product " + prod)
     else:
         logging.warning("Nothing to plot for product " + prod)
 

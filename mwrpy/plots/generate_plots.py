@@ -124,11 +124,22 @@ def generate_figure(
         >>> from mwrpy.plots import generate_figure
         >>> generate_figure('lev2_file.nc', ['lwp'])
     """
-    if nc_file == "" and cov_data is not None and site is not None:
-        valid_fields, valid_names = (
-            [cov_data[field_names[0]][0], cov_data[field_names[1]][0]],
-            field_names,
-        )
+    if (
+        nc_file == ""
+        and cov_data is not None
+        and site is not None
+        and image_name == "cov"
+    ):
+        if cov_data[field_names[0]].ndim == 3:
+            valid_fields, valid_names = (
+                [cov_data[field_names[0]][0], cov_data[field_names[1]][0]],
+                field_names,
+            )
+        else:
+            valid_fields, valid_names = (
+                [cov_data[field_names[0]], cov_data[field_names[1]]],
+                field_names,
+            )
         time = cov_data["time"]
         fig, axes = _initialize_figure(len(valid_fields), dpi)
         for ax, field, name in zip(axes, valid_fields, valid_names):
@@ -147,6 +158,32 @@ def generate_figure(
         fig.set_size_inches(9.0, 7.0 * len(axes))
         f_name = handle_saving(
             nc_file, image_name, save_path, show, c_date, valid_names, site=site
+        )
+        return f_name
+
+    elif (
+        nc_file == ""
+        and cov_data is not None
+        and site is not None
+        and image_name == "his"
+    ):
+        valid_fields, valid_names = (
+            [
+                cov_data[field_names[0]],
+                cov_data[field_names[1]],
+                cov_data[field_names[2]],
+            ],
+            field_names,
+        )
+        time = cov_data["time"][:]
+        fig, axes = _initialize_figure(len(valid_fields), dpi)
+        for ax, field, name in zip(axes, valid_fields, valid_names):
+            ax.set_facecolor(_COLORS["lightgray"])
+            _plot_cal_history(ax, name, cov_data["frequency"], field, time)
+        _add_subtitle(fig, "history", site)
+        fig.set_size_inches(16.0, 7.0 * len(axes))
+        f_name = handle_saving(
+            nc_file, image_name, save_path, show, "history", valid_names, site=site
         )
         return f_name
 
@@ -269,7 +306,7 @@ def handle_saving(
     image_name: str | None,
     save_path: str | None,
     show: bool,
-    case_date: date,
+    case_date: date | str,
     field_names: list,
     fix: str = "",
     site: str | None = None,
@@ -278,12 +315,19 @@ def handle_saving(
     file_name = ""
     site_name = _read_location(nc_file) if nc_file != "" else site
     if image_name:
-        date_string = case_date.strftime("%Y%m%d")
-        file_name = f"{save_path}{date_string}_{site_name}_{image_name}.png"
-        plt.savefig(
-            f"{save_path}{date_string}_{site_name}_{image_name}.png",
-            bbox_inches="tight",
-        )
+        if isinstance(case_date, str):
+            file_name = f"{save_path}{site_name}_{image_name}.png"
+            plt.savefig(
+                f"{save_path}{site_name}_{image_name}.png",
+                bbox_inches="tight",
+            )
+        else:
+            date_string = case_date.strftime("%Y%m%d")
+            file_name = f"{save_path}{date_string}_{site_name}_{image_name}.png"
+            plt.savefig(
+                f"{save_path}{date_string}_{site_name}_{image_name}.png",
+                bbox_inches="tight",
+            )
     elif save_path:
         file_name = _create_save_name(save_path, case_date, field_names, fix)
         plt.savefig(file_name, bbox_inches="tight")
@@ -476,9 +520,12 @@ def _get_cal_date(nc_file: str) -> date:
     return case_date
 
 
-def _add_subtitle(fig, case_date: date, site_name: str):
+def _add_subtitle(fig, case_date: date | str, site_name: str):
     """Adds subtitle into figure."""
-    text = _get_subtitle_text(case_date, site_name)
+    if isinstance(case_date, str):
+        text = f"{site_name}, {case_date}"
+    else:
+        text = _get_subtitle_text(case_date, site_name)
     fig.suptitle(
         text,
         fontsize=13,
@@ -496,9 +543,11 @@ def _get_subtitle_text(case_date: date, site_name: str) -> str:
 
 
 def _create_save_name(
-    save_path: str, case_date: date, field_names: list, fix: str = ""
+    save_path: str, case_date: date | str, field_names: list, fix: str = ""
 ) -> str:
     """Creates file name for saved images."""
+    if isinstance(case_date, str):
+        return f"{save_path}{case_date}_{'_'.join(field_names)}{fix}.png"
     date_string = case_date.strftime("%Y%m%d")
     return f"{save_path}{date_string}_{'_'.join(field_names)}{fix}.png"
 
@@ -1982,3 +2031,50 @@ def _plot_covariance(ax, data_in: ma.MaskedArray, name, f_instance: str | ndarra
     ax.set_yticklabels(np.flip(frequency).astype(str))
     ax.set_xlabel("Frequency (GHz)")
     ax.set_ylabel("Frequency (GHz)")
+
+
+def _plot_cal_history(
+    ax, name: str, freq: np.ndarray, data_his: np.ndarray, time: np.ndarray
+):
+    data_shape = data_his.shape
+    for ind in range(data_shape[0]):
+        if "cov" in name:
+            if data_his.ndim == 3:
+                cal_df = pd.DataFrame(
+                    np.squeeze(data_his[ind, :, :])
+                    .diagonal()
+                    .reshape((1, data_shape[1])),
+                    index=np.array([pd.to_datetime(np.squeeze(time[ind]), unit="s")]),
+                )
+            else:
+                cal_df = pd.DataFrame(
+                    np.squeeze(data_his[:, :]).diagonal().reshape((1, data_shape[1])),
+                    index=np.array([pd.to_datetime(time[0], unit="s")]),
+                )
+        else:
+            cal_df = pd.DataFrame(
+                data_his[ind, :].reshape((1, data_shape[1])),
+                index=np.array([pd.to_datetime(np.squeeze(time[ind]), unit="s")]),
+            )
+        colors = iter(plt.get_cmap("Spectral")(np.linspace(0, 1, data_shape[1])))
+        for line in range(data_shape[1]):
+            ax.plot(
+                cal_df.index,
+                np.sqrt(cal_df.values[0, line]),
+                marker="o",
+                markersize=5,
+                fillstyle="full",
+                linestyle="None",
+                color=next(colors),
+                label=str(freq[line]) + " GHz",
+            )
+        ax.set_ylabel(ATTRIBUTES[name].ylabel)
+        lines, labels = ax.get_legend_handles_labels()
+        ax.legend(
+            lines[: data_shape[1]],
+            labels[: data_shape[1]],
+            loc="center left",
+            bbox_to_anchor=(1.03, 0.5),
+            markerscale=3.0,
+        )
+        ax.set_title(ATTRIBUTES[name].name, fontsize=14)

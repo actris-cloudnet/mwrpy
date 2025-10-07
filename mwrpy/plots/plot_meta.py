@@ -28,6 +28,7 @@ _DEG = "DEG"
 _HPA = "hPa"
 _MMH = "mm h$^{-1}$"
 _MS = "m s$^{-1}$"
+_mV_K = "mV K$^{-1}$"
 
 _COLORS = {
     "green": "#3cb371",
@@ -275,6 +276,7 @@ ATTRIBUTES = {
     ),
     "tb_cov_ln2": PlotMeta(
         name="LN2 target",
+        ylabel="channel noise (" + _K + ")",
         cbar="viridis",
         clabel="covariance (K$^2$)",
         plot_range=(0, 1),
@@ -283,11 +285,21 @@ ATTRIBUTES = {
     ),
     "tb_cov_amb": PlotMeta(
         name="Ambient target",
+        ylabel="channel noise (" + _K + ")",
         cbar="cividis",
         clabel="covariance (K$^2$)",
         plot_range=(0, 1),
         plot_type="mesh",
         source="cov",
+    ),
+    "Gain": PlotMeta(
+        name="Gain",
+        ylabel="gain (" + _mV_K + ")",
+        cbar="cividis",
+        clabel="Gain (mV/K)",
+        plot_range=(0, 1),
+        plot_type="mesh",
+        source="his",
     ),
     "lifted_index": PlotMeta(
         name="Lifted index",

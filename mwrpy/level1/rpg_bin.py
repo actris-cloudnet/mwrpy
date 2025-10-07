@@ -407,11 +407,11 @@ def read_log(file_name: str) -> tuple[dict, dict]:
                     )
                 if line.startswith("Covariance Matrix [K^2]"):
                     data["covariance_matrix"] = np.ndarray(
-                        (1, len(header["_f"]), len(header["_f"])), np.float32
+                        (len(header["_f"]), len(header["_f"])), np.float32
                     )
                     for nf in range(len(header["_f"])):
                         line_a = lines[lineno + nf + 1].split(":")[1].split()
-                        data["covariance_matrix"][0, nf, :] = np.array(
+                        data["covariance_matrix"][nf, :] = np.array(
                             [float(f) for f in line_a]
                         )
     else:
