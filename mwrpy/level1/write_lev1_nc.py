@@ -317,6 +317,13 @@ def prepare_data(
                     rpg_cov["frequency"] = rpg_log.header["_f"]
                     rpg_cov["time"] = rpg_log.data["cal_date"][ind_cal[-1]]
         if len(rpg_cov) == 0 and data_type == "his":
+            file_list_abscal = get_file_list(params["path_to_cal"], "HIS")
+            if len(file_list_abscal) > 0:
+                rpg_log = RpgBin(file_list_abscal, time_offset)
+                rpg_cov["Gain"] = rpg_log.data["Gain"][:, :]
+                rpg_cov["frequency"] = rpg_log.header["_f"]
+                rpg_cov["time"] = rpg_log.data["cal_date"][:]
+        if len(rpg_cov) == 0 and data_type == "his":
             file_list_abscal = get_file_list(params["path_to_cal"] + "ABSCAL/", "LOG")
             if len(file_list_abscal) > 0:
                 rpg_log = RpgBin(file_list_abscal, time_offset)

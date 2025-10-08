@@ -500,6 +500,124 @@ def read_log(file_name: str) -> tuple[dict, dict]:
     return header, data
 
 
+def read_his(file_name: str) -> tuple[dict, dict]:
+    """This function reads RPG MWR ABSCAL.HIS binary files."""
+    Fill_Value_Float = -999.0
+    Fill_Value_Int = -99
+
+    with open(file_name, "rb") as file:
+        code = np.fromfile(file, np.int32, 1)
+        if code != 39583209:
+            raise RuntimeError(["Error: CAL file code " + str(code) + " not supported"])
+
+        def _get_header():
+            """Read header info."""
+            n = int(np.fromfile(file, np.uint32, 1))
+            time_ref = 1
+            header_names = ["_code", "n", "_time_ref"]
+            header_values = [code, n, time_ref]
+            return dict(zip(header_names, header_values))
+
+        def _create_variables():
+            """Initialize data arrays."""
+            vrs = {
+                "len": np.ones(header["n"], np.int32) * Fill_Value_Int,
+                "rad_id": np.ones(header["n"], np.int32) * Fill_Value_Int,
+                "cal1_t": np.ones(header["n"], np.int32) * Fill_Value_Int,
+                "cal2_t": np.ones(header["n"], np.int32) * Fill_Value_Int,
+                "t1": np.ones(header["n"], np.int32) * Fill_Value_Int,
+                "cal_date": np.ones(header["n"], np.int32) * Fill_Value_Int,
+                "t2": np.ones(header["n"], np.int32) * Fill_Value_Int,
+                "a_temp1": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "a_temp2": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "p1": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "p2": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "hl_temp1": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "hl_temp2": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "cl_temp1": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "cl_temp2": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "spare": np.ones([header["n"], 5], np.float32) * Fill_Value_Float,
+                "n_ch1": np.ones(header["n"], np.int32) * Fill_Value_Int,
+                "freq1": np.ones([header["n"], 7], np.float32) * Fill_Value_Float,
+                "n_ch2": np.ones(header["n"], np.int32) * Fill_Value_Int,
+                "freq2": np.ones([header["n"], 7], np.float32) * Fill_Value_Float,
+                "cal_flag": np.ones([header["n"], 14], np.int32) * Fill_Value_Int,
+                "Gain": np.ones([header["n"], 14], np.float32) * Fill_Value_Float,
+                "Tnoise": np.ones([header["n"], 14], np.float32) * Fill_Value_Float,
+                "Trec": np.ones([header["n"], 14], np.float32) * Fill_Value_Float,
+                "Alpha": np.ones([header["n"], 14], np.float32) * Fill_Value_Float,
+            }
+            return vrs
+
+        def _get_data():
+            """Loop over file to read data."""
+            data = _create_variables()
+            for sample in range(header["n"]):
+                data["len"][sample] = np.fromfile(file, np.int32, 1)
+                data["rad_id"][sample] = np.fromfile(file, np.int32, 1)
+                data["cal1_t"][sample] = np.fromfile(file, np.int32, 1)
+                data["cal2_t"][sample] = np.fromfile(file, np.int32, 1)
+                data["t1"][sample] = np.fromfile(file, np.int32, 1)
+                data["cal_date"][sample] = utils.epoch2unix(data["t1"][sample], 1)
+                data["t2"][sample] = np.fromfile(file, np.int32, 1)
+                data["a_temp1"][sample] = np.fromfile(file, np.float32, 1)
+                data["a_temp2"][sample] = np.fromfile(file, np.float32, 1)
+                data["p1"][sample] = np.fromfile(file, np.float32, 1)
+                data["p2"][sample] = np.fromfile(file, np.float32, 1)
+                data["hl_temp1"][sample] = np.fromfile(file, np.float32, 1)
+                data["hl_temp2"][sample] = np.fromfile(file, np.float32, 1)
+                data["cl_temp1"][sample] = np.fromfile(file, np.float32, 1)
+                data["cl_temp2"][sample] = np.fromfile(file, np.float32, 1)
+                data["spare"][sample,] = np.fromfile(file, np.float32, 5)
+                data["n_ch1"][sample] = np.fromfile(file, np.int32, 1)
+                data["n_ch1"][sample] = data["n_ch1"][sample]
+                data["freq1"][sample, 0 : data["n_ch1"][sample]] = np.fromfile(
+                    file, np.float32, int(data["n_ch1"][sample])
+                )
+                data["n_ch2"][sample] = np.fromfile(file, np.int32, 1)
+                data["freq2"][sample, 0 : int(data["n_ch2"][sample])] = np.fromfile(
+                    file, np.float32, int(data["n_ch2"][sample])
+                )
+                data["cal_flag"][
+                    sample, 0 : int(data["n_ch1"][sample] + data["n_ch2"][sample])
+                ] = np.fromfile(
+                    file, np.int32, int(data["n_ch1"][sample] + data["n_ch2"][sample])
+                )
+                data["Gain"][
+                    sample, 0 : int(data["n_ch1"][sample] + data["n_ch2"][sample])
+                ] = (
+                    np.fromfile(
+                        file,
+                        np.float32,
+                        int(data["n_ch1"][sample] + data["n_ch2"][sample]),
+                    )
+                    * 1000.0
+                )
+                data["Tnoise"][
+                    sample, 0 : int(data["n_ch1"][sample] + data["n_ch2"][sample])
+                ] = np.fromfile(
+                    file, np.float32, int(data["n_ch1"][sample] + data["n_ch2"][sample])
+                )
+                data["Trec"][
+                    sample, 0 : int(data["n_ch1"][sample] + data["n_ch2"][sample])
+                ] = np.fromfile(
+                    file, np.float32, int(data["n_ch1"][sample] + data["n_ch2"][sample])
+                )
+                data["Alpha"][
+                    sample, 0 : int(data["n_ch1"][sample] + data["n_ch2"][sample])
+                ] = np.fromfile(
+                    file, np.float32, int(data["n_ch1"][sample] + data["n_ch2"][sample])
+                )
+
+            file.close()
+            return data
+
+        header = _get_header()
+        data = _get_data()
+        header["_f"] = np.concatenate((data["freq1"][0, :], data["freq2"][0, :]))
+        return header, data
+
+
 def _read(file: BinaryIO, fields: list[Field], count: int) -> np.ndarray:
     arr = np.fromfile(file, np.dtype(fields), count)
     if (read := len(arr)) != count:
@@ -586,4 +704,5 @@ type_reader: dict[str, FuncType] = {
     "blb": read_blb,
     "bls": read_bls,
     "log": read_log,
+    "his": read_his,
 }
