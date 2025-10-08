@@ -294,25 +294,35 @@ def prepare_data(
 
     elif data_type in ("cov", "his") and date is not None:
         rpg_cov = {}
-        file_list_abscal = get_file_list(params["path_to_cal"], "LOG")
+        file_list_abscal = get_file_list(params["path_to_cal"] + "COVARIANCE/", "LOG")
         for cal in ["ln2", "amb"]:
             file_list_type = [s for s in file_list_abscal if cal in s.lower()]
             if len(file_list_type) > 0:
                 rpg_log = RpgBin(file_list_type, time_offset)
                 ind_cal = (
-                    np.where(np.abs(date - rpg_log.data["cal_date"]) < 24 * 3600)[0][-1]
+                    np.where(np.abs(date - rpg_log.data["cal_date"]) < 24 * 3600)[0]
                     if data_type == "cov"
                     else np.arange(len(rpg_log.data["cal_date"]))
                 )
-                if rpg_log.data["covariance_matrix"].ndim < 3:
-                    rpg_cov[f"tb_cov_{cal}"] = rpg_log.data["covariance_matrix"][:, :]
-                else:
-                    rpg_cov[f"tb_cov_{cal}"] = rpg_log.data["covariance_matrix"][
-                        ind_cal, :, :
-                    ]
-                rpg_cov["Gain"] = rpg_log.data["Gain"][ind_cal, :]
+                if len(ind_cal) > 0:
+                    if rpg_log.data["covariance_matrix"].ndim < 3:
+                        rpg_cov[f"tb_cov_{cal}"] = rpg_log.data["covariance_matrix"][
+                            :, :
+                        ]
+                    else:
+                        rpg_cov[f"tb_cov_{cal}"] = rpg_log.data["covariance_matrix"][
+                            ind_cal[-1], :, :
+                        ]
+                    rpg_cov["Gain"] = rpg_log.data["Gain"][ind_cal[-1], :]
+                    rpg_cov["frequency"] = rpg_log.header["_f"]
+                    rpg_cov["time"] = rpg_log.data["cal_date"][ind_cal[-1]]
+        if len(rpg_cov) == 0 and data_type == "his":
+            file_list_abscal = get_file_list(params["path_to_cal"] + "ABSCAL/", "LOG")
+            if len(file_list_abscal) > 0:
+                rpg_log = RpgBin(file_list_abscal, time_offset)
+                rpg_cov["Gain"] = rpg_log.data["Gain"][:, :]
                 rpg_cov["frequency"] = rpg_log.header["_f"]
-                rpg_cov["time"] = rpg_log.data["cal_date"][ind_cal]
+                rpg_cov["time"] = rpg_log.data["cal_date"][:]
         return rpg_cov
 
     else:

@@ -167,23 +167,16 @@ def generate_figure(
         and site is not None
         and image_name == "his"
     ):
-        valid_fields, valid_names = (
-            [
-                cov_data[field_names[0]],
-                cov_data[field_names[1]],
-                cov_data[field_names[2]],
-            ],
-            field_names,
-        )
-        time = cov_data["time"][:]
+        valid_fields = [cov_data[name] for name in field_names]
+        time = np.atleast_1d(cov_data["time"])
         fig, axes = _initialize_figure(len(valid_fields), dpi)
-        for ax, field, name in zip(axes, valid_fields, valid_names):
+        for ax, field, name in zip(axes, valid_fields, field_names):
             ax.set_facecolor(_COLORS["lightgray"])
             _plot_cal_history(ax, name, cov_data["frequency"], field, time)
         _add_subtitle(fig, "history", site)
         fig.set_size_inches(16.0, 7.0 * len(axes))
         f_name = handle_saving(
-            nc_file, image_name, save_path, show, "history", valid_names, site=site
+            nc_file, image_name, save_path, show, "history", field_names, site=site
         )
         return f_name
 
@@ -2036,6 +2029,8 @@ def _plot_covariance(ax, data_in: ma.MaskedArray, name, f_instance: str | ndarra
 def _plot_cal_history(
     ax, name: str, freq: np.ndarray, data_his: np.ndarray, time: np.ndarray
 ):
+    if data_his.ndim == 1:
+        data_his = data_his.reshape((1, len(data_his)))
     data_shape = data_his.shape
     for ind in range(data_shape[0]):
         if "cov" in name:

@@ -382,6 +382,7 @@ def read_log(file_name: str) -> tuple[dict, dict]:
     """Reads LOG files and returns header and data as dictionary."""
     header: dict = {}
     data: dict = {}
+    # Reads covariance matrix
     if "covmatrix" in file_name.lower():
         with open(file_name, "r", encoding="utf-8") as file:
             lines = file.readlines()
@@ -414,6 +415,85 @@ def read_log(file_name: str) -> tuple[dict, dict]:
                         data["covariance_matrix"][nf, :] = np.array(
                             [float(f) for f in line_a]
                         )
+    # Reads absolute calibration log files
+    elif "abscal" in file_name.lower():
+        with open(file_name, "r", encoding="utf-8") as file:
+            text = file.read()
+            if (
+                "cancelled" in text
+                or "failed" in text
+                or "Rec1" not in text
+                or "Rec2" not in text
+                or "New" not in text
+            ):
+                return header, data
+        with open(file_name, "r", encoding="utf-8") as file:
+            lines = file.readlines()
+            data["cal_date"] = np.array(
+                [
+                    datetime.datetime.strptime(
+                        lines[1].split("_")[1] + lines[1].split("_")[2].split(".")[0],
+                        "%y%m%d%H%M%S",
+                    ).timestamp()
+                ]
+            )
+            for lineno, line in enumerate(lines):
+                if line.strip().startswith("Number of calibration cycles"):
+                    header["n"] = int(line.split(":")[1].strip())
+                if line.strip().startswith("New"):
+                    ll = 1
+                    while lines[lineno + ll].strip() != "":
+                        for varo, var in enumerate(("Trec", "Tnoise", "Gain", "Alpha")):
+                            if var in data:
+                                data[var] = np.append(
+                                    data[var],
+                                    np.array(
+                                        [
+                                            float(
+                                                lines[lineno + ll].split(" ")[
+                                                    varo * 4 + 1
+                                                ]
+                                            )
+                                        ],
+                                        dtype=float,
+                                        ndmin=2,
+                                    ),
+                                    axis=1,
+                                )
+                            else:
+                                data[var] = np.array(
+                                    [
+                                        float(
+                                            lines[lineno + ll].split(" ")[varo * 4 + 1]
+                                        )
+                                    ],
+                                    dtype=float,
+                                    ndmin=2,
+                                )
+                        ll += 1
+            # Assign frequencies based on number of channels (currently not working for LHATPRO)
+            header["_f"] = (
+                np.array([183.91, 184.81, 185.81, 186.81, 188.31, 190.81, 90.0])
+                if len(data["Trec"]) == 7
+                else np.array(
+                    [
+                        22.24,
+                        23.04,
+                        23.84,
+                        25.44,
+                        26.24,
+                        27.84,
+                        31.4,
+                        51.26,
+                        52.28,
+                        53.86,
+                        54.94,
+                        56.66,
+                        57.3,
+                        58.0,
+                    ]
+                )
+            )
     else:
         raise InvalidFileError(f"LOG file type not supported")
 

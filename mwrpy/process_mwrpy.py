@@ -303,7 +303,12 @@ def plot_product(prod: str, date: datetime.date, site: str):
         }
         for key in PRODUCT_NAME[prod]:
             variables = keymap[key]
-            out_dir = params["path_to_cal"] if key in ("his", "cov") else output_dir
+            if key == "his":
+                out_dir = params["path_to_cal"] + "ABSCAL/"
+            elif key == "cov":
+                out_dir = params["path_to_cal"] + "COVARIANCE/"
+            else:
+                out_dir = output_dir
             ele_range = (
                 (
                     89.0,
@@ -441,7 +446,7 @@ def plot_product(prod: str, date: datetime.date, site: str):
             generate_figure(
                 "",
                 ["tb_cov_ln2", "tb_cov_amb"],
-                save_path=params["path_to_cal"],
+                save_path=params["path_to_cal"] + "COVARIANCE/",
                 image_name="cov",
                 cov_data=cov_data,
                 site=site,
@@ -455,7 +460,9 @@ def plot_product(prod: str, date: datetime.date, site: str):
         if len(his_data) > 0:
             generate_figure(
                 "",
-                ["tb_cov_ln2", "tb_cov_amb", "Gain"],
+                ["tb_cov_ln2", "tb_cov_amb", "Gain"]
+                if "tb_cov_ln2" in his_data
+                else ["Gain"],
                 save_path=params["path_to_cal"],
                 image_name="his",
                 cov_data=his_data,
