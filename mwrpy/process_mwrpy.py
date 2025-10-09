@@ -303,12 +303,9 @@ def plot_product(prod: str, date: datetime.date, site: str):
         }
         for key in PRODUCT_NAME[prod]:
             variables = keymap[key]
-            if key == "his":
-                out_dir = params["path_to_cal"] + "ABSCAL/"
-            elif key == "cov":
-                out_dir = params["path_to_cal"] + "COVARIANCE/"
-            else:
-                out_dir = output_dir
+            out_dir = (
+                params["path_to_cal"] + "COVARIANCE/" if key == "cov" else output_dir
+            )
             ele_range = (
                 (
                     89.0,
@@ -317,15 +314,7 @@ def plot_product(prod: str, date: datetime.date, site: str):
                 if key in ("tb", "tb_spectrum", "irt")
                 else (-1.0, 91.0)
             )
-            if key != "his":
-                generate_figure(
-                    filename,
-                    variables,
-                    ele_range=ele_range,
-                    save_path=out_dir,
-                    image_name=key,
-                )
-            else:
+            if key == "his":
                 his_data = prepare_data(
                     "", key, params, None, date=time.mktime(date.timetuple())
                 )
@@ -333,14 +322,24 @@ def plot_product(prod: str, date: datetime.date, site: str):
                 if len(his_data) > 0:
                     generate_figure(
                         "",
-                        variables,
-                        save_path=out_dir,
+                        ["tb_cov_ln2", "tb_cov_amb", "Gain"]
+                        if "tb_cov_ln2" in his_data
+                        else ["Gain"],
+                        save_path=params["path_to_cal"],
                         image_name=key,
                         cov_data=his_data,
                         site=site,
                     )
                 else:
                     logging.warning("No to plot for product " + prod)
+            else:
+                generate_figure(
+                    filename,
+                    variables,
+                    ele_range=ele_range,
+                    save_path=out_dir,
+                    image_name=key,
+                )
 
     # Plot level 2 single products
     elif os.path.isfile(filename) and (prod[0] == "2"):
@@ -436,7 +435,7 @@ def plot_product(prod: str, date: datetime.date, site: str):
                         pointing=pointing,
                     )
 
-    # Plot covariance data and calibration history if 1C01 file is not available
+    # Plot covariance data and calibration history even if 1C01 file is not available
     elif prod == "1C01" and not os.path.isfile(filename):
         cov_data = prepare_data(
             "", "cov", params, None, date=time.mktime(date.timetuple())

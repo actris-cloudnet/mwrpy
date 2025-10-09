@@ -305,31 +305,77 @@ def prepare_data(
                     else np.arange(len(rpg_log.data["cal_date"]))
                 )
                 if len(ind_cal) > 0:
+                    ind_cal = ind_cal[-1] if data_type == "cov" else ind_cal
                     if rpg_log.data["covariance_matrix"].ndim < 3:
                         rpg_cov[f"tb_cov_{cal}"] = rpg_log.data["covariance_matrix"][
                             :, :
                         ]
                     else:
                         rpg_cov[f"tb_cov_{cal}"] = rpg_log.data["covariance_matrix"][
-                            ind_cal[-1], :, :
+                            ind_cal, :, :
                         ]
-                    rpg_cov["Gain"] = rpg_log.data["Gain"][ind_cal[-1], :]
+                    rpg_cov["Gain"] = rpg_log.data["Gain"][ind_cal, :]
                     rpg_cov["frequency"] = rpg_log.header["_f"]
-                    rpg_cov["time"] = rpg_log.data["cal_date"][ind_cal[-1]]
-        if len(rpg_cov) == 0 and data_type == "his":
-            file_list_abscal = get_file_list(params["path_to_cal"], "HIS")
-            if len(file_list_abscal) > 0:
-                rpg_log = RpgBin(file_list_abscal, time_offset)
-                rpg_cov["Gain"] = rpg_log.data["Gain"][:, :]
-                rpg_cov["frequency"] = rpg_log.header["_f"]
-                rpg_cov["time"] = rpg_log.data["cal_date"][:]
-        if len(rpg_cov) == 0 and data_type == "his":
-            file_list_abscal = get_file_list(params["path_to_cal"] + "ABSCAL/", "LOG")
-            if len(file_list_abscal) > 0:
-                rpg_log = RpgBin(file_list_abscal, time_offset)
-                rpg_cov["Gain"] = rpg_log.data["Gain"][:, :]
-                rpg_cov["frequency"] = rpg_log.header["_f"]
-                rpg_cov["time"] = rpg_log.data["cal_date"][:]
+                    rpg_cov["time"] = rpg_log.data["cal_date"][ind_cal]
+
+        if data_type == "his":
+            for ext in ["LOG", "HIS"]:
+                file_list_abscal = (
+                    get_file_list(params["path_to_cal"], ext)
+                    if ext == "HIS"
+                    else get_file_list(params["path_to_cal"] + "ABSCAL/", ext)
+                )
+                if len(file_list_abscal) > 0:
+                    rpg_log = RpgBin(file_list_abscal, time_offset)
+                    if "Gain" in rpg_cov:
+                        rpg_cov["Gain"] = np.vstack(
+                            [rpg_log.data["Gain"][:, :], rpg_cov["Gain"]]
+                        )
+                        rpg_cov["time"] = np.hstack(
+                            [rpg_log.data["cal_date"][:], rpg_cov["time"]]
+                        )
+                    else:
+                        rpg_cov["Gain"] = rpg_log.data["Gain"][:, :]
+                        rpg_cov["time"] = rpg_log.data["cal_date"][:]
+                        rpg_cov["frequency"] = rpg_log.header["_f"]
+                    for key in ["tb_cov_ln2", "tb_cov_amb"]:
+                        if key in rpg_cov:
+                            arr_len = len(rpg_cov[key]) if rpg_cov[key].ndim == 3 else 1
+                            rpg_cov[key] = np.vstack(
+                                [
+                                    np.ones(
+                                        (
+                                            len(rpg_log.data["cal_date"][:]),
+                                            len(rpg_cov["frequency"]),
+                                            len(rpg_cov["frequency"]),
+                                        )
+                                    )
+                                    * np.nan,
+                                    np.reshape(
+                                        np.atleast_3d(rpg_cov[key]),
+                                        (
+                                            arr_len,
+                                            len(rpg_cov["frequency"]),
+                                            len(rpg_cov["frequency"]),
+                                        ),
+                                    ),
+                                ]
+                            )
+            if len(rpg_cov) > 0:
+                # sort by time and remove duplicates
+                ind = np.argsort(rpg_cov["time"])
+                rpg_cov["time"] = rpg_cov["time"][ind]
+                _, unique_ind = np.unique(rpg_cov["time"], return_index=True)
+                rpg_cov["time"] = rpg_cov["time"][unique_ind]
+                for key in ["tb_cov_ln2", "tb_cov_amb"]:
+                    if key in rpg_cov:
+                        if rpg_cov[key].ndim == 3:
+                            rpg_cov[key] = rpg_cov[key][ind, :, :]
+                            rpg_cov[key] = rpg_cov[key][unique_ind, :, :]
+                if len(rpg_cov["Gain"].shape) > 1:
+                    rpg_cov["Gain"] = rpg_cov["Gain"][ind, :]
+                    rpg_cov["Gain"] = rpg_cov["Gain"][unique_ind, :]
+
         return rpg_cov
 
     else:

@@ -494,6 +494,7 @@ def read_log(file_name: str) -> tuple[dict, dict]:
                     ]
                 )
             )
+        data["Gain"] *= 1e3  # Convert to mV/K
     else:
         raise InvalidFileError(f"LOG file type not supported")
 

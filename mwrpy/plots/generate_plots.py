@@ -176,7 +176,7 @@ def generate_figure(
         _add_subtitle(fig, "history", site)
         fig.set_size_inches(16.0, 7.0 * len(axes))
         f_name = handle_saving(
-            nc_file, image_name, save_path, show, "history", field_names, site=site
+            nc_file, "abscal_his", save_path, show, "history", field_names, site=site
         )
         return f_name
 
@@ -2063,13 +2063,20 @@ def _plot_cal_history(
                 color=next(colors),
                 label=str(freq[line]) + " GHz",
             )
-        ax.set_ylabel(ATTRIBUTES[name].ylabel)
-        lines, labels = ax.get_legend_handles_labels()
-        ax.legend(
-            lines[: data_shape[1]],
-            labels[: data_shape[1]],
-            loc="center left",
-            bbox_to_anchor=(1.03, 0.5),
-            markerscale=3.0,
-        )
-        ax.set_title(ATTRIBUTES[name].name, fontsize=14)
+
+    ax.set_xlim(
+        [
+            pd.to_datetime(np.squeeze(time[0]), unit="s") - pd.Timedelta(days=7),
+            pd.to_datetime(np.squeeze(time[-1]), unit="s") + pd.Timedelta(days=7),
+        ]
+    )
+    ax.set_ylabel(ATTRIBUTES[name].ylabel)
+    lines, labels = ax.get_legend_handles_labels()
+    ax.legend(
+        lines[: data_shape[1]],
+        labels[: data_shape[1]],
+        loc="center left",
+        bbox_to_anchor=(1.03, 0.5),
+        markerscale=3.0,
+    )
+    ax.set_title(ATTRIBUTES[name].name, fontsize=14)
