@@ -503,7 +503,7 @@ def get_products(
             hum_int = interpol_2d(
                 hum_time,
                 hum_dat.variables["absolute_humidity"][:, :],
-                tem_dat.variables["time"][:],
+                tem_time,
             )
         else:
             hum_int = interpolate_2d(
