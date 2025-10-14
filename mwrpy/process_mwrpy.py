@@ -303,9 +303,6 @@ def plot_product(prod: str, date: datetime.date, site: str):
         }
         for key in PRODUCT_NAME[prod]:
             variables = keymap[key]
-            out_dir = (
-                params["path_to_cal"] + "COVARIANCE/" if key == "cov" else output_dir
-            )
             ele_range = (
                 (
                     89.0,
@@ -333,13 +330,17 @@ def plot_product(prod: str, date: datetime.date, site: str):
                 else:
                     logging.warning("No to plot for product " + prod)
             else:
-                generate_figure(
-                    filename,
-                    variables,
-                    ele_range=ele_range,
-                    save_path=out_dir,
-                    image_name=key,
-                )
+                output_dir = params["path_to_cal"] if key == "cov" else output_dir
+                if output_dir is not None:
+                    generate_figure(
+                        filename,
+                        variables,
+                        ele_range=ele_range,
+                        save_path=output_dir + "COVARIANCE/"
+                        if key == "cov"
+                        else output_dir,
+                        image_name=key,
+                    )
 
     # Plot level 2 single products
     elif os.path.isfile(filename) and (prod[0] == "2"):
@@ -437,15 +438,16 @@ def plot_product(prod: str, date: datetime.date, site: str):
 
     # Plot covariance data and calibration history even if 1C01 file is not available
     elif prod == "1C01" and not os.path.isfile(filename):
+        output_dir = params["path_to_cal"]
         cov_data = prepare_data(
             "", "cov", params, None, date=time.mktime(date.timetuple())
         )
         assert isinstance(cov_data, dict)
-        if len(cov_data) > 0:
+        if len(cov_data) > 0 and output_dir is not None:
             generate_figure(
                 "",
                 ["tb_cov_ln2", "tb_cov_amb"],
-                save_path=params["path_to_cal"] + "COVARIANCE/",
+                save_path=output_dir + "COVARIANCE/",
                 image_name="cov",
                 cov_data=cov_data,
                 site=site,
@@ -456,13 +458,13 @@ def plot_product(prod: str, date: datetime.date, site: str):
             "", "his", params, None, date=time.mktime(date.timetuple())
         )
         assert isinstance(his_data, dict)
-        if len(his_data) > 0:
+        if len(his_data) > 0 and output_dir is not None:
             generate_figure(
                 "",
                 ["tb_cov_ln2", "tb_cov_amb", "Gain"]
                 if "tb_cov_ln2" in his_data
                 else ["Gain"],
-                save_path=params["path_to_cal"],
+                save_path=output_dir,
                 image_name="his",
                 cov_data=his_data,
                 site=site,

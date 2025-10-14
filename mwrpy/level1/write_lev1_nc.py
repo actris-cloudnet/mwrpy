@@ -292,33 +292,36 @@ def prepare_data(
         if "rainfall_rate" in rpg_bin.data:
             rpg_bin.data["rainfall_rate"] /= 3.6e6
 
-    elif data_type in ("cov", "his") and date is not None:
+    elif data_type in ("cov", "his"):
         rpg_cov = {}
-        file_list_abscal = get_file_list(params["path_to_cal"] + "COVARIANCE/", "LOG")
-        for cal in ["ln2", "amb"]:
-            file_list_type = [s for s in file_list_abscal if cal in s.lower()]
-            if len(file_list_type) > 0:
-                rpg_log = RpgBin(file_list_type, time_offset)
-                ind_cal = (
-                    np.where(np.abs(date - rpg_log.data["cal_date"]) < 24 * 3600)[0]
-                    if data_type == "cov"
-                    else np.arange(len(rpg_log.data["cal_date"]))
-                )
-                if len(ind_cal) > 0:
-                    ind_cal = ind_cal[-1] if data_type == "cov" else ind_cal
-                    if rpg_log.data["covariance_matrix"].ndim < 3:
-                        rpg_cov[f"tb_cov_{cal}"] = rpg_log.data["covariance_matrix"][
-                            :, :
-                        ]
-                    else:
-                        rpg_cov[f"tb_cov_{cal}"] = rpg_log.data["covariance_matrix"][
-                            ind_cal, :, :
-                        ]
-                    rpg_cov["Gain"] = rpg_log.data["Gain"][ind_cal, :]
-                    rpg_cov["frequency"] = rpg_log.header["_f"]
-                    rpg_cov["time"] = rpg_log.data["cal_date"][ind_cal]
+        if date is not None and params["path_to_cal"] is not None:
+            file_list_abscal = get_file_list(
+                params["path_to_cal"] + "COVARIANCE/", "LOG"
+            )
+            for cal in ["ln2", "amb"]:
+                file_list_type = [s for s in file_list_abscal if cal in s.lower()]
+                if len(file_list_type) > 0:
+                    rpg_log = RpgBin(file_list_type, time_offset)
+                    ind_cal = (
+                        np.where(np.abs(date - rpg_log.data["cal_date"]) < 24 * 3600)[0]
+                        if data_type == "cov"
+                        else np.arange(len(rpg_log.data["cal_date"]))
+                    )
+                    if len(ind_cal) > 0:
+                        ind_cal = ind_cal[-1] if data_type == "cov" else ind_cal
+                        if rpg_log.data["covariance_matrix"].ndim < 3:
+                            rpg_cov[f"tb_cov_{cal}"] = rpg_log.data[
+                                "covariance_matrix"
+                            ][:, :]
+                        else:
+                            rpg_cov[f"tb_cov_{cal}"] = rpg_log.data[
+                                "covariance_matrix"
+                            ][ind_cal, :, :]
+                        rpg_cov["Gain"] = rpg_log.data["Gain"][ind_cal, :]
+                        rpg_cov["frequency"] = rpg_log.header["_f"]
+                        rpg_cov["time"] = rpg_log.data["cal_date"][ind_cal]
 
-        if data_type == "his":
+        if data_type == "his" and params["path_to_cal"] is not None:
             for ext in ["LOG", "HIS"]:
                 file_list_abscal = (
                     get_file_list(params["path_to_cal"], ext)
