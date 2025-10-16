@@ -218,8 +218,8 @@ def _mark_gaps(
         temp_array = np.zeros((2, data.shape[1]))
         temp_mask = np.ones((2, data.shape[1]))
     else:
-        temp_array = np.zeros(2)
-        temp_mask = np.ones(2)
+        temp_array = np.zeros((2, 1))
+        temp_mask = np.ones((2, 1))
     time_delta = 0.001
     for ind in np.sort(gap_indices)[::-1]:
         ind_gap = ind + 1
@@ -233,7 +233,7 @@ def _mark_gaps(
         time_new = np.insert(time_new, 0, time[0] - time_delta)
         time_new = np.insert(time_new, 0, time_delta)
     if (max_x - time[-1]) > max_gap_fraction_hour:
-        ind_gap = mask_new.shape[0]
+        ind_gap = np.int32(len(mask_new))
         data_new = np.insert(data_new, ind_gap, temp_array, axis=0)
         mask_new = np.insert(mask_new, ind_gap, temp_mask, axis=0)
         time_new = np.insert(time_new, ind_gap, max_x - time_delta)
