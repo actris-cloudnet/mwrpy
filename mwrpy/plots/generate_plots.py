@@ -181,7 +181,11 @@ def generate_figure(
     if axes[-1].get_title() == "empty":
         return None
     else:
-        case_date = _set_labels(fig, axes[-1], nc_file, sub_title, instrument_type)
+        case_date = (
+            _read_date(nc_file)
+            if image_name and "_scan" in image_name
+            else _set_labels(fig, axes[-1], nc_file, sub_title, instrument_type)
+        )
         file_name = handle_saving(
             nc_file, image_name, save_path, show, case_date, valid_names
         )
@@ -191,12 +195,17 @@ def generate_figure(
 def _mark_gaps(
     time: ndarray,
     data: ma.MaskedArray,
+    min_x: float = 0,
+    max_x: float = 24,
     max_allowed_gap: float = 1,
 ) -> tuple:
-    """Mark gaps in time and data."""
-    assert time[0] >= 0
-    assert time[-1] <= 24
-    max_gap = max_allowed_gap / 60
+    if time[0] < min_x or time[-1] > max_x:
+        msg = f"x-axis values outside the range {min_x}-{max_x}."
+        raise ValueError(msg)
+    max_gap_fraction_hour = max_allowed_gap / 60
+
+    gap_indices = np.where(np.diff(time) > max_gap_fraction_hour)[0]
+
     if not ma.is_masked(data):
         mask_new = np.zeros(data.shape)
     elif ma.all(data.mask) is ma.masked:
@@ -205,32 +214,30 @@ def _mark_gaps(
         mask_new = np.copy(data.mask)
     data_new = ma.copy(data)
     time_new = np.copy(time)
-    gap_indices = np.where(np.diff(time) > max_gap)[0]
     if data.ndim == 2:
         temp_array = np.zeros((2, data.shape[1]))
         temp_mask = np.ones((2, data.shape[1]))
     else:
-        temp_array = np.zeros((2, 1))
-        temp_mask = np.ones((2, 1))
-    time_delta = 0.0
-    ind: np.int32 | np.int64
+        temp_array = np.zeros(2)
+        temp_mask = np.ones(2)
+    time_delta = 0.001
     for ind in np.sort(gap_indices)[::-1]:
-        ind += 1
-        data_new = np.insert(data_new, ind, temp_array, axis=0)
-        mask_new = np.insert(mask_new, ind, temp_mask, axis=0)
-        time_new = np.insert(time_new, ind, time[ind] - time_delta)
-        time_new = np.insert(time_new, ind, time[ind - 1] + time_delta)
-    if (time[0] - 0) > max_gap:
+        ind_gap = ind + 1
+        data_new = np.insert(data_new, ind_gap, temp_array, axis=0)
+        mask_new = np.insert(mask_new, ind_gap, temp_mask, axis=0)
+        time_new = np.insert(time_new, ind_gap, time[ind_gap] - time_delta)
+        time_new = np.insert(time_new, ind_gap, time[ind_gap - 1] + time_delta)
+    if (time[0] - min_x) > max_gap_fraction_hour:
         data_new = np.insert(data_new, 0, temp_array, axis=0)
         mask_new = np.insert(mask_new, 0, temp_mask, axis=0)
         time_new = np.insert(time_new, 0, time[0] - time_delta)
         time_new = np.insert(time_new, 0, time_delta)
-    if (24 - time[-1]) > max_gap:
-        ind = np.int32(len(mask_new.shape))
-        data_new = np.insert(data_new, ind, temp_array, axis=0)
-        mask_new = np.insert(mask_new, ind, temp_mask, axis=0)
-        time_new = np.insert(time_new, ind, 24 - time_delta)
-        time_new = np.insert(time_new, ind, time[-1] + time_delta)
+    if (max_x - time[-1]) > max_gap_fraction_hour:
+        ind_gap = mask_new.shape[0]
+        data_new = np.insert(data_new, ind_gap, temp_array, axis=0)
+        mask_new = np.insert(mask_new, ind_gap, temp_mask, axis=0)
+        time_new = np.insert(time_new, ind_gap, max_x - time_delta)
+        time_new = np.insert(time_new, ind_gap, time[-1] + time_delta)
     data_new.mask = mask_new
     return time_new, data_new
 
@@ -613,12 +620,12 @@ def _plot_colormesh_data(
 
     if np.ma.median(np.diff(axes[0][:])) < avg_time:
         data = _calculate_rolling_mean(axes[0], data, win=avg_time)
-        time, data = _mark_gaps(axes[0][:], ma.MaskedArray(data), 35)
+        time, data = _mark_gaps(axes[0][:], ma.MaskedArray(data), max_allowed_gap=35)
     else:
         time, data = _mark_gaps(
             axes[0][:],
             ma.MaskedArray(data_in),
-            60.1,
+            max_allowed_gap=60.1,
         )
 
     ax.contourf(
@@ -645,13 +652,13 @@ def _plot_colormesh_data(
         flag = _calculate_rolling_mean(axes[0], flag, win=avg_time)
         data_in[(flag > 0) | (hum_flag > 0), :] = np.nan
         data = _calculate_rolling_mean(axes[0], data_in, win=avg_time)
-        time, data = _mark_gaps(axes[0][:], ma.MaskedArray(data), 35)
+        time, data = _mark_gaps(axes[0][:], ma.MaskedArray(data), max_allowed_gap=35)
     else:
         data_in[(flag > 0) | (hum_flag > 0), :] = np.nan
         time, data = _mark_gaps(
             axes[0][:],
             ma.MaskedArray(data_in),
-            60.1,
+            max_allowed_gap=60.1,
         )
 
     if variables.cbar_ext in ("neither", "max"):
