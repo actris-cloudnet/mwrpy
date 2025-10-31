@@ -130,6 +130,7 @@ def main(args):
                             args.format,
                             args.instrument,
                             args.altitude,
+                            args.azimuth_offset,
                         )
                     except Exception as e:
                         logging.error(
@@ -143,6 +144,7 @@ def main(args):
                         args.format,
                         args.instrument,
                         args.altitude,
+                        args.azimuth_offset,
                     )
             if args.command != "no-plot":
                 logging.info(f"Plotting {product} product, {args.site} {date}")
@@ -163,6 +165,7 @@ def process_product(
     data_format: str,
     instrument: IType,
     altitude: float,
+    azimuth_offset: float | None,
 ):
     """Process a given product for a specific date and site.
     This function handles the processing of different products based on their type
@@ -176,6 +179,7 @@ def process_product(
         data_format: Data format of the netCDF file (cloudnet, e-profile).
         instrument: Specific instrument type (hatpro, lhatpro, etc.).
         altitude: Altitude of the site in meters above mean sea level.
+        azimuth_offset: Azimuth offset to be added to azimuth angle.
 
     Returns:
         None
@@ -234,6 +238,7 @@ def process_product(
             date=date,
             instrument_type=instrument,
             altitude=altitude,
+            azimuth_offset=azimuth_offset,
         )
 
     # Process level 2 single products
@@ -249,24 +254,45 @@ def process_product(
         lev2_to_nc(
             prod,
             _get_filename("1C01", date, site),
+            data_format,
             output_file=output_file,
             site=site,
             temp_file=temp_file,
             hum_file=hum_file,
             lwp_offset=lwp_offset_tuple,
+            instrument_type=instrument,
         )
 
     # Process level 2 combined products
     elif prod == "single" and instrument != "lhumpro_u90":
         generate_lev2_single(
-            site, _get_filename("1C01", date, site), output_file, lwp_offset_tuple
+            site,
+            data_format,
+            _get_filename("1C01", date, site),
+            output_file,
+            lwp_offset_tuple,
+            None,
+            instrument,
         )
     elif instrument == "lhumpro_u90":
         generate_lev2_lhumpro(
-            site, _get_filename("1C01", date, site), output_file, lwp_offset_tuple
+            site,
+            data_format,
+            _get_filename("1C01", date, site),
+            output_file,
+            lwp_offset_tuple,
+            None,
+            instrument,
         )
     elif prod == "multi":
-        generate_lev2_multi(site, _get_filename("1C01", date, site), output_file)
+        generate_lev2_multi(
+            site,
+            data_format,
+            _get_filename("1C01", date, site),
+            output_file,
+            None,
+            instrument,
+        )
 
     # Update LWP offset file if necessary
     offset_current = _get_filename("lwp_offset", date, site)

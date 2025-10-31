@@ -4,6 +4,7 @@ import calendar
 from collections.abc import Sequence
 from datetime import datetime, timedelta, timezone
 from os import PathLike
+from typing import Literal
 
 import atmoslib
 import atmoslib.constants as ac
@@ -18,6 +19,7 @@ from mwrpy.level2.get_ret_coeff import get_mvr_coeff
 from mwrpy.level2.lev2_meta_nc import get_data_attributes
 from mwrpy.level2.lwp_offset import correct_lwp_offset
 from mwrpy.utils import (
+    get_coeff_list,
     interpol_2d,
     interpolate_2d,
     isbit,
@@ -35,12 +37,14 @@ def _local_solar_time(unix_seconds: float, longitude: float) -> datetime:
 def lev2_to_nc(
     data_type: str,
     lev1_file: str | PathLike,
+    data_format: str,
     output_file: str | PathLike,
     site: str | None = None,
     temp_file: str | PathLike | None = None,
     hum_file: str | PathLike | None = None,
     lwp_offset: tuple[float | None, float | None] = (None, None),
     coeff_files: Sequence[str | PathLike] | None = None,
+    instrument_type: Literal["hatpro", "lhatpro", "lhumpro_u90"] | None = None,
 ):
     """This function reads Level 1 files,
     applies retrieval coefficients for Level 2 products
@@ -49,12 +53,14 @@ def lev2_to_nc(
     Args:
         data_type: Data type of the netCDF file.
         lev1_file: Path of Level 1 file.
+        data_format: Data format of the netCDF file (cloudnet, e-profile).
         output_file: Name of output file.
         site: Name of site.
         temp_file: Name of temperature product file.
         hum_file: Name of humidity product file.
         lwp_offset: LWP offset with the previous day's last and next day's first reliable values.
         coeff_files: List of coefficient files.
+        instrument_type: Specific instrument type (HATPRO, LHATPRO, etc.).
 
     """
     if data_type not in (
@@ -70,8 +76,9 @@ def lev2_to_nc(
     ):
         raise ValueError(f"Data type {data_type} not recognised")
 
-    global_attributes = read_config(site, "hatpro", "global_specs")
-    params = read_config(site, "hatpro", "params")
+    assert instrument_type is not None
+    global_attributes = read_config(site, instrument_type, "global_specs")
+    params = read_config(site, instrument_type, "params")
 
     with nc.Dataset(lev1_file) as lev1:
         params["altitude"] = ma.median(lev1.variables["altitude"][:])
@@ -89,8 +96,26 @@ def lev2_to_nc(
         _combine_lev1(lev1, rpg_dat, index, data_type, scan_time)
         _del_att(global_attributes)
         mwr = rpg_mwr.Rpg(rpg_dat)
-        mwr.data = get_data_attributes(mwr.data, data_type, coeff)
-        rpg_mwr.save_rpg(mwr, output_file, global_attributes, data_type)
+        mwr.data = get_data_attributes(mwr.data, data_type, coeff, data_format)
+        if data_format == "cloudnet":
+            c_files = (
+                get_coeff_list(
+                    site,
+                    prefix=["tpb"]
+                    if data_type in ("2P02", "2P04", "2P07", "2P08")
+                    else ["lwp", "iwv", "hpt", "tpt"],
+                    coeff_files=None,
+                    coeff_dir=params.get("coeff_path", None),
+                )
+                if coeff_files is None
+                else coeff_files
+            )
+            global_attributes = {
+                "site": site,
+                "instrument": instrument_type,
+                "coeff_files": c_files,
+            }
+        rpg_mwr.save_rpg(mwr, output_file, global_attributes, data_type, data_format)
 
 
 def get_products(
@@ -115,16 +140,19 @@ def get_products(
         np.empty([0], np.int32),
         np.empty([0], np.int32),
     )
+    coeff_path = params.get("coeff_path", None)
 
     if data_type in ("2I01", "2I02", "2I06"):
         product = (
             "lwp" if data_type == "2I01" else "iwv" if data_type == "2I02" else "sta"
         )
 
-        coeff = get_mvr_coeff(site, product, lev1["frequency"][:], coeff_files)
+        coeff = get_mvr_coeff(
+            site, product, lev1["frequency"][:], coeff_files, coeff_path
+        )
         if coeff[0]["RT"] < 2:
             coeff, offset, lin, quad = get_mvr_coeff(
-                site, product, lev1["frequency"][:], coeff_files
+                site, product, lev1["frequency"][:], coeff_files, coeff_path
             )
         else:
             # pylint: disable-next=unbalanced-tuple-unpacking
@@ -278,10 +306,10 @@ def get_products(
         else:
             product, ret = "absolute_humidity", "hpt"
 
-        coeff = get_mvr_coeff(site, ret, lev1["frequency"][:], coeff_files)
+        coeff = get_mvr_coeff(site, ret, lev1["frequency"][:], coeff_files, coeff_path)
         if coeff[0]["RT"] < 2:
             coeff, offset, lin, quad = get_mvr_coeff(
-                site, ret, lev1["frequency"][:], coeff_files
+                site, ret, lev1["frequency"][:], coeff_files, coeff_path
             )
         else:
             # pylint: disable-next=unbalanced-tuple-unpacking
@@ -294,7 +322,7 @@ def get_products(
                 weights1,
                 weights2,
                 factor,
-            ) = get_mvr_coeff(site, ret, lev1["frequency"][:], coeff_files)
+            ) = get_mvr_coeff(site, ret, lev1["frequency"][:], coeff_files, coeff_path)
 
         ret_in = retrieval_input(lev1, coeff)
 
@@ -379,15 +407,17 @@ def get_products(
         _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
 
     elif data_type == "2P02":
-        coeff = get_mvr_coeff(site, "tpb", lev1["frequency"][:], coeff_files)
+        coeff = get_mvr_coeff(
+            site, "tpb", lev1["frequency"][:], coeff_files, coeff_path
+        )
         if coeff[0]["RT"] < 2:
             coeff, offset, lin, quad = get_mvr_coeff(
-                site, "tpb", lev1["frequency"][:], coeff_files
+                site, "tpb", lev1["frequency"][:], coeff_files, coeff_path
             )
         else:
             # pylint: disable-next=unbalanced-tuple-unpacking
             coeff, _, _, _, _, _, _, _ = get_mvr_coeff(
-                site, "tpb", lev1["frequency"][:], coeff_files
+                site, "tpb", lev1["frequency"][:], coeff_files, coeff_path
             )
 
         coeff["AG"] = np.flip(np.sort(coeff["AG"]))

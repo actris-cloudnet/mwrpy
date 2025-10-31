@@ -310,9 +310,12 @@ def get_coeff_list(
     c_list = []
     for p in prefix:
         tmp = glob.glob(dir_path + "*" + p.lower() + "*")
-        if len(c_list) == 0:
+        if len(tmp) == 0:
             tmp = glob.glob(dir_path + "*" + p.upper() + "*")
-        c_list = c_list + tmp
+        if len(c_list) == 0:
+            c_list = tmp
+        elif len(tmp) > 0 and len(c_list) > 0:
+            c_list = c_list + tmp
 
     if len(c_list) > 0:
         if "spc" in c_list and "ins" in c_list:

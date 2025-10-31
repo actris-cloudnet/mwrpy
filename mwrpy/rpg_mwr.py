@@ -260,7 +260,10 @@ def init_file(
     """
     nc_file = netCDF4.Dataset(file_name, "w", format="NETCDF4_CLASSIC")
     for key, dimension in dimensions.items():
-        nc_file.createDimension(key, dimension)
+        if data_format == "cloudnet" and key == "bnds":
+            continue
+        else:
+            nc_file.createDimension(key, dimension)
     _write_vars2nc(nc_file, rpg_arrays)
     _add_cloudnet_global_attributes(
         nc_file, att_global, data_type
@@ -301,17 +304,29 @@ def _add_cloudnet_global_attributes(
     form = "%Y-%m-%d %H:%M:%S"
     instrument = add_global["instrument"].upper()
     site = add_global["site"]
+    if data_type == "1C01":
+        level = "mwr-l1c"
+        title = f"{instrument} microwave radiometer Level 1c from {site}"
+        history = level
+    elif data_type == "2P02":
+        level = "mwr-multi"
+        title = f"MWR multiple-pointing from {site}"
+        history = "MWR multiple-pointing"
+    else:
+        level = "mwr-single"
+        title = f"MWR single-pointing from {site}"
+        history = "MWR single-pointing"
     att_global = {
         "Conventions": "CF-1.8",
         "mwrpy_version": version.__version__,
         "location": add_global["site"],
         "source": f"RPG-Radiometer Physics {instrument}",
         "references": "https://doi.org/10.21105/joss.06733",
-        "mwrpy_file_type": data_type,
-        "title": f"{instrument} microwave radiometer Level 1c from {site}",
+        "cloudnet_file_type": level,
+        "title": title,
         "history": f"{datetime.datetime.now(tz=t_zone).strftime(form)} +00:00"
         + " - "
-        + data_type
+        + history
         + " file created",
     }
     for name, value in att_global.items():

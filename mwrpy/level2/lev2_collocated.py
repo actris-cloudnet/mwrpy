@@ -2,6 +2,7 @@ import logging
 from collections.abc import Sequence
 from os import PathLike
 from tempfile import NamedTemporaryFile
+from typing import Literal
 
 import netCDF4
 
@@ -11,10 +12,12 @@ from mwrpy.utils import copy_global, copy_variables
 
 def generate_lev2_single(
     site: str | None,
+    data_format: str,
     mwr_l1c_file: str | PathLike,
     output_file: str | PathLike,
     lwp_offset: tuple[float | None, float | None] = (None, None),
     coeff_files: Sequence[str | PathLike] | None = None,
+    instrument_type: Literal["hatpro", "lhatpro", "lhumpro_u90"] | None = None,
 ):
     with (
         NamedTemporaryFile() as lwp_file,
@@ -41,6 +44,7 @@ def generate_lev2_single(
             lev2_to_nc(
                 prod,
                 mwr_l1c_file,
+                data_format=data_format,
                 output_file=file,
                 site=site,
                 temp_file=t_prof_file.name
@@ -51,6 +55,7 @@ def generate_lev2_single(
                 else None,
                 lwp_offset=lwp_offset,
                 coeff_files=coeff_files,
+                instrument_type=instrument_type,
             )
 
         with (
@@ -65,7 +70,8 @@ def generate_lev2_single(
         ):
             nc_output.createDimension("height", len(nc_t_prof.variables["height"][:]))
             nc_output.createDimension("time", len(nc_lwp.variables["time"][:]))
-            nc_output.createDimension("bnds", 2)
+            if data_format == "e-profile":
+                nc_output.createDimension("bnds", 2)
 
             for source, variables in (
                 (
@@ -152,6 +158,7 @@ def generate_lev2_single(
                     lev2_to_nc(
                         prod,
                         mwr_l1c_file,
+                        data_format=data_format,
                         output_file=file,
                         site=site,
                         temp_file=t_prof_file.name
@@ -162,6 +169,7 @@ def generate_lev2_single(
                         else None,
                         lwp_offset=(None, None),
                         coeff_files=coeff_files,
+                        instrument_type=instrument_type,
                     )
                     with netCDF4.Dataset(stability_file.name, "r") as nc_sta:
                         var_2I06 = (
@@ -186,10 +194,12 @@ def generate_lev2_single(
 
 def generate_lev2_lhumpro(
     site: str | None,
+    data_format: str,
     mwr_l1c_file: str | PathLike,
     output_file: str | PathLike,
     lwp_offset: tuple[float | None, float | None] = (None, None),
     coeff_files: Sequence[str | PathLike] | None = None,
+    instrument_type: Literal["hatpro", "lhatpro", "lhumpro_u90"] | None = None,
 ):
     with (
         NamedTemporaryFile() as lwp_file,
@@ -208,12 +218,14 @@ def generate_lev2_lhumpro(
             lev2_to_nc(
                 prod,
                 mwr_l1c_file,
+                data_format=data_format,
                 output_file=file,
                 site=site,
                 temp_file=None,
                 hum_file=None,
                 lwp_offset=lwp_offset,
                 coeff_files=coeff_files,
+                instrument_type=instrument_type,
             )
 
         with (
@@ -224,7 +236,8 @@ def generate_lev2_lhumpro(
         ):
             nc_output.createDimension("height", len(nc_abs_hum.variables["height"][:]))
             nc_output.createDimension("time", len(nc_lwp.variables["time"][:]))
-            nc_output.createDimension("bnds", 2)
+            if data_format == "e-profile":
+                nc_output.createDimension("bnds", 2)
 
             for source, variables in (
                 (
@@ -276,9 +289,11 @@ def generate_lev2_lhumpro(
 
 def generate_lev2_multi(
     site: str | None,
+    data_format: str,
     mwr_l1c_file: str | PathLike,
     output_file: str | PathLike,
     coeff_files: Sequence[str | PathLike] | None = None,
+    instrument_type: Literal["hatpro", "lhatpro", "lhumpro_u90"] | None = None,
 ):
     with (
         NamedTemporaryFile() as temperature_file,
@@ -301,6 +316,7 @@ def generate_lev2_multi(
             lev2_to_nc(
                 prod,
                 mwr_l1c_file,
+                data_format=data_format,
                 output_file=file,
                 site=site,
                 temp_file=temperature_file.name
@@ -309,6 +325,7 @@ def generate_lev2_multi(
                 hum_file=abs_hum_file.name if prod not in ("2P02", "2P03") else None,
                 lwp_offset=(None, None),
                 coeff_files=coeff_files,
+                instrument_type=instrument_type,
             )
 
         with (
@@ -320,7 +337,8 @@ def generate_lev2_multi(
         ):
             nc_output.createDimension("time", len(nc_temp.variables["time"][:]))
             nc_output.createDimension("height", len(nc_temp.variables["height"][:]))
-            nc_output.createDimension("bnds", 2)
+            if data_format == "e-profile":
+                nc_output.createDimension("bnds", 2)
 
             for source, variables in (
                 (

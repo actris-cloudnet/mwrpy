@@ -43,6 +43,7 @@ def lev1_to_nc(
     time_offset: datetime.timedelta | None = None,
     instrument_type: Literal["hatpro", "lhatpro", "lhumpro_u90"] | None = None,
     altitude: float | None = None,
+    azimuth_offset: float | None = None,
 ) -> rpg_mwr.Rpg:
     """This function reads one day of RPG MWR binary files,
     adds attributes and writes it into netCDF file.
@@ -60,9 +61,10 @@ def lev1_to_nc(
         time_offset: Time offset if instrument operated in local time.
         instrument_type: Specific instrument type (HATPRO, LHATPRO, etc.).
         altitude: Altitude of the site in meters above mean sea level.
+        azimuth_offset: Azimuth offset to be added to azimuth angle.
 
     Raises:
-        MissingInputData: if required input file is missing.
+        MissingInputData: if input file is missing.
     """
     if site is None:
         assert coeff_files is not None
@@ -88,7 +90,13 @@ def lev1_to_nc(
         params = {**params, **instrument_config}
 
     rpg_bin = prepare_data(
-        path_to_files, data_type, params, lidar_path, time_offset, altitude
+        path_to_files,
+        data_type,
+        params,
+        lidar_path,
+        time_offset,
+        altitude,
+        azimuth_offset,
     )
     assert isinstance(rpg_bin, RpgBin)
 
@@ -108,8 +116,8 @@ def lev1_to_nc(
                     None,
                     params.get("coeff_path", None),
                 )
-                if (coeff_files is None)
-                else (coeff_files)
+                if coeff_files is None
+                else coeff_files
             )
             global_attributes = {
                 "site": site,
@@ -133,6 +141,7 @@ def prepare_data(
     time_offset: datetime.timedelta | None = None,
     altitude: float | None = None,
     date: float | None = None,
+    azimuth_offset: float | None = None,
 ) -> RpgBin | dict:
     """Load and prepare data for netCDF writing."""
     if data_type in ("1B01", "1C01"):
@@ -209,9 +218,12 @@ def prepare_data(
         if params["azi_cor"] != -999.0:
             _azi_correction(rpg_bin.data, params)
 
-        if params["const_azi"] != -999.0:
+        azimuth_offset = (
+            params["azimuth_offset"] if "azimuth_offset" in params else azimuth_offset
+        )
+        if azimuth_offset is not None:
             rpg_bin.data["azimuth_angle"] = (
-                rpg_bin.data["azimuth_angle"] + params["const_azi"]
+                rpg_bin.data["azimuth_angle"] + azimuth_offset
             ) % 360
 
         file_list_abscal = (

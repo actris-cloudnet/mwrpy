@@ -8,6 +8,7 @@ from mwrpy.level1.write_lev1_nc import lev1_to_nc
 from mwrpy.level2.lev2_collocated import generate_lev2_multi, generate_lev2_single
 
 SITE = "hyytiala"
+DATA_FORMAT = "e-profile"
 
 PACKAGE_DIR = os.path.abspath(os.path.dirname(__file__))
 DATA_DIR = f"{PACKAGE_DIR}/data/{SITE}"
@@ -31,25 +32,25 @@ def l1_file(request):
 def test_generate_lev2_single_site(l1_file):
     fd, path = tempfile.mkstemp()
     os.close(fd)
-    generate_lev2_single(SITE, l1_file, path)
+    generate_lev2_single(SITE, DATA_FORMAT, l1_file, path)
     os.unlink(path)
 
 
 def test_generate_lev2_single_no_site(l1_file):
     fd, path = tempfile.mkstemp()
     os.close(fd)
-    generate_lev2_single(None, l1_file, path, coeff_files=COEFF_FILES)
+    generate_lev2_single(None, DATA_FORMAT, l1_file, path, coeff_files=COEFF_FILES)
     os.unlink(path)
 
 
 def test_generate_lev2_multi_site(l1_file):
     fd, path = tempfile.mkstemp()
     os.close(fd)
-    generate_lev2_multi(SITE, l1_file, path)
+    generate_lev2_multi(SITE, DATA_FORMAT, l1_file, path)
     os.unlink(path)
 
 
 def test_generate_lev2_multi_no_site(l1_file):
     fd, path = tempfile.mkstemp()
     os.close(fd)
-    generate_lev2_multi(None, l1_file, path, coeff_files=COEFF_FILES)
+    generate_lev2_multi(None, DATA_FORMAT, l1_file, path, coeff_files=COEFF_FILES)
