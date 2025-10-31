@@ -6,20 +6,28 @@ All MWRpy files use ``NETCDF4_CLASSIC`` data model, i.e., ``HDF5`` file format.
 **Dimensions**
 
 .. list-table::
-   :widths: 25
+   :widths: 25 25
    :header-rows: 1
 
-   * - Name
+   * - Name (E-PROFILE)
+     - Name (Cloudnet)
    * - time
+     - time
    * - bnds
+     -
    * - frequency
+     - frequency
    * - ir_wavelength
+     - ir_channel
    * - receiver_nb
+     - receiver_nb
    * - t_amb_nb
+     - t_amb_nb
    * - height
+     - height
 
 
-**Variables (common to all files)**
+**Variables (common to all E-PROFILE files)**
 
 .. list-table::
    :widths: 25 50 25 25 25 25
@@ -62,6 +70,43 @@ All MWRpy files use ``NETCDF4_CLASSIC`` data model, i.e., ``HDF5`` file format.
      - float32
      - altitude
 
+**Variables (common to all Cloudnet files)**
+
+.. list-table::
+   :widths: 25 50 25 25 25 25
+   :header-rows: 1
+
+   * - Name
+     - Long name
+     - Dimensions
+     - Units
+     - Data type
+     - Standard name
+   * - time
+     - Time UTC
+     - time
+     - hours since YYYY-MM-DD 00:00:00 +00:00
+     - double
+     - time
+   * - latitude
+     - Latitude of site
+     - time
+     - degree_north
+     - float32
+     - latitude
+   * - longitude
+     - Longitude of site
+     - time
+     - degree_east
+     - float32
+     - longitude
+   * - altitude
+     - Altitude of site
+     - time
+     - m
+     - float32
+     - altitude
+
 
 MWR-Level 1 files
 .................
@@ -70,7 +115,8 @@ MWR-Level 1 files
 ~~~~~~~~~
 
 The Level 1 default file type ``1C01`` contains all variables from the file types
-``1B01``, ``1B11`` (if an infrared radiometer is available), and ``1B21`` (if a weather station is available).
+``1B01``, ``1B11`` (if an infrared radiometer is available), and ``1B21`` (if a weather station is available) and is
+available for the E-PROFILE and Cloudnet data format.
 
 **Variables (MWR_1B01 specific)**
 
@@ -193,6 +239,25 @@ The Level 1 default file type ``1C01`` contains all variables from the file type
      - int32
      -
 
+**Additional Cloudnet variable**
+
+.. list-table::
+   :widths: 25 50 25 25 25 25
+   :header-rows: 1
+
+   * - Name
+     - Long name
+     - Dimensions
+     - Units
+     - Data type
+     - Standard name
+   * - zenith_angle
+     - Zenith angle
+     - time
+     - degree
+     - float32
+     - zenith_angle
+
 **Variables (MWR_1B11 specific)**
 
 .. list-table::
@@ -238,6 +303,25 @@ The Level 1 default file type ``1C01`` contains all variables from the file type
    * - ir_beamwidth
      - Beam width of the infrared radiometer
      -
+     - degree
+     - float32
+     -
+
+**Additional Cloudnet variable**
+
+.. list-table::
+   :widths: 25 50 25 25 25 25
+   :header-rows: 1
+
+   * - Name
+     - Long name
+     - Dimensions
+     - Units
+     - Data type
+     - Standard name
+   * - ir_zenith_angle
+     - Infrared sensor zenith angle
+     - time
      - degree
      - float32
      -
@@ -298,7 +382,7 @@ The Level 1 default file type ``1C01`` contains all variables from the file type
      -
 
 MWR-Level 2 files
-...............
+.................
 
 **Variables (common to all Level 2 files)**
 
@@ -329,7 +413,8 @@ Single pointing file
 ~~~~~~~~~~~~~~~~~~~~
 
 The Level 2 default file type ``single`` contains all variables from the file types
-``2I01``, ``2I02``, ``2I06``, ``2P01``, and ``2P03`` (if the respective retrieval coefficients are available).
+``2I01``, ``2I02``, ``2I06``, ``2P01``, and ``2P03`` (if the respective retrieval coefficients are available) and is
+available for the E-PROFILE and Cloudnet data format.
 
 **Variables (MWR_2I01 specific)**
 
@@ -545,7 +630,8 @@ Multiple pointing file
 ~~~~~~~~~~~~~~~~~~~~~~
 
 The Level 2 default file type ``multi`` contains all variables from the file types
-``2P02``, ``2P04``, ``2P07``, and ``2P08`` (if the respective retrieval coefficients are available).
+``2P02``, ``2P04``, ``2P07``, and ``2P08`` (if the respective retrieval coefficients are available) and is
+available for the E-PROFILE and Cloudnet data format.
 
 **Variables (MWR_2P02 specific)**
 
