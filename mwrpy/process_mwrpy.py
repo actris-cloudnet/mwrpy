@@ -126,6 +126,7 @@ def main(args):
                             args.format,
                             args.instrument,
                             args.altitude,
+                            args.azimuth_offset,
                         )
                     except Exception as e:
                         logging.error(
@@ -139,6 +140,7 @@ def main(args):
                         args.format,
                         args.instrument,
                         args.altitude,
+                        args.azimuth_offset,
                     )
             if args.command != "no-plot":
                 logging.info(f"Plotting {product} product, {args.site} {date}")
@@ -159,6 +161,7 @@ def process_product(
     data_format: str,
     instrument: IType,
     altitude: float,
+    azimuth_offset: float | None,
 ):
     output_file = (
         _get_filename(prod, date, site)
@@ -211,6 +214,7 @@ def process_product(
             date=date,
             instrument_type=instrument,
             altitude=altitude,
+            azimuth_offset=azimuth_offset,
         )
     elif prod[0] == "2":
         if prod in ("2P04", "2P07", "2P08"):
@@ -224,22 +228,43 @@ def process_product(
         lev2_to_nc(
             prod,
             _get_filename("1C01", date, site),
+            data_format,
             output_file=output_file,
             site=site,
             temp_file=temp_file,
             hum_file=hum_file,
             lwp_offset=lwp_offset,
+            instrument_type=instrument,
         )
     elif prod == "single" and instrument != "lhumpro_u90":
         generate_lev2_single(
-            site, _get_filename("1C01", date, site), output_file, lwp_offset
+            site,
+            data_format,
+            _get_filename("1C01", date, site),
+            output_file,
+            lwp_offset,
+            None,
+            instrument,
         )
     elif instrument == "lhumpro_u90":
         generate_lev2_lhumpro(
-            site, _get_filename("1C01", date, site), output_file, lwp_offset
+            site,
+            data_format,
+            _get_filename("1C01", date, site),
+            output_file,
+            lwp_offset,
+            None,
+            instrument,
         )
     elif prod == "multi":
-        generate_lev2_multi(site, _get_filename("1C01", date, site), output_file)
+        generate_lev2_multi(
+            site,
+            data_format,
+            _get_filename("1C01", date, site),
+            output_file,
+            None,
+            instrument,
+        )
 
     offset_current = _get_filename("lwp_offset", date, site)
     if (

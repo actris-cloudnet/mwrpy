@@ -29,8 +29,6 @@ params:
   # If you do not want to transform the coordinates set azi_cor to -999.
   azi_cor: -999.
 
-  const_azi: -999.
-
   # some default values:
   # -------------------
   receiver_nb: [1, 2]

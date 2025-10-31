@@ -6,13 +6,16 @@ from typing import TypeAlias
 from mwrpy.utils import MetaData
 
 
-def get_data_attributes(rpg_variables: dict, data_type: str, coeff: dict) -> dict:
+def get_data_attributes(
+    rpg_variables: dict, data_type: str, coeff: dict, data_format: str
+) -> dict:
     """Adds Metadata for RPG MWR Level 2 variables for NetCDF file writing.
 
     Args:
         rpg_variables: RpgArray instances.
         data_type: Data type of the netCDF file.
         coeff: Coefficient data of variable
+        data_format: Data format of the netCDF file (cloudnet, e-profile).
 
     Returns:
         Dictionary
@@ -61,6 +64,10 @@ def get_data_attributes(rpg_variables: dict, data_type: str, coeff: dict) -> dic
         else:
             del rpg_variables[key]
 
+    if data_format == "cloudnet":
+        attributes.pop("time")
+        attributes = dict(ATTRIBUTES_CN, **attributes)
+
     index_map = {v: i for i, v in enumerate(attributes)}
     rpg_variables = dict(
         sorted(rpg_variables.items(), key=lambda pair: index_map[pair[0]])
@@ -68,6 +75,17 @@ def get_data_attributes(rpg_variables: dict, data_type: str, coeff: dict) -> dic
 
     return rpg_variables
 
+
+ATTRIBUTES_CN = {
+    "time": MetaData(
+        comment="Time indication of samples is at end of integration-time",
+        units="hours since ",
+        long_name="Time UTC",
+        standard_name="time",
+        calendar="standard",
+        dimensions=("time",),
+    ),
+}
 
 DEFINITIONS_COM = {
     "quality_flag": (
