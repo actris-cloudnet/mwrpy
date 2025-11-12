@@ -203,6 +203,12 @@ def process_product(
                     csv_off["date"] == xday[1].strftime("%m-%d"), "offset"
                 ].values[0]
 
+    l1_filename = (
+        _get_filename("1C01", date, site)
+        if data_format == "e-profile"
+        else _get_filename_cloudnet("1C01", date, site, instrument)
+    )
+
     if prod[0] == "1":
         lev1_to_nc(
             prod,
@@ -240,7 +246,7 @@ def process_product(
         generate_lev2_single(
             site,
             data_format,
-            _get_filename("1C01", date, site),
+            l1_filename,
             output_file,
             lwp_offset,
             None,
@@ -250,7 +256,7 @@ def process_product(
         generate_lev2_lhumpro(
             site,
             data_format,
-            _get_filename("1C01", date, site),
+            l1_filename,
             output_file,
             lwp_offset,
             None,
@@ -260,7 +266,7 @@ def process_product(
         generate_lev2_multi(
             site,
             data_format,
-            _get_filename("1C01", date, site),
+            l1_filename,
             output_file,
             None,
             instrument,

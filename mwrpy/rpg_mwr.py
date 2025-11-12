@@ -142,7 +142,7 @@ class Rpg:
     def convert_time_to_hours(self):
         """Converts time from seconds since epoch to hours since midnight."""
         time = self.data["time"].data[:]
-        time_hours = seconds2hours(time)
+        time_hours = seconds2hours(time) if time.max() > 24 else time
         self.data["time"] = RpgArray(
             time_hours,
             "time",

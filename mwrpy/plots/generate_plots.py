@@ -594,7 +594,12 @@ def _plot_colormesh_data(
         "potential_temperature",
         "equivalent_potential_temperature",
     ):
-        hum_time = seconds2hours(read_nc_fields(hum_file, "time"))
+        hum_time = read_nc_fields(hum_file, "time")
+        hum_time = (
+            seconds2hours(read_nc_fields(hum_file, "time"))
+            if hum_time.max() > 24
+            else hum_time
+        )
         hum_flag = _get_ret_flag(
             hum_file, hum_time, "absolute_humidity", instrument_type=instrument_type
         )
@@ -738,7 +743,7 @@ def _plot_instrument_data(
     elif product == "sen":
         _plot_sen(ax, data, name, time, nc_file)
     elif product == "hkd":
-        _plot_hkd(ax, data, name, time)
+        _plot_hkd(ax, data, name, time, nc_file)
 
     pos = ax.get_position()
     ax.set_position([pos.x0, pos.y0, pos.width * 0.965, pos.height])
@@ -746,9 +751,11 @@ def _plot_instrument_data(
     return fig
 
 
-def _plot_hkd(ax, data_in: ndarray, name: str, time: ndarray):
+def _plot_hkd(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
     """Plot for housekeeping data."""
     time = _nan_time_gaps(time)
+    pointing_flag = read_nc_fields(nc_file, "pointing_flag")
+    data_in[pointing_flag == 1, :] = np.nan
     if name == "t_amb":
         data_in[data_in == -999.0] = np.nan
         if (data_in[:, 0].all() is ma.masked) | (data_in[:, 1].all() is ma.masked):
@@ -1743,7 +1750,7 @@ def _plot_scan(
         fig.subplots_adjust(hspace=0.09)
         case_date = _read_date(nc_file)
         axt, ax1 = 0, 0
-        data_g = None
+        var_pl = None
         for ind in range(len(angles)):
             ele_range = (angles[ind] - 1.0, angles[ind] + 1.0)
             elevation_f = _elevation_filter(nc_file, elevation, ele_range=ele_range)
@@ -1873,7 +1880,7 @@ def _plot_scan(
                         colorbar.set_label("scan deviation (" + clab + ")", fontsize=13)
                         axi[ip].yaxis.set_tick_params(labelbottom=False)
 
-        if data_g is None:
+        if var_pl is None:
             ax.set_title("empty")
         else:
             axp = axs[axt, :] if len(angles) > 1 else axs
