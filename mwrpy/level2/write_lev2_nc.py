@@ -95,7 +95,10 @@ def lev2_to_nc(
         )
         _combine_lev1(lev1, rpg_dat, index, data_type, scan_time)
         _del_att(global_attributes)
-        mwr = rpg_mwr.Rpg(rpg_dat)
+        mwr = rpg_mwr.Rpg(
+            rpg_dat,
+            date=num2pydate(lev1.variables["time"][:][0], lev1.variables["time"].units),
+        )
         mwr.data = get_data_attributes(mwr.data, data_type, coeff, data_format)
         if data_format == "cloudnet":
             c_files = (

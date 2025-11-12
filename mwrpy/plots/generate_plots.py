@@ -2,7 +2,6 @@
 
 import glob
 import locale
-import logging
 from datetime import date, datetime, timezone
 
 import atmoslib
@@ -700,7 +699,12 @@ def _plot_colormesh_data(
         "potential_temperature",
         "equivalent_potential_temperature",
     ):
-        hum_time = seconds2hours(read_nc_fields(hum_file, "time"))
+        hum_time = read_nc_fields(hum_file, "time")
+        hum_time = (
+            seconds2hours(read_nc_fields(hum_file, "time"))
+            if hum_time.max() > 24
+            else hum_time
+        )
         hum_flag = _get_ret_flag(
             hum_file, hum_time, "absolute_humidity", instrument_type=instrument_type
         )
@@ -844,7 +848,7 @@ def _plot_instrument_data(
     elif product == "sen":
         _plot_sen(ax, data, name, time, nc_file)
     elif product == "hkd":
-        _plot_hkd(ax, data, name, time)
+        _plot_hkd(ax, data, name, time, nc_file)
     elif product == "cov":
         _plot_covariance(ax, data, name, nc_file)
 
@@ -854,9 +858,11 @@ def _plot_instrument_data(
     return fig
 
 
-def _plot_hkd(ax, data_in: ndarray, name: str, time: ndarray):
+def _plot_hkd(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
     """Plot for housekeeping data."""
     time = _nan_time_gaps(time)
+    pointing_flag = read_nc_fields(nc_file, "pointing_flag")
+    data_in[pointing_flag == 1, :] = np.nan
     if name == "t_amb":
         data_in[data_in == -999.0] = np.nan
         if (data_in[:, 0].all() is ma.masked) | (data_in[:, 1].all() is ma.masked):

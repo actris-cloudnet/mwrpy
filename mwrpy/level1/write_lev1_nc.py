@@ -112,7 +112,7 @@ def lev1_to_nc(
             c_files = (
                 get_coeff_list(
                     site,
-                    ["spc", "ins", "lwp", "iwv", "hpt", "tpt", "tpb"],
+                    ["spc", "ins", "lwp", "iwv", "hpt", "tpt", "tpb", "tbx"],
                     None,
                     params.get("coeff_path", None),
                 )
