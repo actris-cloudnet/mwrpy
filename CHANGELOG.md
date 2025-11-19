@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.2 – 2025-11-19
+
+- Handle coordinates format in old files
+
 ## 1.4.1 – 2025-11-19
 
 - Fix interpolation for different time formats
