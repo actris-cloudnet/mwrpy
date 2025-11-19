@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.1 – 2025-11-19
+
+- Fix interpolation for different time formats
+- Update `_mark_gaps` method and scan plot title
+- Fix for numpy update
+- Fix compression in collocated products
+
 ## 1.4.0 – 2025-09-19
 
 - Fix spectral consistency check for scanning data
