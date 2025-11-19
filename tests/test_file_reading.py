@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+import pytest
 from numpy.testing import assert_array_almost_equal
 
 from mwrpy.level1 import rpg_bin
@@ -314,3 +315,14 @@ class TestMetFileReading:
         assert (np.isclose(self.data["wind_speed"][-1], 1.3, atol=0.1)).all()
         assert (np.isclose(self.data["wind_direction"][-1], 207.03, atol=0.1)).all()
         assert (np.isclose(self.data["rainfall_rate"][-1], 0, atol=0.1)).all()
+
+
+@pytest.mark.parametrize(
+    "a,b",
+    [
+        (-12245.50, -122 - 45 / 60 - 30 / 60 / 60),
+        (-3321.25, -33 - 21 / 60 - 15 / 60 / 60),
+    ],
+)
+def test_decode_latlon(a, b):
+    assert np.isclose(rpg_bin._decode_latlon(a), b)

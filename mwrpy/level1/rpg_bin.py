@@ -306,6 +306,8 @@ def read_hkd(file_name: str) -> tuple[dict, dict]:
             file,
             [("_code", "<i4"), ("n", "<i4"), ("_time_ref", "<i4"), ("_sel", "<i4")],
         )
+        if header["_code"] != 837854832:
+            raise InvalidFileError(f"HKD file code {header['_code']} not supported")
         dt: list[Field] = [("time", "<i4"), ("alarm", "b")]
         if header["_sel"] & 0x1:
             dt += [("longitude", "<f"), ("latitude", "<f")]
@@ -323,7 +325,21 @@ def read_hkd(file_name: str) -> tuple[dict, dict]:
         _check_eof(file)
 
     header = _fix_header(header)
+
+    # Old files store coordinates in degrees and minutes (-)DDDMM.mmmm like
+    # documented in the manual, but newer files store these in degrees
+    # (-)DDD.dddd. There doesn't seem to be a reliably way to check which format
+    # is used...
+    if np.all(np.abs(data["latitude"]) > 1000):
+        data["latitude"] = _decode_latlon(data["latitude"])
+        data["longitude"] = _decode_latlon(data["longitude"])
+
     return header, data
+
+
+def _decode_latlon(x: np.ndarray) -> np.ndarray:
+    deg, min = np.divmod(np.abs(x), 100)
+    return np.copysign(deg + min / 60, x)
 
 
 def read_met(file_name: str) -> tuple[dict, dict]:
