@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.3 – 2025-11-20
+
+- Fix bug if coordinates are not stored in HKD file
+
 ## 1.4.2 – 2025-11-19
 
 - Handle coordinates format in old files
