@@ -330,7 +330,7 @@ def read_hkd(file_name: str) -> tuple[dict, dict]:
     # documented in the manual, but newer files store these in degrees
     # (-)DDD.dddd. There doesn't seem to be a reliably way to check which format
     # is used...
-    if np.all(np.abs(data["latitude"]) > 1000):
+    if "latitude" in data and np.all(np.abs(data["latitude"]) >= 100):
         data["latitude"] = _decode_latlon(data["latitude"])
         data["longitude"] = _decode_latlon(data["longitude"])
 
