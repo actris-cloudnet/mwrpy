@@ -37,7 +37,9 @@ def stack_files(file_list: list[str]) -> tuple[dict, dict]:
                     else:
                         target[name] = fun((target[name], value))
                 elif target[name].ndim != value.ndim and name == "covariance_matrix":
-                    target[name] = np.concat((target[name], value[np.newaxis, :, :]))
+                    target[name] = np.concatenate(
+                        (target[name], value[np.newaxis, :, :])
+                    )
             elif value.ndim > 0 and name not in target:
                 target[name] = value
 

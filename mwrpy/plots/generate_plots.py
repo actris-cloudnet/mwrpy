@@ -2024,6 +2024,7 @@ def _plot_covariance(ax, data_in: ma.MaskedArray, name, f_instance: str | ndarra
     ax.set_yticklabels(np.flip(frequency).astype(str))
     ax.set_xlabel("Frequency (GHz)")
     ax.set_ylabel("Frequency (GHz)")
+    _set_title(ax, name, "", "")
 
 
 def _plot_cal_history(

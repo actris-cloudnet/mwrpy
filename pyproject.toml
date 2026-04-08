@@ -39,7 +39,7 @@ Changelog = "https://github.com/actris-cloudnet/mwrpy/blob/main/CHANGELOG.md"
 check_untyped_defs = true
 
 [[tool.mypy.overrides]]
-module = ["cftime.*", "mpl_toolkits.*", "pandas.*", "scipy.*", "suncalc.*"]
+module = ["cftime.*", "matplotlib.*", "mpl_toolkits.*", "netCDF4.*", "pandas.*", "scipy.*", "suncalc.*", "timezonefinder.*"]
 ignore_missing_imports = true
 
 [tool.release-version]

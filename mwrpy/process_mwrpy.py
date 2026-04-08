@@ -453,7 +453,7 @@ def plot_product(prod: str, date: datetime.date, site: str):
                 site=site,
             )
         else:
-            logging.warning("No to plot for product " + prod)
+            logging.warning("Nothing to plot for product " + prod)
         his_data = prepare_data(
             "", "his", params, None, date=time.mktime(date.timetuple())
         )
@@ -470,7 +470,7 @@ def plot_product(prod: str, date: datetime.date, site: str):
                 site=site,
             )
         else:
-            logging.warning("No to plot for product " + prod)
+            logging.warning("Nothing to plot for product " + prod)
     else:
         logging.warning("Nothing to plot for product " + prod)
 
