@@ -251,46 +251,50 @@ def generate_figure(
 def _mark_gaps(
     time: ndarray,
     data: ma.MaskedArray,
+    min_x: float = 0,
+    max_x: float = 24,
     max_allowed_gap: float = 1,
 ) -> tuple:
-    """Mark gaps in time and data."""
-    assert time[0] >= 0
-    assert time[-1] <= 24
-    max_gap = max_allowed_gap / 60
+    if time[0] < min_x or time[-1] > max_x:
+        msg = f"x-axis values outside the range {min_x}-{max_x}."
+        raise ValueError(msg)
+    max_gap_fraction_hour = max_allowed_gap / 60
+
+    gap_indices = np.where(np.diff(time) > max_gap_fraction_hour)[0]
+
     if not ma.is_masked(data):
-        mask_new = np.zeros(data.shape)
+        mask_new = np.zeros(data.shape, dtype=np.int32)
     elif ma.all(data.mask) is ma.masked:
-        mask_new = np.ones(data.shape)
+        mask_new = np.ones(data.shape, dtype=np.int32)
     else:
         mask_new = np.copy(data.mask)
     data_new = ma.copy(data)
     time_new = np.copy(time)
-    gap_indices = np.where(np.diff(time) > max_gap)[0]
     if data.ndim == 2:
         temp_array = np.zeros((2, data.shape[1]))
         temp_mask = np.ones((2, data.shape[1]))
     else:
         temp_array = np.zeros((2, 1))
         temp_mask = np.ones((2, 1))
-    time_delta = 0.0
+    time_delta = 0.001
     for ind in np.sort(gap_indices)[::-1]:
-        ind += 1
-        data_new = np.insert(data_new, ind, temp_array, axis=0)
-        mask_new = np.insert(mask_new, ind, temp_mask, axis=0)
-        time_new = np.insert(time_new, ind, time[ind] - time_delta)
-        time_new = np.insert(time_new, ind, time[ind - 1] + time_delta)
-    if (time[0] - 0) > max_gap:
+        ind_gap = ind + 1
+        data_new = np.insert(data_new, ind_gap, temp_array, axis=0)
+        mask_new = np.insert(mask_new, ind_gap, temp_mask, axis=0)
+        time_new = np.insert(time_new, ind_gap, time[ind_gap] - time_delta)
+        time_new = np.insert(time_new, ind_gap, time[ind_gap - 1] + time_delta)
+    if (time[0] - min_x) > max_gap_fraction_hour:
         data_new = np.insert(data_new, 0, temp_array, axis=0)
         mask_new = np.insert(mask_new, 0, temp_mask, axis=0)
         time_new = np.insert(time_new, 0, time[0] - time_delta)
         time_new = np.insert(time_new, 0, time_delta)
-    if (24 - time[-1]) > max_gap:
-        ind_new = len(mask_new)
-        data_new = np.insert(data_new, ind_new, temp_array, axis=0)
-        mask_new = np.insert(mask_new, ind_new, temp_mask, axis=0)
-        time_new = np.insert(time_new, ind_new, 24 - time_delta)
-        time_new = np.insert(time_new, ind_new, time[-1] + time_delta)
-    data_new.mask = mask_new
+    if (max_x - time[-1]) > max_gap_fraction_hour:
+        ind_gap = np.int32(len(mask_new))
+        data_new = np.insert(data_new, ind_gap, temp_array, axis=0)
+        mask_new = np.insert(mask_new, ind_gap, temp_mask, axis=0)
+        time_new = np.insert(time_new, ind_gap, max_x - time_delta)
+        time_new = np.insert(time_new, ind_gap, time[-1] + time_delta)
+    data_new[mask_new] = ma.masked
     return time_new, data_new
 
 
