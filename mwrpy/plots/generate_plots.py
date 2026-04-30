@@ -4,6 +4,7 @@ import glob
 import locale
 from datetime import date, datetime
 
+import atmoslib
 import matplotlib.pyplot as plt
 import netCDF4
 import numpy as np
@@ -23,7 +24,7 @@ from matplotlib.transforms import Affine2D, Bbox, ScaledTranslation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from numpy import ma, ndarray
 
-from mwrpy.atmos import abs_hum, dir_avg, t_dew_rh
+from mwrpy.atmos import dir_avg
 from mwrpy.plots.plot_meta import _COLORS, ATTRIBUTES
 from mwrpy.plots.plot_utils import (
     _calculate_rolling_mean,
@@ -1498,7 +1499,7 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
         )
         rh = read_nc_fields(nc_file, "relative_humidity")
         rh = _elevation_filter(nc_file, rh, ele_range=(-1.0, 91.0))
-        t_d = t_dew_rh(data, rh)
+        t_d = atmoslib.dew_point_temperature(data, rh)
         rolling_mean = _calculate_rolling_mean(time, t_d)
         ax.plot(
             time,
@@ -1525,7 +1526,8 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
     if name == "relative_humidity":
         T = read_nc_fields(nc_file, "air_temperature")
         T = _elevation_filter(nc_file, T, ele_range=(-1.0, 91.0))
-        q = abs_hum(T, data / 100.0)
+        vp = (data / 100.0) * atmoslib.saturation_vapor_pressure(T)
+        q = atmoslib.absolute_humidity(T, vp)
         rolling_mean2 = _calculate_rolling_mean(time, q)
         ax2 = ax.twinx()
         ax2.plot(
