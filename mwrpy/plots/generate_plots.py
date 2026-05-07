@@ -208,9 +208,9 @@ def _mark_gaps(
     gap_indices = np.where(np.diff(time) > max_gap_fraction_hour)[0]
 
     if not ma.is_masked(data):
-        mask_new = np.zeros(data.shape)
+        mask_new = np.zeros(data.shape, dtype=np.int32)
     elif ma.all(data.mask) is ma.masked:
-        mask_new = np.ones(data.shape)
+        mask_new = np.ones(data.shape, dtype=np.int32)
     else:
         mask_new = np.copy(data.mask)
     data_new = ma.copy(data)
@@ -240,6 +240,7 @@ def _mark_gaps(
         time_new = np.insert(time_new, ind_gap, max_x - time_delta)
         time_new = np.insert(time_new, ind_gap, time[-1] + time_delta)
     data_new[mask_new] = ma.masked
+    data_new[data_new == 0.0] = ma.masked
     return time_new, data_new
 
 
