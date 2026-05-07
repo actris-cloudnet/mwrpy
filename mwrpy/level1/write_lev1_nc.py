@@ -10,8 +10,9 @@ from typing import Literal, TypeAlias
 import numpy as np
 from numpy import ma
 
-from mwrpy import atmos, rpg_mwr
+from mwrpy import rpg_mwr
 from mwrpy.exceptions import MissingInputData
+from mwrpy.level1.droplet_mwrpy import find_lwcl_free
 from mwrpy.level1.lev1_meta_nc import get_data_attributes
 from mwrpy.level1.met_quality_control import apply_met_qc
 from mwrpy.level1.quality_control import apply_qc
@@ -127,7 +128,7 @@ def prepare_data(
             (
                 rpg_bin.data["liquid_cloud_flag"],
                 rpg_bin.data["liquid_cloud_flag_status"],
-            ) = atmos.find_lwcl_free(rpg_bin.data, lidar_path)
+            ) = find_lwcl_free(rpg_bin.data, lidar_path)
         else:
             (
                 rpg_bin.data["liquid_cloud_flag"],
@@ -209,7 +210,7 @@ def prepare_data(
             (
                 rpg_bin.data["liquid_cloud_flag"],
                 rpg_bin.data["liquid_cloud_flag_status"],
-            ) = atmos.find_lwcl_free(rpg_bin.data, lidar_path)
+            ) = find_lwcl_free(rpg_bin.data, lidar_path)
 
             file_list_met = get_file_list(path_to_files, "MET")
             if len(file_list_met) == 0:

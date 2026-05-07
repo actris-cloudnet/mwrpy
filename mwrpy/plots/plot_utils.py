@@ -128,7 +128,9 @@ def _calculate_rolling_mean(time: ndarray, data: ndarray, win: float = 0.5) -> n
         ind = time_to_datetime_index(time)
         df = pd.DataFrame({"data": data}, index=ind)
         rolling_mean = (
-            df.rolling(pd.offsets.Minute(win * 60), center=True, min_periods=1)
+            df.rolling(
+                pd.offsets.Minute(int(np.floor(win * 60))), center=True, min_periods=1
+            )
             .mean()
             .data
         )
@@ -144,6 +146,23 @@ def _calculate_rolling_mean(time: ndarray, data: ndarray, win: float = 0.5) -> n
         rolling_window = np.ones((1, width)) * np.blackman(width)
         rolling_mean = convolve2DFFT(data, rolling_window.T, max_missing=0.1)
     return rolling_mean
+
+
+def _dir_avg(
+    time: np.ndarray, spd: np.ndarray, drc: np.ndarray, win: int = 30
+) -> np.ndarray:
+    """Computes average wind direction (DEG) for a certain window length."""
+    ve = spd * np.sin(np.deg2rad(drc))
+    vn = spd * np.cos(np.deg2rad(drc))
+    ind = time_to_datetime_index(time)
+    components = pd.DataFrame({"ve": ve, "vn": vn}, index=ind)
+
+    avg_comp = components.rolling(
+        pd.offsets.Minute(win), center=True, min_periods=1
+    ).mean()
+    avg_dir = np.rad2deg(np.arctan2(-avg_comp["ve"], -avg_comp["vn"]))
+
+    return np.where(avg_dir < 180.0, avg_dir + 180.0, avg_dir - 180.0)
 
 
 def _read_location(nc_file: str) -> str:

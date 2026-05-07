@@ -24,10 +24,10 @@ from matplotlib.transforms import Affine2D, Bbox, ScaledTranslation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from numpy import ma, ndarray
 
-from mwrpy.atmos import dir_avg
 from mwrpy.plots.plot_meta import _COLORS, ATTRIBUTES
 from mwrpy.plots.plot_utils import (
     _calculate_rolling_mean,
+    _dir_avg,
     _gap_array,
     _get_bit_flag,
     _get_freq_flag,
@@ -1465,7 +1465,7 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
 
     if name == "wind_direction":
         spd = read_nc_fields(nc_file, "wind_speed")
-        rolling_mean = dir_avg(time, spd, data)
+        rolling_mean = _dir_avg(time, spd, data)
         ax.set_yticks(np.linspace(0, 360, 9))
 
     time = _nan_time_gaps(time)
