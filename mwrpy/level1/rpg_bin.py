@@ -58,11 +58,11 @@ def stack_files(file_list: list[str]) -> tuple[dict, dict]:
     header: dict = {}
 
     for file in file_list:
-        try:
-            header_tmp, data_tmp = read_type(file)
-        except (TypeError, ValueError, InvalidFileError) as err:
-            logging.warning(f"Skipping '{file}': {err}")
-            continue
+        # try:
+        header_tmp, data_tmp = read_type(file)
+        # except (TypeError, ValueError, InvalidFileError) as err:
+        #     logging.warning(f"Skipping '{file}': {err}")
+        #     continue
         _stack_header(header_tmp, header, np.add)
         _stack_data(data_tmp, data, np.concatenate)
 
@@ -515,7 +515,7 @@ def read_his(file_name: str) -> tuple[dict, dict]:
 
         def _get_header():
             """Read header info."""
-            n = int(np.fromfile(file, np.uint32, 1))
+            n = int(np.fromfile(file, np.uint32, 1)[0])
             time_ref = 1
             header_names = ["_code", "n", "_time_ref"]
             header_values = [code, n, time_ref]
@@ -556,28 +556,28 @@ def read_his(file_name: str) -> tuple[dict, dict]:
             """Loop over file to read data."""
             data = _create_variables()
             for sample in range(header["n"]):
-                data["len"][sample] = np.fromfile(file, np.int32, 1)
-                data["rad_id"][sample] = np.fromfile(file, np.int32, 1)
-                data["cal1_t"][sample] = np.fromfile(file, np.int32, 1)
-                data["cal2_t"][sample] = np.fromfile(file, np.int32, 1)
-                data["t1"][sample] = np.fromfile(file, np.int32, 1)
+                data["len"][sample] = np.fromfile(file, np.int32, 1)[0]
+                data["rad_id"][sample] = np.fromfile(file, np.int32, 1)[0]
+                data["cal1_t"][sample] = np.fromfile(file, np.int32, 1)[0]
+                data["cal2_t"][sample] = np.fromfile(file, np.int32, 1)[0]
+                data["t1"][sample] = np.fromfile(file, np.int32, 1)[0]
                 data["cal_date"][sample] = utils.epoch2unix(data["t1"][sample], 1)
-                data["t2"][sample] = np.fromfile(file, np.int32, 1)
-                data["a_temp1"][sample] = np.fromfile(file, np.float32, 1)
-                data["a_temp2"][sample] = np.fromfile(file, np.float32, 1)
-                data["p1"][sample] = np.fromfile(file, np.float32, 1)
-                data["p2"][sample] = np.fromfile(file, np.float32, 1)
-                data["hl_temp1"][sample] = np.fromfile(file, np.float32, 1)
-                data["hl_temp2"][sample] = np.fromfile(file, np.float32, 1)
-                data["cl_temp1"][sample] = np.fromfile(file, np.float32, 1)
-                data["cl_temp2"][sample] = np.fromfile(file, np.float32, 1)
+                data["t2"][sample] = np.fromfile(file, np.int32, 1)[0]
+                data["a_temp1"][sample] = np.fromfile(file, np.float32, 1)[0]
+                data["a_temp2"][sample] = np.fromfile(file, np.float32, 1)[0]
+                data["p1"][sample] = np.fromfile(file, np.float32, 1)[0]
+                data["p2"][sample] = np.fromfile(file, np.float32, 1)[0]
+                data["hl_temp1"][sample] = np.fromfile(file, np.float32, 1)[0]
+                data["hl_temp2"][sample] = np.fromfile(file, np.float32, 1)[0]
+                data["cl_temp1"][sample] = np.fromfile(file, np.float32, 1)[0]
+                data["cl_temp2"][sample] = np.fromfile(file, np.float32, 1)[0]
                 data["spare"][sample,] = np.fromfile(file, np.float32, 5)
-                data["n_ch1"][sample] = np.fromfile(file, np.int32, 1)
+                data["n_ch1"][sample] = np.fromfile(file, np.int32, 1)[0]
                 data["n_ch1"][sample] = data["n_ch1"][sample]
                 data["freq1"][sample, 0 : data["n_ch1"][sample]] = np.fromfile(
                     file, np.float32, int(data["n_ch1"][sample])
                 )
-                data["n_ch2"][sample] = np.fromfile(file, np.int32, 1)
+                data["n_ch2"][sample] = np.fromfile(file, np.int32, 1)[0]
                 data["freq2"][sample, 0 : int(data["n_ch2"][sample])] = np.fromfile(
                     file, np.float32, int(data["n_ch2"][sample])
                 )
