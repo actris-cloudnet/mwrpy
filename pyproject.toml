@@ -18,16 +18,14 @@ dependencies = [
   "matplotlib",
   "netCDF4",
   "pandas",
-  "pytz",
   "pyyaml",
   "scipy",
   "suncalc",
-  "timezonefinder",
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
-test = ["mypy", "pre-commit", "pytest", "pytest-flakefinder", "types-PyYAML", "types-pytz"]
+test = ["mypy", "pre-commit", "pytest", "pytest-flakefinder", "types-PyYAML"]
 dev = ["release-version"]
 
 [project.urls]
@@ -49,7 +47,6 @@ module = [
   "pandas.*",
   "scipy.*",
   "suncalc.*",
-  "timezonefinder.*",
 ]
 ignore_missing_imports = true
 

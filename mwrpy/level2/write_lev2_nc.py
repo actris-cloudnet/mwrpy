@@ -1,17 +1,16 @@
 """Module for writing Level 2 netCDF files."""
 
+import calendar
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from os import PathLike
 
 import atmoslib
 import atmoslib.constants as ac
 import netCDF4 as nc
 import numpy as np
-import pytz
 from cftime import num2pydate
 from numpy import ma
-from timezonefinder import TimezoneFinder
 
 from mwrpy import rpg_mwr
 from mwrpy.exceptions import MissingInputData
@@ -23,6 +22,13 @@ from mwrpy.utils import (
     interpolate_2d,
     read_config,
 )
+
+
+def _local_solar_time(unix_seconds: float, longitude: float) -> datetime:
+    """Return mean local solar time: UTC shifted by 4 min per degree of longitude."""
+    return datetime.fromtimestamp(unix_seconds, timezone.utc) + timedelta(
+        seconds=longitude * 240.0
+    )
 
 
 def lev2_to_nc(
@@ -723,44 +729,18 @@ def retrieval_input(lev1: dict, coeff: dict) -> np.ndarray:
             )
         if coeff.get("DY") == 1:
             doy = ma.masked_all((len(lev1["time"][:]), 2), np.float32)
-            tf = TimezoneFinder()
-            timezone_str = tf.timezone_at(
-                lng=longitude,
-                lat=latitude,
-            )
-            assert timezone_str is not None
-            timezone = pytz.timezone(timezone_str)
-            dtime = datetime.fromtimestamp(time_median, timezone)
-            dyear = datetime(dtime.year, 12, 31, 0, 0).timetuple().tm_yday
-            doy[:, 0] = np.cos(
-                datetime.fromtimestamp(time_median).timetuple().tm_yday
-                / dyear
-                * 2
-                * np.pi
-            )
-            doy[:, 1] = np.sin(
-                datetime.fromtimestamp(time_median).timetuple().tm_yday
-                / dyear
-                * 2
-                * np.pi
-            )
+            dtime = _local_solar_time(time_median, longitude)
+            dyear = 366 if calendar.isleap(dtime.year) else 365
+            yday_frac = dtime.timetuple().tm_yday / dyear * 2 * np.pi
+            doy[:, 0] = np.cos(yday_frac)
+            doy[:, 1] = np.sin(yday_frac)
             ret_in = np.concatenate((ret_in, doy), axis=1)
         if coeff.get("SU") == 1:
             sun = ma.masked_all((len(lev1["time"][:]), 2), np.float32)
-            tf = TimezoneFinder()
-            timezone_str = tf.timezone_at(
-                lng=longitude,
-                lat=latitude,
-            )
-            assert timezone_str is not None
-            timezone = pytz.timezone(timezone_str)
-            dtime = datetime.fromtimestamp(time_median, timezone)
-            sun[:, 0] = np.cos(
-                (dtime.hour + dtime.minute / 60 + dtime.second / 3600) / 24 * 2 * np.pi
-            )
-            sun[:, 1] = np.sin(
-                (dtime.hour + dtime.minute / 60 + dtime.second / 3600) / 24 * 2 * np.pi
-            )
+            dtime = _local_solar_time(time_median, longitude)
+            hour_frac = (dtime.hour + dtime.minute / 60 + dtime.second / 3600) / 24
+            sun[:, 0] = np.cos(hour_frac * 2 * np.pi)
+            sun[:, 1] = np.sin(hour_frac * 2 * np.pi)
             ret_in = np.concatenate((ret_in, sun), axis=1)
 
     return ret_in
