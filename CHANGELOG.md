@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.1 – 2026-05-08
+
+- Drop pytz and timezonefinder dependencies
+
 ## 1.5.0 – 2026-05-08
 
 - Replace local thermodynamics functions with atmoslib
