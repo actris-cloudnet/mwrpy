@@ -4,6 +4,7 @@ import glob
 import locale
 from datetime import date, datetime
 
+import atmoslib
 import matplotlib.pyplot as plt
 import netCDF4
 import numpy as np
@@ -23,10 +24,10 @@ from matplotlib.transforms import Affine2D, Bbox, ScaledTranslation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from numpy import ma, ndarray
 
-from mwrpy.atmos import abs_hum, dir_avg, t_dew_rh
 from mwrpy.plots.plot_meta import _COLORS, ATTRIBUTES
 from mwrpy.plots.plot_utils import (
     _calculate_rolling_mean,
+    _dir_avg,
     _gap_array,
     _get_bit_flag,
     _get_freq_flag,
@@ -207,9 +208,9 @@ def _mark_gaps(
     gap_indices = np.where(np.diff(time) > max_gap_fraction_hour)[0]
 
     if not ma.is_masked(data):
-        mask_new = np.zeros(data.shape)
+        mask_new = np.zeros(data.shape, dtype=np.int32)
     elif ma.all(data.mask) is ma.masked:
-        mask_new = np.ones(data.shape)
+        mask_new = np.ones(data.shape, dtype=np.int32)
     else:
         mask_new = np.copy(data.mask)
     data_new = ma.copy(data)
@@ -239,6 +240,7 @@ def _mark_gaps(
         time_new = np.insert(time_new, ind_gap, max_x - time_delta)
         time_new = np.insert(time_new, ind_gap, time[-1] + time_delta)
     data_new[mask_new] = ma.masked
+    data_new[data_new == 0.0] = ma.masked
     return time_new, data_new
 
 
@@ -1464,7 +1466,7 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
 
     if name == "wind_direction":
         spd = read_nc_fields(nc_file, "wind_speed")
-        rolling_mean = dir_avg(time, spd, data)
+        rolling_mean = _dir_avg(time, spd, data)
         ax.set_yticks(np.linspace(0, 360, 9))
 
     time = _nan_time_gaps(time)
@@ -1498,7 +1500,7 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
         )
         rh = read_nc_fields(nc_file, "relative_humidity")
         rh = _elevation_filter(nc_file, rh, ele_range=(-1.0, 91.0))
-        t_d = t_dew_rh(data, rh)
+        t_d = atmoslib.dew_point_temperature(data, rh)
         rolling_mean = _calculate_rolling_mean(time, t_d)
         ax.plot(
             time,
@@ -1525,7 +1527,8 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
     if name == "relative_humidity":
         T = read_nc_fields(nc_file, "air_temperature")
         T = _elevation_filter(nc_file, T, ele_range=(-1.0, 91.0))
-        q = abs_hum(T, data / 100.0)
+        vp = (data / 100.0) * atmoslib.saturation_vapor_pressure(T)
+        q = atmoslib.absolute_humidity(T, vp)
         rolling_mean2 = _calculate_rolling_mean(time, q)
         ax2 = ax.twinx()
         ax2.plot(

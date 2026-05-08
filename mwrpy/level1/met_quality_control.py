@@ -1,8 +1,7 @@
 """Module for meteorological sensor quality control."""
 
-import metpy.calc as mpcalc
+import atmoslib
 import numpy as np
-from metpy.units import masked_array
 
 from mwrpy.utils import setbit
 
@@ -39,8 +38,7 @@ def apply_met_qc(data: dict, params: dict) -> None:
         if name not in data:
             continue
         if name == "air_pressure":
-            altitude = masked_array(params["altitude"], data_units="m")
-            pressure = mpcalc.height_to_pressure_std(altitude).to("pascal").magnitude
+            pressure = atmoslib.isa_pressure(params["altitude"])
             threshold_low = pressure - 10000
             threshold_high = pressure + 10000
         else:

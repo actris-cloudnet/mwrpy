@@ -4,6 +4,8 @@ from collections.abc import Sequence
 from datetime import datetime
 from os import PathLike
 
+import atmoslib
+import atmoslib.constants as ac
 import netCDF4 as nc
 import numpy as np
 import pytz
@@ -12,7 +14,6 @@ from numpy import ma
 from timezonefinder import TimezoneFinder
 
 from mwrpy import rpg_mwr
-from mwrpy.atmos import eq_pot_tem, pot_tem, rel_hum
 from mwrpy.exceptions import MissingInputData
 from mwrpy.level2.get_ret_coeff import get_mvr_coeff
 from mwrpy.level2.lev2_meta_nc import get_data_attributes
@@ -516,24 +517,31 @@ def get_products(
 
         rpg_dat["height"] = tem_dat.variables["height"][:]
         pres = np.interp(tem_time, lev1["time"][:], lev1["air_pressure"][:])
+        T = tem_dat.variables["temperature"][:, :]
+        # hum_int is absolute humidity (kg m-3) from the 2P03 product; vapor
+        # pressure follows from the ideal gas law e = rho_v * R_v * T.
+        vp = hum_int * ac.RW * T
         if data_type == "2P04":
-            rpg_dat["relative_humidity"] = rel_hum(
-                tem_dat.variables["temperature"][:, :], hum_int
+            rpg_dat["relative_humidity"] = vp / atmoslib.saturation_vapor_pressure(T)
+        if data_type in ("2P07", "2P08"):
+            # Two-pass hydrostatic integration: a dry profile gives a pressure
+            # estimate good enough to convert vp to specific humidity, then we
+            # re-integrate with the moist virtual-temperature correction.
+            p_dry = atmoslib.hydrostatic_pressure(
+                T, np.array(0.0), rpg_dat["height"], pres
             )
-        if data_type == "2P07":
-            rpg_dat["potential_temperature"] = pot_tem(
-                tem_dat.variables["temperature"][:, :],
-                hum_int,
-                pres,
-                rpg_dat["height"],
-            )
-        if data_type == "2P08":
-            rpg_dat["equivalent_potential_temperature"] = eq_pot_tem(
-                tem_dat.variables["temperature"][:, :],
-                hum_int,
-                pres,
-                rpg_dat["height"],
-            )
+            mr_dry = atmoslib.mixing_ratio(vp, p_dry)
+            q = mr_dry / (1 + mr_dry)
+            p_baro = atmoslib.hydrostatic_pressure(T, q, rpg_dat["height"], pres)
+            theta = atmoslib.potential_temperature(T, p_baro)
+            if data_type == "2P07":
+                rpg_dat["potential_temperature"] = theta
+            else:
+                mr = atmoslib.mixing_ratio(vp, p_baro)
+                q_moist = mr / (1 + mr)
+                rpg_dat["equivalent_potential_temperature"] = (
+                    atmoslib.equivalent_potential_temperature(T, p_baro, q_moist)
+                )
 
         _combine_lev1(
             tem_dat,
