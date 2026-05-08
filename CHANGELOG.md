@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.0 – 2026-05-08
+
+- Replace local thermodynamics functions with atmoslib
+- Take azimuth angle from zenith measurements after the BLB scan
+- Introduce condition for low level cloud detection
+
 ## 1.4.3 – 2025-11-20
 
 - Fix bug if coordinates are not stored in HKD file
