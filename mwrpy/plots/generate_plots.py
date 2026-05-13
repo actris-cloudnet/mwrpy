@@ -561,12 +561,19 @@ def _plot_colormesh_data(
 
     assert variables.plot_range is not None
 
-    if any(map(nc_file.__contains__, ["2P04", "2P07", "2P08"])):
+    ret_type = "retrieved"
+    if name == "relative_humidity":
+        with netCDF4.Dataset(nc_file) as nc:
+            ret_type = nc.variables["relative_humidity"].retrieval_type
+
+    if any(map(nc_file.__contains__, ["2P07", "2P08"])) or (
+        any(map(nc_file.__contains__, ["2P04"])) and ret_type == "derived product"
+    ):
         file_name = glob.glob(nc_file.rsplit("/", 1)[0] + "/MWR_2P02*")
         tem_file = str(
             file_name[0]
             if file_name
-            else glob.glob(nc_file.rsplit("/", 1)[0] + "/MWR_2P01*")
+            else glob.glob(nc_file.rsplit("/", 1)[0] + "/MWR_2P01*")[0]
         )
     else:
         tem_file = nc_file
@@ -589,16 +596,16 @@ def _plot_colormesh_data(
         data = np.clip(data, 0, 1.001) * 100
         data_in = np.clip(data_in, 0, 1.001) * 100
         nbin = 6
-        hum_file = nc_file.replace("2P04", "2P03")
+        if ret_type == "derived product":
+            hum_file = nc_file.replace("2P04", "2P03")
 
     if "multi" in nc_file:
         hum_file = nc_file.replace("multi", "single")
 
     if name in (
-        "relative_humidity",
         "potential_temperature",
         "equivalent_potential_temperature",
-    ):
+    ) or (name == "relative_humidity" and ret_type == "derived product"):
         hum_time = seconds2hours(read_nc_fields(hum_file, "time"))
         hum_flag = _get_ret_flag(
             hum_file, hum_time, "absolute_humidity", instrument_type=instrument_type
@@ -641,10 +648,9 @@ def _plot_colormesh_data(
     )
 
     if name in (
-        "relative_humidity",
         "potential_temperature",
         "equivalent_potential_temperature",
-    ):
+    ) or (name == "relative_humidity" and ret_type == "derived product"):
         flag = _get_ret_flag(
             tem_file, axes[0], "temperature", instrument_type=instrument_type
         )

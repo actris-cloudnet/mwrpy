@@ -40,6 +40,7 @@ def lev2_to_nc(
     hum_file: str | PathLike | None = None,
     lwp_offset: tuple[float | None, float | None] = (None, None),
     coeff_files: Sequence[str | PathLike] | None = None,
+    multi: bool = False,
 ):
     """This function reads Level 1 files,
     applies retrieval coefficients for Level 2 products
@@ -54,6 +55,7 @@ def lev2_to_nc(
         hum_file: Name of humidity product file.
         lwp_offset: LWP offset with the previous day's last and next day's first reliable values.
         coeff_files: List of coefficient files.
+        multi: Multi pointing product (default: false).
 
     """
     if data_type not in (
@@ -84,12 +86,16 @@ def lev2_to_nc(
             temp_file=temp_file,
             hum_file=hum_file,
             lwp_offset=lwp_offset,
+            multi=multi,
         )
-        _combine_lev1(lev1, rpg_dat, index, data_type, scan_time)
-        _del_att(global_attributes)
-        mwr = rpg_mwr.Rpg(rpg_dat)
-        mwr.data = get_data_attributes(mwr.data, data_type, coeff)
-        rpg_mwr.save_rpg(mwr, output_file, global_attributes, data_type)
+        if len(rpg_dat) > 0:
+            _combine_lev1(
+                lev1, rpg_dat, index, data_type, scan_time, coeff["retrieval_type"]
+            )
+            _del_att(global_attributes)
+            mwr = rpg_mwr.Rpg(rpg_dat)
+            mwr.data = get_data_attributes(mwr.data, data_type, coeff)
+            rpg_mwr.save_rpg(mwr, output_file, global_attributes, data_type)
 
 
 def get_products(
@@ -101,6 +107,7 @@ def get_products(
     temp_file: str | PathLike | None = None,
     hum_file: str | PathLike | None = None,
     lwp_offset: tuple[float | None, float | None] = (None, None),
+    multi: bool = False,
 ) -> tuple[dict, dict, np.ndarray, np.ndarray]:
     """Derive specified Level 2 products."""
     lev1 = {key: value[:] for key, value in nclev1.variables.items()}
@@ -114,155 +121,14 @@ def get_products(
         np.empty([0], np.int32),
         np.empty([0], np.int32),
     )
+    product, ret, rt = _get_ret_info(data_type, site, lev1["frequency"][:], coeff_files)
 
-    if data_type in ("2I01", "2I02", "2I06"):
-        product = (
-            "lwp" if data_type == "2I01" else "iwv" if data_type == "2I02" else "sta"
-        )
-
-        coeff = get_mvr_coeff(site, product, lev1["frequency"][:], coeff_files)
-        if coeff[0]["RT"] < 2:
-            coeff, offset, lin, quad = get_mvr_coeff(
-                site, product, lev1["frequency"][:], coeff_files
-            )
-        else:
-            # pylint: disable-next=unbalanced-tuple-unpacking
-            (
-                coeff,
-                input_scale,
-                input_offset,
-                output_scale,
-                output_offset,
-                weights1,
-                weights2,
-                factor,
-            ) = get_mvr_coeff(site, product, lev1["frequency"][:], coeff_files)
-        ret_in = retrieval_input(lev1, coeff)
-
-        index = np.where(lev1["pointing_flag"][:] == 0)[0]  # type: ignore
-        if len(index) == 0:
-            raise MissingInputData(
-                f"No suitable data found for processing for data type: {data_type}"
-            )
-
-        coeff["retrieval_elevation_angles"] = _format_attribute_array(
-            ele_retrieval(lev1["elevation_angle"][index], coeff)
-        )
-        coeff["retrieval_frequencies"] = _get_retrieval_frequencies(coeff)
-
-        if coeff["RT"] < 2:
-            coeff_offset = offset(lev1["elevation_angle"][index])
-            coeff_lin = lin(lev1["elevation_angle"][index])
-            coeff_quad = quad(lev1["elevation_angle"][index])
-            tmp_product = (
-                np.squeeze(coeff_offset[:])
-                + np.einsum("ij,ij->i", ret_in[index, :], coeff_lin)
-                + np.einsum("ij,ij->i", ret_in[index, :] ** 2, coeff_quad)
-            )
-
-        else:
-            c_w1, c_w2, fac = (
-                weights1(lev1["elevation_angle"][index]),
-                weights2(lev1["elevation_angle"][index]),
-                factor(lev1["elevation_angle"][index]),
-            )
-            if fac.ndim == 1:
-                fac = fac[:, np.newaxis]
-            in_sc, in_os = (
-                input_scale(lev1["elevation_angle"][index]),
-                input_offset(lev1["elevation_angle"][index]),
-            )
-            op_sc, op_os = (
-                output_scale(lev1["elevation_angle"][index]),
-                output_offset(lev1["elevation_angle"][index]),
-            )
-
-            ret_in[index, 1:] = (ret_in[index, 1:] - in_os[:, :]) * in_sc[:, :]
-            hidden_layer = np.ones((len(index), c_w1.shape[2] + 1), np.float32)
-            hidden_layer[:, 1:] = np.tanh(
-                fac[:] * np.einsum("ijk,ij->ik", c_w1, ret_in[index, :])
-            )
-            if product == "sta":
-                tmp_product = np.squeeze(
-                    np.tanh(fac[:] * np.einsum("ij,ikj->ik", hidden_layer, c_w2))
-                    * op_sc
-                    + op_os
-                )
-            else:
-                tmp_product = np.squeeze(
-                    np.tanh(
-                        fac[:]
-                        * np.einsum("ij,ij->i", hidden_layer, c_w2).reshape(
-                            (len(index), 1)
-                        )
-                    )
-                    * op_sc
-                    + op_os
-                )
-
-        index_ret = np.where(
-            np.any(
-                np.abs(
-                    (
-                        np.ones((len(lev1["elevation_angle"][index]), len(coeff["AG"])))
-                        * coeff["AG"]
-                    )
-                    - np.transpose(
-                        np.ones((len(coeff["AG"]), len(lev1["elevation_angle"][index])))
-                        * lev1["elevation_angle"][index]
-                    )
-                )
-                <= 0.5,
-                axis=1,
-            )
-        )[0]  # type: ignore
-        if product in ("lwp", "iwv"):
-            ret_product = ma.masked_all(len(index), np.float32)
-            ret_product[index_ret] = tmp_product[index_ret]
-            _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
-            if product == "lwp":
-                rpg_dat["lwp"], rpg_dat["lwp_offset"] = (
-                    ret_product,
-                    ma.masked_all(len(index)),
-                )
-                if len(index_ret) > 0:
-                    (
-                        rpg_dat["lwp"][index_ret],
-                        rpg_dat["lwp_offset"][index_ret],
-                    ) = correct_lwp_offset(
-                        lev1,
-                        ret_product[index_ret],
-                        index[index_ret],
-                        rpg_dat["lwp_quality_flag"][index_ret],
-                        lwp_offset,
-                    )
-            else:
-                rpg_dat[product] = ret_product
-
-        else:
-            product_list = (
-                "k_index",
-                "ko_index",
-                "total_totals",
-                "lifted_index",
-                "showalter_index",
-                "cape",
-            )
-            for ind, prd in enumerate(product_list):
-                ret_product = ma.masked_all(len(index), np.float32)
-                ret_product[index_ret] = tmp_product[index_ret, ind]
-                rpg_dat[prd] = ret_product
-
-            _get_qf(rpg_dat, lev1, coeff, index, index_ret, "stability")
-
-    elif data_type in ("2P01", "2P03"):
-        if data_type == "2P01":
-            product, ret = "temperature", "tpt"
-        else:
-            product, ret = "absolute_humidity", "hpt"
-
-        coeff = get_mvr_coeff(site, ret, lev1["frequency"][:], coeff_files)
-        if coeff[0]["RT"] < 2:
+    if (
+        data_type in ("2I01", "2I02", "2I06", "2P01", "2P03", "2P04")
+        and rt > 0
+        and not multi
+    ):
+        if rt != 2:
             coeff, offset, lin, quad = get_mvr_coeff(
                 site, ret, lev1["frequency"][:], coeff_files
             )
@@ -278,7 +144,6 @@ def get_products(
                 weights2,
                 factor,
             ) = get_mvr_coeff(site, ret, lev1["frequency"][:], coeff_files)
-
         ret_in = retrieval_input(lev1, coeff)
 
         index = np.where(lev1["pointing_flag"][:] == 0)[0]  # type: ignore
@@ -286,84 +151,161 @@ def get_products(
             raise MissingInputData(
                 f"No suitable data found for processing for data type: {data_type}"
             )
+
         coeff["retrieval_elevation_angles"] = _format_attribute_array(
             ele_retrieval(lev1["elevation_angle"][index], coeff)
         )
-
         coeff["retrieval_frequencies"] = _get_retrieval_frequencies(coeff)
 
-        rpg_dat["height"] = coeff["AL"][:] + params["altitude"]
+        if "I" in data_type:
+            if coeff["RT"] < 2:
+                coeff_offset = offset(lev1["elevation_angle"][index])
+                coeff_lin = lin(lev1["elevation_angle"][index])
+                coeff_quad = quad(lev1["elevation_angle"][index])
+                tmp_product = (
+                    np.squeeze(coeff_offset[:])
+                    + np.einsum("ij,ij->i", ret_in[index, :], coeff_lin)
+                    + np.einsum("ij,ij->i", ret_in[index, :] ** 2, coeff_quad)
+                )
+            else:
+                c_w1, c_w2, fac = (
+                    weights1(lev1["elevation_angle"][index]),
+                    weights2(lev1["elevation_angle"][index]),
+                    factor(lev1["elevation_angle"][index]),
+                )
+                if fac.ndim == 1:
+                    fac = fac[:, np.newaxis]
+                in_sc, in_os = (
+                    input_scale(lev1["elevation_angle"][index]),
+                    input_offset(lev1["elevation_angle"][index]),
+                )
+                op_sc, op_os = (
+                    output_scale(lev1["elevation_angle"][index]),
+                    output_offset(lev1["elevation_angle"][index]),
+                )
 
-        if coeff["RT"] < 2:
-            coeff_offset = offset(lev1["elevation_angle"][index])
-            coeff_lin = lin(lev1["elevation_angle"][index])
-            coeff_quad = quad(lev1["elevation_angle"][index])
-            tmp_dat = (
-                coeff_offset
-                + np.einsum("ijk,ik->ij", coeff_lin, ret_in[index, :])
-                + np.einsum("ijk,ik->ij", coeff_quad, ret_in[index, :] ** 2)
-            )
-            if (coeff["RT"] == 1) and (data_type == "2P03"):
-                tmp_dat[:, :] = tmp_dat[:, :] / 1000.0
+                ret_in[index, 1:] = (ret_in[index, 1:] - in_os[:, :]) * in_sc[:, :]
+                hidden_layer = np.ones((len(index), c_w1.shape[2] + 1), np.float32)
+                hidden_layer[:, 1:] = np.tanh(
+                    fac[:] * np.einsum("ijk,ij->ik", c_w1, ret_in[index, :])
+                )
+                if product == "sta":
+                    tmp_product = np.squeeze(
+                        np.tanh(fac[:] * np.einsum("ij,ikj->ik", hidden_layer, c_w2))
+                        * op_sc
+                        + op_os
+                    )
+                else:
+                    tmp_product = np.squeeze(
+                        np.tanh(
+                            fac[:]
+                            * np.einsum("ij,ij->i", hidden_layer, c_w2).reshape(
+                                (len(index), 1)
+                            )
+                        )
+                        * op_sc
+                        + op_os
+                    )
+
+            index_ret = _get_ret_ind(lev1, coeff, index)
+            if product in ("lwp", "iwv"):
+                ret_product = ma.masked_all(len(index), np.float32)
+                ret_product[index_ret] = tmp_product[index_ret]
+                _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
+                if product == "lwp":
+                    rpg_dat["lwp"], rpg_dat["lwp_offset"] = (
+                        ret_product,
+                        ma.masked_all(len(index)),
+                    )
+                    if len(index_ret) > 0:
+                        (
+                            rpg_dat["lwp"][index_ret],
+                            rpg_dat["lwp_offset"][index_ret],
+                        ) = correct_lwp_offset(
+                            lev1,
+                            ret_product[index_ret],
+                            index[index_ret],
+                            rpg_dat["lwp_quality_flag"][index_ret],
+                            lwp_offset,
+                        )
+                else:
+                    rpg_dat[product] = ret_product
+
+            else:
+                product_list = (
+                    "k_index",
+                    "ko_index",
+                    "total_totals",
+                    "lifted_index",
+                    "showalter_index",
+                    "cape",
+                )
+                for ind, prd in enumerate(product_list):
+                    ret_product = ma.masked_all(len(index), np.float32)
+                    ret_product[index_ret] = tmp_product[index_ret, ind]
+                    rpg_dat[prd] = ret_product
+
+                _get_qf(rpg_dat, lev1, coeff, index, index_ret, "stability")
 
         else:
-            c_w1, c_w2, fac = (
-                weights1(lev1["elevation_angle"][index]),
-                weights2(lev1["elevation_angle"][index]),
-                factor(lev1["elevation_angle"][index]),
-            )
-            in_sc, in_os = (
-                input_scale(lev1["elevation_angle"][index]),
-                input_offset(lev1["elevation_angle"][index]),
-            )
-            op_sc, op_os = (
-                output_scale(lev1["elevation_angle"][index]),
-                output_offset(lev1["elevation_angle"][index]),
-            )
+            rpg_dat["height"] = coeff["AL"][:] + params["altitude"]
 
-            ret_in[index, 1:] = (ret_in[index, 1:] - in_os) * in_sc
-            hidden_layer = np.ones((len(index), c_w1.shape[2] + 1), np.float32)
-            hidden_layer[:, 1:] = np.tanh(
-                fac[:].reshape((len(index), 1))
-                * np.einsum("ijk,ij->ik", c_w1, ret_in[index, :])
-            )
-            tmp_dat = (
-                np.tanh(
+            if coeff["RT"] < 2:
+                coeff_offset = offset(lev1["elevation_angle"][index])
+                coeff_lin = lin(lev1["elevation_angle"][index])
+                coeff_quad = quad(lev1["elevation_angle"][index])
+                tmp_dat = (
+                    coeff_offset
+                    + np.einsum("ijk,ik->ij", coeff_lin, ret_in[index, :])
+                    + np.einsum("ijk,ik->ij", coeff_quad, ret_in[index, :] ** 2)
+                )
+                if (coeff["RT"] == 1) and (data_type == "2P03"):
+                    tmp_dat[:, :] = tmp_dat[:, :] / 1000.0
+
+            else:
+                c_w1, c_w2, fac = (
+                    weights1(lev1["elevation_angle"][index]),
+                    weights2(lev1["elevation_angle"][index]),
+                    factor(lev1["elevation_angle"][index]),
+                )
+                in_sc, in_os = (
+                    input_scale(lev1["elevation_angle"][index]),
+                    input_offset(lev1["elevation_angle"][index]),
+                )
+                op_sc, op_os = (
+                    output_scale(lev1["elevation_angle"][index]),
+                    output_offset(lev1["elevation_angle"][index]),
+                )
+
+                ret_in[index, 1:] = (ret_in[index, 1:] - in_os) * in_sc
+                hidden_layer = np.ones((len(index), c_w1.shape[2] + 1), np.float32)
+                hidden_layer[:, 1:] = np.tanh(
                     fac[:].reshape((len(index), 1))
-                    * np.einsum("ijk,ik->ij", c_w2, hidden_layer)
+                    * np.einsum("ijk,ij->ik", c_w1, ret_in[index, :])
                 )
-                * op_sc
-                + op_os
-            )
-            if data_type == "2P03":
-                tmp_dat = tmp_dat / 1000.0
-
-        index_ret = np.where(
-            np.any(
-                np.abs(
-                    (
-                        np.ones((len(lev1["elevation_angle"][index]), len(coeff["AG"])))
-                        * coeff["AG"]
+                tmp_dat = (
+                    np.tanh(
+                        fac[:].reshape((len(index), 1))
+                        * np.einsum("ijk,ik->ij", c_w2, hidden_layer)
                     )
-                    - np.transpose(
-                        np.ones((len(coeff["AG"]), len(lev1["elevation_angle"][index])))
-                        * lev1["elevation_angle"][index]
-                    )
+                    * op_sc
+                    + op_os
                 )
-                <= 0.5,
-                axis=1,
+                if data_type == "2P03":
+                    tmp_dat /= 1000.0
+                elif data_type == "2P04":
+                    tmp_dat /= 100.0
+
+            index_ret = _get_ret_ind(lev1, coeff, index)
+            rpg_dat[product] = ma.masked_all(
+                (len(index), len(rpg_dat["height"])), np.float32
             )
-        )[0]  # type: ignore
-        rpg_dat[product] = ma.masked_all(
-            (len(index), len(rpg_dat["height"])), np.float32
-        )
-        rpg_dat[product][index_ret, :] = tmp_dat[index_ret, :]
+            rpg_dat[product][index_ret, :] = tmp_dat[index_ret, :]
 
-        _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
+            _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
 
-    elif data_type == "2P02":
-        coeff = get_mvr_coeff(site, "tpb", lev1["frequency"][:], coeff_files)
-        if coeff[0]["RT"] < 2:
+    elif data_type == "2P02" and rt > 0:
+        if rt != 2:
             coeff, offset, lin, quad = get_mvr_coeff(
                 site, "tpb", lev1["frequency"][:], coeff_files
             )
@@ -484,7 +426,7 @@ def get_products(
             rpg_dat, lev1, coeff, index, np.array(range(len(index))), "temperature", ibl
         )
 
-    elif data_type in ("2P04", "2P07", "2P08"):
+    elif (data_type in ("2P04", "2P07", "2P08") and rt < 0) or multi:
         assert temp_file is not None
         assert hum_file is not None
         tem_dat = load_product(temp_file)
@@ -555,8 +497,57 @@ def get_products(
             np.arange(len(tem_time)),
             data_type,
             scan_time,
+            coeff["retrieval_type"],
         )
     return rpg_dat, coeff, index, scan_time
+
+
+def _get_ret_info(
+    data_type: str,
+    site: str | None,
+    freq: np.ndarray,
+    coeff_files: Sequence[str | PathLike] | None,
+) -> tuple[str, str, int]:
+    if "I" in data_type:
+        product = (
+            "lwp" if data_type == "2I01" else "iwv" if data_type == "2I02" else "sta"
+        )
+        ret = product
+    else:
+        if data_type == "2P01":
+            product, ret = "temperature", "tpt"
+        elif data_type == "2P02":
+            product, ret = "temperature", "tpb"
+        elif data_type == "2P03":
+            product, ret = "absolute_humidity", "hpt"
+        elif data_type == "2P04":
+            product, ret = "relative_humidity", "rhp"
+        else:
+            product, ret = "", ""
+
+    coeff = get_mvr_coeff(site, ret, freq, coeff_files)
+    rt = coeff[0]["RT"] if len(coeff) > 0 else -99
+
+    return product, ret, rt
+
+
+def _get_ret_ind(lev1: dict, coeff: dict, index: np.ndarray) -> np.ndarray:
+    return np.where(
+        np.any(
+            np.abs(
+                (
+                    np.ones((len(lev1["elevation_angle"][index]), len(coeff["AG"])))
+                    * coeff["AG"]
+                )
+                - np.transpose(
+                    np.ones((len(coeff["AG"]), len(lev1["elevation_angle"][index])))
+                    * lev1["elevation_angle"][index]
+                )
+            )
+            <= 0.5,
+            axis=1,
+        )
+    )[0]  # type: ignore
 
 
 def _get_qf(
@@ -598,6 +589,7 @@ def _combine_lev1(
     index: np.ndarray,
     data_type: str,
     scan_time: np.ndarray,
+    retrieval_type: str,
 ) -> None:
     """Add level1 data."""
     lev1_vars = [
@@ -619,7 +611,11 @@ def _combine_lev1(
                 rpg_dat[ivars] = np.ndarray((len(index), 2))
                 rpg_dat[ivars][:, 0] = time - scan_time
                 rpg_dat[ivars][:, 1] = time
-            elif ivars == "time_bnds" and data_type in ("2P04", "2P07", "2P08"):
+            elif (ivars == "time_bnds" and data_type in ("2P07", "2P08")) or (
+                ivars == "time_bnds"
+                and data_type == "2P04"
+                and "derived" in retrieval_type
+            ):
                 rpg_dat[ivars] = ma.masked_all(lev1[ivars].shape, np.int32)
             else:
                 try:
@@ -693,7 +689,9 @@ def retrieval_input(lev1: dict, coeff: dict) -> np.ndarray:
             ret_in = np.concatenate(
                 (
                     ret_in,
-                    np.reshape(lev1["relative_humidity"][:], (len(lev1["time"][:]), 1)),
+                    np.reshape(
+                        lev1["relative_humidity"][:] * 100.0, (len(lev1["time"][:]), 1)
+                    ),
                 ),
                 axis=1,
             )

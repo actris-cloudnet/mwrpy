@@ -278,7 +278,7 @@ def add_time_bounds(time_arr: np.ndarray, int_time: int) -> np.ndarray:
 def get_coeff_list(
     site: str | None, prefix: str, coeff_files: Sequence[str | PathLike] | None
 ) -> list[str]:
-    """Returns list of .nc coefficient file(s)."""
+    """Returns list of .ret or .nc coefficient file(s)."""
     if coeff_files is not None:
         c_list = []
         for file in coeff_files:
@@ -290,25 +290,28 @@ def get_coeff_list(
 
     assert isinstance(site, str)
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    c_list = glob.glob(
-        dir_path
-        + "/site_config/"
-        + site
-        + "/coefficients/"
-        + "*"
-        + prefix.lower()
-        + "*"
-    )
-    if len(c_list) == 0:
+    for suf in (".nc", ".ret"):
         c_list = glob.glob(
             dir_path
             + "/site_config/"
             + site
             + "/coefficients/"
             + "*"
-            + prefix.upper()
+            + prefix.lower()
             + "*"
+            + suf
         )
+        if len(c_list) == 0:
+            c_list = glob.glob(
+                dir_path
+                + "/site_config/"
+                + site
+                + "/coefficients/"
+                + "*"
+                + prefix.upper()
+                + "*"
+                + suf
+            )
 
     if len(c_list) > 0:
         return sorted(c_list)

@@ -123,6 +123,8 @@ def generate_lev2_single(
                         "relative_humidity",
                         "relative_humidity_random_error",
                         "relative_humidity_systematic_error",
+                        "relative_humidity_quality_flag",
+                        "relative_humidity_quality_flag_status",
                     ),
                 ),
                 (
@@ -178,7 +180,7 @@ def generate_lev2_single(
 
                     copy_global(nc_lwp, nc_output, nc_lwp.ncattrs())
 
-            except IndexError:
+            except OSError:
                 logging.warning("No coefficient files for product " + prod)
 
         return nc_output
@@ -309,6 +311,7 @@ def generate_lev2_multi(
                 hum_file=abs_hum_file.name if prod not in ("2P02", "2P03") else None,
                 lwp_offset=(None, None),
                 coeff_files=coeff_files,
+                multi=True if prod == "2P04" else False,
             )
 
         with (
