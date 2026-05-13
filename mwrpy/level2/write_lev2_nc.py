@@ -524,8 +524,7 @@ def _get_ret_info(
             product, ret = "relative_humidity", "rhp"
         else:
             product, ret = "", ""
-
-    coeff = get_mvr_coeff(site, ret, freq, coeff_files)
+    coeff = get_mvr_coeff(site, ret, freq, coeff_files) if ret != "" else {}
     rt = coeff[0]["RT"] if len(coeff) > 0 else -99
 
     return product, ret, rt
