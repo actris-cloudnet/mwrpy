@@ -31,7 +31,7 @@ def get_mvr_coeff(
     c_list = get_coeff_list(site, prefix, coeff_files)
 
     coeff: dict = {}
-    if len(c_list) != 1:
+    if len(c_list) == 0:
         return coeff
 
     if (str(c_list[0][-3:]).lower() == "ret") and (len(c_list) == 1):
