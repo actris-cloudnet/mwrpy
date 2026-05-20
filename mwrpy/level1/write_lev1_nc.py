@@ -185,7 +185,7 @@ def prepare_data(
                 rpg_bin.data["azimuth_angle"] + params["const_azi"]
             ) % 360
 
-        file_list_abscal = get_file_list(params["path_to_cal"], "LOG")
+        file_list_abscal = get_file_list(params["path_to_cal"] + "COVARIANCE/", "LOG")
         for cal in ["ln2", "amb"]:
             file_list_type = [s for s in file_list_abscal if cal in s.lower()]
             if len(file_list_type) > 0:
@@ -198,9 +198,11 @@ def prepare_data(
                     "cal_date"
                 ][ind_cal]
                 rpg_bin.data["calibration_status"] = rpg_log.data["status"][ind_cal, :]
-                rpg_bin.data[f"tb_cov_{cal}"] = rpg_log.data["covariance_matrix"][
-                    ind_cal, :, :
-                ]
+                rpg_bin.data[f"tb_cov_{cal}"] = (
+                    rpg_log.data["covariance_matrix"][ind_cal, :, :]
+                    if rpg_log.data["covariance_matrix"].ndim > 2
+                    else rpg_log.data["covariance_matrix"][:, :]
+                )
 
         if data_type == "1C01":
             if params["ir_flag"]:
