@@ -185,7 +185,11 @@ def prepare_data(
                 rpg_bin.data["azimuth_angle"] + params["const_azi"]
             ) % 360
 
-        file_list_abscal = get_file_list(params["path_to_cal"] + "COVARIANCE/", "LOG")
+        file_list_abscal = (
+            get_file_list(params["path_to_cal"] + "COVARIANCE/", "LOG")
+            if params["path_to_cal"] is not None
+            else []
+        )
         for cal in ["ln2", "amb"]:
             file_list_type = [s for s in file_list_abscal if cal in s.lower()]
             if len(file_list_type) > 0:
