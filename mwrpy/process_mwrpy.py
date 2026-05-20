@@ -177,6 +177,7 @@ def process_product(prod: str, date: datetime.date, site: str):
                 lwp_offset[1] = csv_off.loc[
                     csv_off["date"] == xday[1].strftime("%m-%d"), "offset"
                 ].values[0]
+    lwp_offset_tuple = (lwp_offset[0], lwp_offset[1])
 
     itype = _read_site_config_yaml(site)["type"]
     # Process level 1 data
@@ -207,17 +208,17 @@ def process_product(prod: str, date: datetime.date, site: str):
             site=site,
             temp_file=temp_file,
             hum_file=hum_file,
-            lwp_offset=lwp_offset,
+            lwp_offset=lwp_offset_tuple,
         )
 
     # Process level 2 combined products
     elif prod == "single" and itype != "lhumpro_u90":
         generate_lev2_single(
-            site, _get_filename("1C01", date, site), output_file, lwp_offset
+            site, _get_filename("1C01", date, site), output_file, lwp_offset_tuple
         )
     elif itype == "lhumpro_u90":
         generate_lev2_lhumpro(
-            site, _get_filename("1C01", date, site), output_file, lwp_offset
+            site, _get_filename("1C01", date, site), output_file, lwp_offset_tuple
         )
     elif prod == "multi":
         generate_lev2_multi(site, _get_filename("1C01", date, site), output_file)
@@ -500,14 +501,16 @@ def _get_lidar_file_path(date_in: datetime.date, site: str) -> str | None:
         The lidar file path as a string or None if not found.
     """
     params, path = read_config(site, None, "params"), ""
-    lidar_model = params["lidar_model"] if "lidar_model" in params else "unknown"
+    lidar_model = params.get("lidar_model", "unknown")
+    lidar_model = "unknown" if lidar_model is None else lidar_model.lower()
     if "path_to_lidar" in params and params["path_to_lidar"] is not None:
         path = os.path.join(
             params["path_to_lidar"],
             date_in.strftime("%Y/%m/%d/"),
-            date_in.strftime("%Y%m%d") + "_" + site + "_" + lidar_model,
         )
-    file = glob.glob(path + "*.nc")
+    file = glob.glob(
+        path + date_in.strftime("%Y%m%d") + "_" + site + "_" + lidar_model + "*.nc"
+    )
     if len(file) == 0:
         logging.info(
             "No lidar file of type " + lidar_model + " found in directory " + str(path)

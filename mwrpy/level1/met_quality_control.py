@@ -1,8 +1,8 @@
 """Module for meteorological sensor quality control."""
 
+import atmoslib
 import numpy as np
 
-import mwrpy.constants as con
 from mwrpy.utils import setbit
 
 
@@ -38,10 +38,7 @@ def apply_met_qc(data: dict, params: dict) -> None:
         if name not in data:
             continue
         if name == "air_pressure":
-            gamma = 6.5 / 1000.0
-            pressure = con.p0 * (1 - (gamma / 288.0) * params["altitude"]) ** (
-                con.g0 / (gamma * con.RS)
-            )
+            pressure = atmoslib.isa_pressure(params["altitude"])
             threshold_low = pressure - 10000
             threshold_high = pressure + 10000
         else:

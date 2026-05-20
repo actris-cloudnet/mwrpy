@@ -58,11 +58,11 @@ def stack_files(file_list: list[str]) -> tuple[dict, dict]:
     header: dict = {}
 
     for file in file_list:
-        # try:
-        header_tmp, data_tmp = read_type(file)
-        # except (TypeError, ValueError, InvalidFileError) as err:
-        #     logging.warning(f"Skipping '{file}': {err}")
-        #     continue
+        try:
+            header_tmp, data_tmp = read_type(file)
+        except (TypeError, ValueError, InvalidFileError) as err:
+            logging.warning(f"Skipping '{file}': {err}")
+            continue
         _stack_header(header_tmp, header, np.add)
         _stack_data(data_tmp, data, np.concatenate)
 
@@ -313,6 +313,8 @@ def read_hkd(file_name: str) -> tuple[dict, dict]:
             file,
             [("_code", "<i4"), ("n", "<i4"), ("_time_ref", "<i4"), ("_sel", "<i4")],
         )
+        if header["_code"] != 837854832:
+            raise InvalidFileError(f"HKD file code {header['_code']} not supported")
         dt: list[Field] = [("time", "<i4"), ("alarm", "b")]
         if header["_sel"] & 0x1:
             dt += [("longitude", "<f"), ("latitude", "<f")]
@@ -330,7 +332,21 @@ def read_hkd(file_name: str) -> tuple[dict, dict]:
         _check_eof(file)
 
     header = _fix_header(header)
+
+    # Old files store coordinates in degrees and minutes (-)DDDMM.mmmm like
+    # documented in the manual, but newer files store these in degrees
+    # (-)DDD.dddd. There doesn't seem to be a reliably way to check which format
+    # is used...
+    if "latitude" in data and np.all(np.abs(data["latitude"]) >= 100):
+        data["latitude"] = _decode_latlon(data["latitude"])
+        data["longitude"] = _decode_latlon(data["longitude"])
+
     return header, data
+
+
+def _decode_latlon(x: np.ndarray) -> np.ndarray:
+    deg, min = np.divmod(np.abs(x), 100)
+    return np.copysign(deg + min / 60, x)
 
 
 def read_met(file_name: str) -> tuple[dict, dict]:

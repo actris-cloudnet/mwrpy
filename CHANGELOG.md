@@ -1,5 +1,56 @@
 # Changelog
 
+## 1.5.1 – 2026-05-08
+
+- Drop pytz and timezonefinder dependencies
+
+## 1.5.0 – 2026-05-08
+
+- Replace local thermodynamics functions with atmoslib
+- Take azimuth angle from zenith measurements after the BLB scan
+- Introduce condition for low level cloud detection
+
+## 1.4.3 – 2025-11-20
+
+- Fix bug if coordinates are not stored in HKD file
+
+## 1.4.2 – 2025-11-19
+
+- Handle coordinates format in old files
+
+## 1.4.1 – 2025-11-19
+
+- Fix interpolation for different time formats
+- Update `_mark_gaps` method and scan plot title
+- Fix for numpy update
+- Fix compression in collocated products
+
+## 1.4.0 – 2025-09-19
+
+- Fix spectral consistency check for scanning data
+- Fix lidar file path in CLI
+
+## 1.3.6 – 2025-09-17
+
+- Generate plots without site config
+- Change `lwp_offset` to tuple
+
+## 1.3.5 – 2025-09-02
+
+- Fix fetching of coefficient files
+
+## 1.3.4 – 2025-09-02
+
+- Allow `PathLike` arguments
+
+## 1.3.3 – 2025-07-23
+
+- Handle different array shapes from .ret and .nc
+
+## 1.3.2 – 2025-06-18
+
+- Fix for UFS retrieval coefficients
+
 ## 1.3.1 – 2025-05-05
 
 - Fix inconsistency in reported frequencies for LHUMPRO

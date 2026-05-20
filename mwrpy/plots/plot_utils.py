@@ -19,7 +19,11 @@ from mwrpy.utils import (
 
 
 def _get_ret_flag(
-    nc_file: str, time: np.ndarray, variable: str, bits: int = 0
+    nc_file: str,
+    time: np.ndarray,
+    variable: str,
+    bits: int = 0,
+    instrument_type: str | None = None,
 ) -> ndarray:
     """Returns quality flag for frequencies used in retrieval."""
     file = netCDF4.Dataset(nc_file)
@@ -30,8 +34,11 @@ def _get_ret_flag(
     )
     quality_flag = quality_flag[index]
     flag = np.zeros(len(time), np.int32)
-    site = _read_location(nc_file)
-    params = read_config(site, None, "params")
+    if instrument_type is None:
+        site = _read_location(nc_file)
+        params = read_config(site, None, "params")
+    else:
+        params = read_config(None, instrument_type, "params")
 
     if params["flag_status"][3] == 0 and bits == 0:
         flag[isbit(quality_flag[:], 3) > 0] = 1
@@ -121,7 +128,9 @@ def _calculate_rolling_mean(time: ndarray, data: ndarray, win: float = 0.5) -> n
         ind = time_to_datetime_index(time)
         df = pd.DataFrame({"data": data}, index=ind)
         rolling_mean = (
-            df.rolling(pd.offsets.Minute(win * 60), center=True, min_periods=1)
+            df.rolling(
+                pd.offsets.Minute(int(np.floor(win * 60))), center=True, min_periods=1
+            )
             .mean()
             .data
         )
@@ -137,6 +146,23 @@ def _calculate_rolling_mean(time: ndarray, data: ndarray, win: float = 0.5) -> n
         rolling_window = np.ones((1, width)) * np.blackman(width)
         rolling_mean = convolve2DFFT(data, rolling_window.T, max_missing=0.1)
     return rolling_mean
+
+
+def _dir_avg(
+    time: np.ndarray, spd: np.ndarray, drc: np.ndarray, win: int = 30
+) -> np.ndarray:
+    """Computes average wind direction (DEG) for a certain window length."""
+    ve = spd * np.sin(np.deg2rad(drc))
+    vn = spd * np.cos(np.deg2rad(drc))
+    ind = time_to_datetime_index(time)
+    components = pd.DataFrame({"ve": ve, "vn": vn}, index=ind)
+
+    avg_comp = components.rolling(
+        pd.offsets.Minute(win), center=True, min_periods=1
+    ).mean()
+    avg_dir = np.rad2deg(np.arctan2(-avg_comp["ve"], -avg_comp["vn"]))
+
+    return np.where(avg_dir < 180.0, avg_dir + 180.0, avg_dir - 180.0)
 
 
 def _read_location(nc_file: str) -> str:

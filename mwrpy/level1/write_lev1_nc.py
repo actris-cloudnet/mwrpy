@@ -2,15 +2,17 @@
 
 import datetime
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from itertools import groupby
+from os import PathLike
 from typing import Literal, TypeAlias
 
 import numpy as np
 from numpy import ma
 
-from mwrpy import atmos, rpg_mwr
+from mwrpy import rpg_mwr
 from mwrpy.exceptions import MissingInputData
+from mwrpy.level1.droplet_mwrpy import find_lwcl_free
 from mwrpy.level1.lev1_meta_nc import get_data_attributes
 from mwrpy.level1.met_quality_control import apply_met_qc
 from mwrpy.level1.quality_control import apply_qc
@@ -29,11 +31,11 @@ FuncType: TypeAlias = Callable[[str], np.ndarray]
 
 def lev1_to_nc(
     data_type: str,
-    path_to_files: str,
+    path_to_files: str | PathLike,
     site: str | None = None,
-    output_file: str | None = None,
-    lidar_path: str | None = None,
-    coeff_files: list | None = None,
+    output_file: str | PathLike | None = None,
+    lidar_path: str | PathLike | None = None,
+    coeff_files: Sequence[str | PathLike] | None = None,
     instrument_config: dict | None = None,
     date: datetime.date | None = None,
     time_offset: datetime.timedelta | None = None,
@@ -96,10 +98,10 @@ def lev1_to_nc(
 
 
 def prepare_data(
-    path_to_files: str,
+    path_to_files: str | PathLike,
     data_type: str,
     params: dict,
-    lidar_path: str | None,
+    lidar_path: str | PathLike | None,
     time_offset: datetime.timedelta | None = None,
     date: float | None = None,
 ) -> RpgBin | dict:
@@ -129,7 +131,7 @@ def prepare_data(
             (
                 rpg_bin.data["liquid_cloud_flag"],
                 rpg_bin.data["liquid_cloud_flag_status"],
-            ) = atmos.find_lwcl_free(rpg_bin.data, lidar_path)
+            ) = find_lwcl_free(rpg_bin.data, lidar_path)
         else:
             (
                 rpg_bin.data["liquid_cloud_flag"],
@@ -228,7 +230,7 @@ def prepare_data(
             (
                 rpg_bin.data["liquid_cloud_flag"],
                 rpg_bin.data["liquid_cloud_flag_status"],
-            ) = atmos.find_lwcl_free(rpg_bin.data, lidar_path)
+            ) = find_lwcl_free(rpg_bin.data, lidar_path)
 
             file_list_met = get_file_list(path_to_files, "MET")
             if len(file_list_met) == 0:
@@ -618,11 +620,16 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict) -> None:
                 )
             )
 
+            # Take azimuth angle from zenith measurements after the BLB scan
             brt_ind = np.where(
-                (brt.data["time"] > time_blb - 3600)
-                & (brt.data["time"] < time_blb + 3600)
+                (brt.data["time"] > time_blb) & (brt.data["time"] < time_blb + 600)
             )[0]
-            brt_azi = ma.median(brt.data["azimuth_angle"][brt_ind])
+            brt_azi = (
+                np.nan
+                if len(brt_ind) == 0
+                or (np.diff(brt.data["azimuth_angle"][brt_ind]) > 3.0).all()
+                else ma.median(brt.data["azimuth_angle"][brt_ind])
+            )
             azimuth_angle_add = np.concatenate(
                 (
                     azimuth_angle_add,

@@ -1,16 +1,18 @@
 """Module for writing Level 2 netCDF files."""
 
-from datetime import datetime
+import calendar
+from collections.abc import Sequence
+from datetime import datetime, timedelta, timezone
+from os import PathLike
 
+import atmoslib
+import atmoslib.constants as ac
 import netCDF4 as nc
 import numpy as np
-import pytz
 from cftime import num2pydate
 from numpy import ma
-from timezonefinder import TimezoneFinder
 
 from mwrpy import rpg_mwr
-from mwrpy.atmos import eq_pot_tem, pot_tem, rel_hum
 from mwrpy.exceptions import MissingInputData
 from mwrpy.level2.get_ret_coeff import get_mvr_coeff
 from mwrpy.level2.lev2_meta_nc import get_data_attributes
@@ -23,15 +25,22 @@ from mwrpy.utils import (
 )
 
 
+def _local_solar_time(unix_seconds: float, longitude: float) -> datetime:
+    """Return mean local solar time: UTC shifted by 4 min per degree of longitude."""
+    return datetime.fromtimestamp(unix_seconds, timezone.utc) + timedelta(
+        seconds=longitude * 240.0
+    )
+
+
 def lev2_to_nc(
     data_type: str,
-    lev1_file: str,
-    output_file: str,
+    lev1_file: str | PathLike,
+    output_file: str | PathLike,
     site: str | None = None,
-    temp_file: str | None = None,
-    hum_file: str | None = None,
-    lwp_offset: list[float | None] = [None, None],
-    coeff_files: list | None = None,
+    temp_file: str | PathLike | None = None,
+    hum_file: str | PathLike | None = None,
+    lwp_offset: tuple[float | None, float | None] = (None, None),
+    coeff_files: Sequence[str | PathLike] | None = None,
 ):
     """This function reads Level 1 files,
     applies retrieval coefficients for Level 2 products
@@ -44,7 +53,7 @@ def lev2_to_nc(
         site: Name of site.
         temp_file: Name of temperature product file.
         hum_file: Name of humidity product file.
-        lwp_offset: Offset for LWP correction.
+        lwp_offset: LWP offset with the previous day's last and next day's first reliable values.
         coeff_files: List of coefficient files.
 
     """
@@ -89,22 +98,16 @@ def get_products(
     nclev1: nc.Dataset,
     data_type: str,
     params: dict,
-    coeff_files: list | None,
-    temp_file: str | None = None,
-    hum_file: str | None = None,
-    lwp_offset: list[float | None] = [None, None],
+    coeff_files: Sequence[str | PathLike] | None,
+    temp_file: str | PathLike | None = None,
+    hum_file: str | PathLike | None = None,
+    lwp_offset: tuple[float | None, float | None] = (None, None),
 ) -> tuple[dict, dict, np.ndarray, np.ndarray]:
     """Derive specified Level 2 products."""
     lev1 = {key: value[:] for key, value in nclev1.variables.items()}
     if "elevation_angle" not in lev1:
         lev1["elevation_angle"] = 90 - lev1["zenith_angle"][:]
-    tf = TimezoneFinder()
-    timezone_str = tf.timezone_at(
-        lng=float(ma.median(lev1["longitude"])),
-        lat=float(ma.median(lev1["latitude"])),
-    )
-    assert timezone_str is not None
-    lev1["time"] = _read_time(nclev1["time"], timezone_str)
+    lev1["time"] = _read_time(nclev1["time"])
 
     rpg_dat: dict = {}
     coeff, index, scan_time = (
@@ -515,16 +518,16 @@ def get_products(
         )
 
         coeff["retrieval_type"] = "derived product"
-        coeff["dependencies"] = temp_file + ", " + hum_file
+        coeff["dependencies"] = str(temp_file) + ", " + str(hum_file)
 
-        hum_time = _read_time(hum_dat.variables["time"], timezone_str)
-        tem_time = _read_time(tem_dat.variables["time"], timezone_str)
+        hum_time = _read_time(hum_dat.variables["time"])
+        tem_time = _read_time(tem_dat.variables["time"])
 
         if len(hum_dat.variables["height"][:]) == len(tem_dat.variables["height"][:]):
             hum_int = interpol_2d(
                 hum_time,
                 hum_dat.variables["absolute_humidity"][:, :],
-                tem_dat.variables["time"][:],
+                tem_time,
             )
         else:
             hum_int = interpolate_2d(
@@ -537,24 +540,31 @@ def get_products(
 
         rpg_dat["height"] = tem_dat.variables["height"][:]
         pres = np.interp(tem_time, lev1["time"][:], lev1["air_pressure"][:])
+        T = tem_dat.variables["temperature"][:, :]
+        # hum_int is absolute humidity (kg m-3) from the 2P03 product; vapor
+        # pressure follows from the ideal gas law e = rho_v * R_v * T.
+        vp = hum_int * ac.RW * T
         if data_type == "2P04":
-            rpg_dat["relative_humidity"] = rel_hum(
-                tem_dat.variables["temperature"][:, :], hum_int
+            rpg_dat["relative_humidity"] = vp / atmoslib.saturation_vapor_pressure(T)
+        if data_type in ("2P07", "2P08"):
+            # Two-pass hydrostatic integration: a dry profile gives a pressure
+            # estimate good enough to convert vp to specific humidity, then we
+            # re-integrate with the moist virtual-temperature correction.
+            p_dry = atmoslib.hydrostatic_pressure(
+                T, np.array(0.0), rpg_dat["height"], pres
             )
-        if data_type == "2P07":
-            rpg_dat["potential_temperature"] = pot_tem(
-                tem_dat.variables["temperature"][:, :],
-                hum_int,
-                pres,
-                rpg_dat["height"],
-            )
-        if data_type == "2P08":
-            rpg_dat["equivalent_potential_temperature"] = eq_pot_tem(
-                tem_dat.variables["temperature"][:, :],
-                hum_int,
-                pres,
-                rpg_dat["height"],
-            )
+            mr_dry = atmoslib.mixing_ratio(vp, p_dry)
+            q = mr_dry / (1 + mr_dry)
+            p_baro = atmoslib.hydrostatic_pressure(T, q, rpg_dat["height"], pres)
+            theta = atmoslib.potential_temperature(T, p_baro)
+            if data_type == "2P07":
+                rpg_dat["potential_temperature"] = theta
+            else:
+                mr = atmoslib.mixing_ratio(vp, p_baro)
+                q_moist = mr / (1 + mr)
+                rpg_dat["equivalent_potential_temperature"] = (
+                    atmoslib.equivalent_potential_temperature(T, p_baro, q_moist)
+                )
 
         _combine_lev1(
             tem_dat,
@@ -644,7 +654,7 @@ def _del_att(global_attributes: dict) -> None:
             del global_attributes[name]
 
 
-def load_product(filename: str):
+def load_product(filename: str | PathLike):
     """Load existing lev2 file for deriving other products."""
     file = nc.Dataset(filename)
     return file
@@ -736,44 +746,18 @@ def retrieval_input(lev1: dict, coeff: dict) -> np.ndarray:
             )
         if coeff.get("DY") == 1:
             doy = ma.masked_all((len(lev1["time"][:]), 2), np.float32)
-            tf = TimezoneFinder()
-            timezone_str = tf.timezone_at(
-                lng=longitude,
-                lat=latitude,
-            )
-            assert timezone_str is not None
-            timezone = pytz.timezone(timezone_str)
-            dtime = datetime.fromtimestamp(time_median, timezone)
-            dyear = datetime(dtime.year, 12, 31, 0, 0).timetuple().tm_yday
-            doy[:, 0] = np.cos(
-                datetime.fromtimestamp(time_median).timetuple().tm_yday
-                / dyear
-                * 2
-                * np.pi
-            )
-            doy[:, 1] = np.sin(
-                datetime.fromtimestamp(time_median).timetuple().tm_yday
-                / dyear
-                * 2
-                * np.pi
-            )
+            dtime = _local_solar_time(time_median, longitude)
+            dyear = 366 if calendar.isleap(dtime.year) else 365
+            yday_frac = dtime.timetuple().tm_yday / dyear * 2 * np.pi
+            doy[:, 0] = np.cos(yday_frac)
+            doy[:, 1] = np.sin(yday_frac)
             ret_in = np.concatenate((ret_in, doy), axis=1)
         if coeff.get("SU") == 1:
             sun = ma.masked_all((len(lev1["time"][:]), 2), np.float32)
-            tf = TimezoneFinder()
-            timezone_str = tf.timezone_at(
-                lng=longitude,
-                lat=latitude,
-            )
-            assert timezone_str is not None
-            timezone = pytz.timezone(timezone_str)
-            dtime = datetime.fromtimestamp(time_median, timezone)
-            sun[:, 0] = np.cos(
-                (dtime.hour + dtime.minute / 60 + dtime.second / 3600) / 24 * 2 * np.pi
-            )
-            sun[:, 1] = np.sin(
-                (dtime.hour + dtime.minute / 60 + dtime.second / 3600) / 24 * 2 * np.pi
-            )
+            dtime = _local_solar_time(time_median, longitude)
+            hour_frac = (dtime.hour + dtime.minute / 60 + dtime.second / 3600) / 24
+            sun[:, 0] = np.cos(hour_frac * 2 * np.pi)
+            sun[:, 1] = np.sin(hour_frac * 2 * np.pi)
             ret_in = np.concatenate((ret_in, sun), axis=1)
 
     return ret_in
@@ -800,11 +784,11 @@ def _format_attribute_array(array: np.ndarray | list) -> np.ndarray:
     return np.round(np.sort(np.unique(array)), 2)
 
 
-def _read_time(ncvar: nc.Variable, timezone_str: str) -> np.ndarray:
+def _read_time(ncvar: nc.Variable) -> np.ndarray:
     """Read netCDF time in Unix time."""
     return np.array(
         [
-            dt.replace(tzinfo=pytz.timezone(timezone_str)).timestamp()
+            dt.timestamp()
             for dt in num2pydate(
                 ncvar[:],
                 units=ncvar.units,

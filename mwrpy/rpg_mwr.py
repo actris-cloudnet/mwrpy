@@ -1,6 +1,7 @@
 """RpgArray Class."""
 
 import datetime
+from os import PathLike
 
 import netCDF4
 import numpy as np
@@ -143,7 +144,7 @@ class Rpg:
                     self.data[key].data = self.data[key].data[ind, :]
 
 
-def save_rpg(rpg: Rpg, output_file: str, att: dict, data_type: str) -> None:
+def save_rpg(rpg: Rpg, output_file: str | PathLike, att: dict, data_type: str) -> None:
     """Saves the RPG MWR file."""
     if data_type == "1B01":
         dims = {
@@ -203,7 +204,7 @@ def save_rpg(rpg: Rpg, output_file: str, att: dict, data_type: str) -> None:
 
 
 def init_file(
-    file_name: str, dimensions: dict, rpg_arrays: dict, att_global: dict
+    file_name: str | PathLike, dimensions: dict, rpg_arrays: dict, att_global: dict
 ) -> netCDF4.Dataset:
     """Initializes an RPG MWR file for writing.
 

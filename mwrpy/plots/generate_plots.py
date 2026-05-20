@@ -5,6 +5,7 @@ import locale
 import logging
 from datetime import date, datetime, timezone
 
+import atmoslib
 import matplotlib.pyplot as plt
 import netCDF4
 import numpy as np
@@ -24,10 +25,10 @@ from matplotlib.transforms import Affine2D, Bbox, ScaledTranslation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from numpy import ma, ndarray
 
-from mwrpy.atmos import abs_hum, dir_avg, t_dew_rh
 from mwrpy.plots.plot_meta import _COLORS, ATTRIBUTES
 from mwrpy.plots.plot_utils import (
     _calculate_rolling_mean,
+    _dir_avg,
     _gap_array,
     _get_bit_flag,
     _get_freq_flag,
@@ -89,6 +90,7 @@ def generate_figure(
         91.0,
     ),
     pointing: int = 0,
+    instrument_type: str | None = None,
     dpi: int = 120,
     image_name: str | None = None,
     sub_title: bool = True,
@@ -106,7 +108,8 @@ def generate_figure(
             given path). Default is None, when the figure is not saved.
         max_y (int, optional): Upper limit in the plots (km). Default is 12.
         ele_range (tuple, optional): Range of elevation angles to be plotted.
-        pointing (int, optional): Type of observation (0: single pointing, 1: BL scan)
+        pointing (int, optional): Type of observation (0: single pointing, 1: BL scan).
+        instrument_type (str, optional): Type of instrument (hatpro, lhatpro, lhumpro).
         dpi (int, optional): Figure quality (if saved). Higher value means
             more pixels, i.e., better image quality. Default is 120.
         image_name (str, optional): Name (and full path) of the output image.
@@ -122,7 +125,7 @@ def generate_figure(
 
     Examples:
         >>> from mwrpy.plots import generate_figure
-        >>> generate_figure('lev2_file.nc', ['lwp'])
+        >>> generate_figure('lev2_file.nc', ['lwp'], instrument_type='hatpro')
     """
     if (
         nc_file == ""
@@ -216,8 +219,17 @@ def generate_figure(
             if title:
                 _set_title(ax, name, nc_file, "")
             if not is_height:
-                _plot_instrument_data(
-                    ax, field, name, pl_source, time, fig, nc_file, ele_range, pointing
+                fig = _plot_instrument_data(
+                    ax,
+                    field,
+                    name,
+                    pl_source,
+                    time,
+                    fig,
+                    nc_file,
+                    ele_range,
+                    pointing,
+                    instrument_type,
                 )
             else:
                 ax_value = _read_ax_values(nc_file)
@@ -227,7 +239,9 @@ def generate_figure(
 
                 plot_type = ATTRIBUTES[name].plot_type
                 if plot_type == "mesh":
-                    _plot_colormesh_data(ax, field, name, ax_value, nc_file)
+                    _plot_colormesh_data(
+                        ax, field, name, ax_value, nc_file, instrument_type
+                    )
 
         if axes[-1].get_title() != "empty":
             if {"tb_cov_ln2", "tb_cov_amb"} & set(field_names):
@@ -236,10 +250,16 @@ def generate_figure(
                 _add_subtitle(fig, case_date, site_name)
                 fig.set_size_inches(9.0, 7.0 * len(axes))
             else:
-                case_date = _set_labels(fig, axes[-1], nc_file, sub_title)
+                case_date = (
+                    _read_date(nc_file)
+                    if image_name and "_scan" in image_name
+                    else _set_labels(fig, axes[-1], nc_file, sub_title, instrument_type)
+                )
             file_name = handle_saving(
                 nc_file, image_name, save_path, show, case_date, valid_names
             )
+        else:
+            return None
 
     except Exception as e:
         logging.error(f"Error in plotting: {e}.")
@@ -295,6 +315,7 @@ def _mark_gaps(
         time_new = np.insert(time_new, ind_gap, max_x - time_delta)
         time_new = np.insert(time_new, ind_gap, time[-1] + time_delta)
     data_new[mask_new] = ma.masked
+    data_new[data_new == 0.0] = ma.masked
     return time_new, data_new
 
 
@@ -334,11 +355,15 @@ def handle_saving(
     return file_name
 
 
-def _set_labels(fig, ax, nc_file: str, sub_title: bool = True) -> date:
+def _set_labels(
+    fig, ax, nc_file: str, sub_title: bool = True, instrument_type: str | None = None
+) -> date:
     """Sets labels and returns date of netCDF file."""
     ax.set_xlabel("Time (UTC)", fontsize=13)
     case_date = _read_date(nc_file)
     site_name = _read_location(nc_file)
+    if site_name == "" and instrument_type is not None:
+        site_name = instrument_type
     if sub_title:
         _add_subtitle(fig, case_date, site_name)
     return case_date
@@ -549,7 +574,14 @@ def _create_save_name(
     return f"{save_path}{date_string}_{'_'.join(field_names)}{fix}.png"
 
 
-def _plot_segment_data(ax, data: ma.MaskedArray, name: str, axes: tuple, nc_file: str):
+def _plot_segment_data(
+    ax,
+    data: ma.MaskedArray,
+    name: str,
+    axes: tuple,
+    nc_file: str,
+    instrument_type: str | None = None,
+):
     """Plots categorical 2D variable.
 
     Args:
@@ -558,6 +590,7 @@ def _plot_segment_data(ax, data: ma.MaskedArray, name: str, axes: tuple, nc_file
         name (string): Name of plotted data.
         axes (tuple): Time and height 1D arrays.
         nc_file (str): Input file.
+        instrument_type (str, optional): Type of instrument (hatpro, lhatpro, lhumpro).
     """
     if name == "tb_missing":
         cmap = ListedColormap(["#FFFFFF00", _COLORS["gray"]])
@@ -582,14 +615,24 @@ def _plot_segment_data(ax, data: ma.MaskedArray, name: str, axes: tuple, nc_file
         colorbar = _init_colorbar(pl, ax)
         colorbar.set_ticks(np.arange(len(clabel)))
         if name == "quality_flag_3":
-            site = _read_location(nc_file)
-            params = read_config(site, None, "params")
+            if instrument_type is None:
+                site = _read_location(nc_file)
+                params = read_config(site, None, "params")
+            else:
+                params = read_config(None, instrument_type, "params")
             clabel[2] = clabel[2] + " (" + str(params["TB_threshold"][1]) + " K)"
             clabel[1] = clabel[1] + " (" + str(params["TB_threshold"][0]) + " K)"
         colorbar.ax.set_yticklabels(clabel, fontsize=13)
 
 
-def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_file: str):
+def _plot_colormesh_data(
+    ax,
+    data_in: np.ndarray,
+    name: str,
+    axes: tuple,
+    nc_file: str,
+    instrument_type: str | None = None,
+):
     """Plots continuous 2D variable.
     Creates only one plot, so can be used both one plot and subplot type of figs.
 
@@ -599,6 +642,8 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
         name (string): Name of plotted data.
         axes (tuple): Time and height 1D arrays.
         nc_file (str): Input file.
+        instrument_type (str, optional): Type of instrument (hatpro, lhatpro, lhumpro).
+            Default is None.
     """
     data = data_in.copy()
     variables = ATTRIBUTES[name]
@@ -652,7 +697,9 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
         "equivalent_potential_temperature",
     ):
         hum_time = seconds2hours(read_nc_fields(hum_file, "time"))
-        hum_flag = _get_ret_flag(hum_file, hum_time, "absolute_humidity")
+        hum_flag = _get_ret_flag(
+            hum_file, hum_time, "absolute_humidity", instrument_type=instrument_type
+        )
         hum_flag = _calculate_rolling_mean(hum_time, hum_flag, win=avg_time)
         hum_flag = np.interp(axes[0], hum_time, hum_flag)
     else:
@@ -672,12 +719,12 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
 
     if np.ma.median(np.diff(axes[0][:])) < avg_time:
         data = _calculate_rolling_mean(axes[0], data, win=avg_time)
-        time, data = _mark_gaps(axes[0][:], ma.MaskedArray(data), 35)
+        time, data = _mark_gaps(axes[0][:], ma.MaskedArray(data), max_allowed_gap=35)
     else:
         time, data = _mark_gaps(
             axes[0][:],
             ma.MaskedArray(data_in),
-            60.1,
+            max_allowed_gap=60.1,
         )
 
     ax.contourf(
@@ -695,20 +742,22 @@ def _plot_colormesh_data(ax, data_in: np.ndarray, name: str, axes: tuple, nc_fil
         "potential_temperature",
         "equivalent_potential_temperature",
     ):
-        flag = _get_ret_flag(tem_file, axes[0], "temperature")
+        flag = _get_ret_flag(
+            tem_file, axes[0], "temperature", instrument_type=instrument_type
+        )
     else:
-        flag = _get_ret_flag(tem_file, axes[0], name)
+        flag = _get_ret_flag(tem_file, axes[0], name, instrument_type=instrument_type)
     if np.ma.median(np.diff(axes[0][:])) < avg_time:
         flag = _calculate_rolling_mean(axes[0], flag, win=avg_time)
         data_in[(flag > 0) | (hum_flag > 0), :] = np.nan
         data = _calculate_rolling_mean(axes[0], data_in, win=avg_time)
-        time, data = _mark_gaps(axes[0][:], ma.MaskedArray(data), 35)
+        time, data = _mark_gaps(axes[0][:], ma.MaskedArray(data), max_allowed_gap=35)
     else:
         data_in[(flag > 0) | (hum_flag > 0), :] = np.nan
         time, data = _mark_gaps(
             axes[0][:],
             ma.MaskedArray(data_in),
-            60.1,
+            max_allowed_gap=60.1,
         )
 
     if variables.cbar_ext in ("neither", "max"):
@@ -767,24 +816,27 @@ def _plot_instrument_data(
     nc_file: str,
     ele_range: tuple,
     pointing: int,
+    instrument_type: str | None = None,
 ):
     """Calls plotting function for specified product."""
     if product == "int":
-        _plot_int(ax, data, name, time, nc_file)
+        _plot_int(ax, data, name, time, nc_file, instrument_type)
     elif product == "scan":
-        _plot_scan(data, name, time, nc_file, ax)
+        fig = _plot_scan(fig, data, name, time, nc_file, ax, instrument_type)
     elif product == "sta":
-        _plot_sta(ax, data, name, time, nc_file)
+        _plot_sta(ax, data, name, time, nc_file, instrument_type)
     elif product in ("met", "met2"):
         _plot_met(ax, data, name, time, nc_file)
     elif product == "tb":
-        _plot_tb(data, time, fig, nc_file, ele_range, pointing, name)
+        fig = _plot_tb(
+            data, time, fig, nc_file, ele_range, pointing, name, instrument_type
+        )
     elif product == "irt":
         _plot_irt(ax, data, name, time, nc_file)
     elif product == "qf":
-        _plot_qf(data, time, fig, nc_file)
+        fig = _plot_qf(data, time, fig, nc_file, instrument_type)
     elif product == "mqf":
-        _plot_mqf(ax, data, time, nc_file)
+        _plot_mqf(ax, data, time, nc_file, instrument_type)
     elif product == "sen":
         _plot_sen(ax, data, name, time, nc_file)
     elif product == "hkd":
@@ -794,6 +846,8 @@ def _plot_instrument_data(
 
     pos = ax.get_position()
     ax.set_position([pos.x0, pos.y0, pos.width * 0.965, pos.height])
+
+    return fig
 
 
 def _plot_hkd(ax, data_in: ndarray, name: str, time: ndarray):
@@ -980,7 +1034,13 @@ def _plot_irt(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
     _set_ax(ax, vmax, variables.ylabel, vmin)
 
 
-def _plot_mqf(ax, data_in: ma.MaskedArray, time: ndarray, nc_file: str):
+def _plot_mqf(
+    ax,
+    data_in: ma.MaskedArray,
+    time: ndarray,
+    nc_file: str,
+    instrument_type: str | None = None,
+):
     """Plot for quality flags of meteorological sensors."""
     qf = _get_bit_flag(data_in, np.arange(6))
     _plot_segment_data(
@@ -989,6 +1049,7 @@ def _plot_mqf(ax, data_in: ma.MaskedArray, time: ndarray, nc_file: str):
         "met_quality_flag",
         (time, np.linspace(0.5, 5.5, 6)),
         nc_file,
+        instrument_type,
     )
     ax.set_yticks(np.arange(6))
     ax.yaxis.set_ticklabels([])
@@ -996,17 +1057,21 @@ def _plot_mqf(ax, data_in: ma.MaskedArray, time: ndarray, nc_file: str):
     ax.set_title(ATTRIBUTES["met_quality_flag"].name)
 
 
-def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
+def _plot_qf(
+    data_in: ndarray,
+    time: ndarray,
+    fig,
+    nc_file: str,
+    instrument_type: str | None = None,
+):
     """Plot for Level 1 quality flags."""
-    site = _read_location(nc_file)
-    params = read_config(site, None, "params")
-    receiver = np.array(params["receiver"])
-    if len(receiver) < 14:
-        tmp = np.copy(receiver)
-        receiver[tmp == 1] = 2
-        receiver[tmp == 2] = 1
+    if instrument_type is None:
+        site = _read_location(nc_file)
+        params = read_config(site, None, "params")
+    else:
+        params = read_config(None, instrument_type, "params")
 
-    fig.clear()
+    plt.close(fig)
     nsub = 4 if params["flag_status"][3] == 0 else 3
     h_ratio = [0.1, 0.3, 0.3, 0.3] if nsub == 4 else [0.2, 0.4, 0.4]
     fig, axs = plt.subplots(
@@ -1022,6 +1087,7 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
         "quality_flag_0",
         (time, np.linspace(0.5, 1.5, 2)),
         nc_file,
+        instrument_type,
     )
     axs[0].set_yticks(np.arange(2))
     axs[0].yaxis.set_ticklabels([])
@@ -1032,8 +1098,8 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
     case_date = _read_date(nc_file)
     gtim = _gap_array(time, case_date, 10.0)
 
-    qf1 = _get_freq_flag(data_in[:, receiver == 1], np.array([4]))
-    qf2 = _get_freq_flag(data_in[:, receiver == 2], np.array([4]))
+    qf1 = _get_freq_flag(data_in[:, np.array(params["receiver"]) == 1], np.array([4]))
+    qf2 = _get_freq_flag(data_in[:, np.array(params["receiver"]) == 2], np.array([4]))
     qf = np.column_stack((qf1 - 1, qf2 + 1))
     _plot_segment_data(
         axs[1],
@@ -1041,6 +1107,7 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
         "quality_flag_1",
         (time, np.linspace(0.5, len(frequency) - 0.5, len(frequency))),
         nc_file,
+        instrument_type,
     )
     axs[1].set_title(ATTRIBUTES["quality_flag_1"].name)
 
@@ -1062,6 +1129,7 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
                 "tb_qf",
                 (time_i, np.linspace(0.5, 20.0 - 0.5, 2)),
                 nc_file,
+                instrument_type,
             )
         _plot_segment_data(
             axs[2],
@@ -1069,6 +1137,7 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
             "quality_flag_2",
             (time, np.linspace(0.5, len(frequency) - 0.5, len(frequency))),
             nc_file,
+            instrument_type,
         )
         axs[2].set_title(ATTRIBUTES["quality_flag_2"].name)
 
@@ -1080,6 +1149,7 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
             "tb_qf",
             (time_i, np.linspace(0.5, 20.0 - 0.5, 2)),
             nc_file,
+            instrument_type,
         )
     _plot_segment_data(
         axs[nsub - 1],
@@ -1087,6 +1157,7 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
         "quality_flag_3",
         (time, np.linspace(0.5, len(frequency) - 0.5, len(frequency))),
         nc_file,
+        instrument_type,
     )
     axs[nsub - 1].set_title(ATTRIBUTES["quality_flag_3"].name)
 
@@ -1103,11 +1174,11 @@ def _plot_qf(data_in: ndarray, time: ndarray, fig, nc_file: str):
         ind1, ind2 = axs[i].get_xlim()
         axs[i].plot(
             np.linspace(ind1, ind2, len(time)),
-            np.ones(len(time)) * np.sum(receiver == 1),
+            np.ones(len(time)) * np.sum(np.array(params["receiver"]) == 1),
             "k-",
             linewidth=1,
         )
-    _set_labels(fig, axs[-1], nc_file)
+    return fig
 
 
 def _plot_tb(
@@ -1118,10 +1189,14 @@ def _plot_tb(
     ele_range: tuple,
     pointing: int,
     name: str,
+    instrument_type: str | None = None,
 ):
     """Plot for microwave brightness temperatures."""
-    site = _read_location(nc_file)
-    params = read_config(site, None, "params")
+    if instrument_type is None:
+        site = _read_location(nc_file)
+        params = read_config(site, None, "params")
+    else:
+        params = read_config(None, instrument_type, "params")
     frequency = read_nc_fields(nc_file, "frequency")
     quality_flag = read_nc_fields(nc_file, "quality_flag")
     if name == "tb_spectrum":
@@ -1135,7 +1210,7 @@ def _plot_tb(
     quality_flag = _elevation_azimuth_filter(nc_file, quality_flag, ele_range)
     quality_flag = _pointing_filter(nc_file, quality_flag, ele_range, pointing)
 
-    fig.clear()
+    plt.close(fig)
     col = 2 if len(frequency) > 7 else 1
     fig, axs = plt.subplots(
         7,
@@ -1265,11 +1340,6 @@ def _plot_tb(
                     "",
                     0.0,
                 )
-            if i in (
-                len(np.where(np.array(params["receiver"]) == 1)[0]) - 1,
-                len(params["receiver"]) - 1,
-            ):
-                _set_labels(fig, axi, nc_file)
             axi.text(
                 0.05,
                 0.9,
@@ -1443,7 +1513,9 @@ def _plot_tb(
                 fillstyle="full",
             )
             axa[irec].set_facecolor(_COLORS["lightgray"])
-            flag = np.where(np.sum(quality_flag[:, receiver == rec], axis=1) > 0)[0]
+            flag = np.where(
+                np.sum(quality_flag[:, np.array(params["receiver"]) == rec], axis=1) > 0
+            )[0]
             axa[irec].plot(
                 time[flag], tbx_m[flag, irec], "ro", markersize=0.75, fillstyle="full"
             )
@@ -1467,11 +1539,13 @@ def _plot_tb(
                         ),
                     ),
                     nc_file,
+                    instrument_type,
                 )
                 handles, labels = axa[irec].get_legend_handles_labels()
                 handles.append(Patch(facecolor=_COLORS["gray"]))
                 labels.append("rain_detected")
                 axa[irec].legend(handles, labels, loc="upper left")
+    return fig
 
 
 def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
@@ -1491,7 +1565,7 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
 
     if name == "wind_direction":
         spd = read_nc_fields(nc_file, "wind_speed")
-        rolling_mean = dir_avg(time, spd, data)
+        rolling_mean = _dir_avg(time, spd, data)
         ax.set_yticks(np.linspace(0, 360, 9))
 
     time = _nan_time_gaps(time)
@@ -1525,7 +1599,7 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
         )
         rh = read_nc_fields(nc_file, "relative_humidity")
         rh = _elevation_filter(nc_file, rh, ele_range=(-1.0, 91.0))
-        t_d = t_dew_rh(data, rh)
+        t_d = atmoslib.dew_point_temperature(data, rh)
         rolling_mean = _calculate_rolling_mean(time, t_d)
         ax.plot(
             time,
@@ -1552,7 +1626,8 @@ def _plot_met(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
     if name == "relative_humidity":
         T = read_nc_fields(nc_file, "air_temperature")
         T = _elevation_filter(nc_file, T, ele_range=(-1.0, 91.0))
-        q = abs_hum(T, data / 100.0)
+        vp = (data / 100.0) * atmoslib.saturation_vapor_pressure(T)
+        q = atmoslib.absolute_humidity(T, vp)
         rolling_mean2 = _calculate_rolling_mean(time, q)
         ax2 = ax.twinx()
         ax2.plot(
@@ -1661,9 +1736,18 @@ def _calculate_ticks(x, yl, yl2):
     return yl2[0] + (x - yl[0]) / (yl[1] - yl[0]) * (yl2[1] - yl2[0])
 
 
-def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
+def _plot_int(
+    ax,
+    data_in: ma.MaskedArray,
+    name: str,
+    time: ndarray,
+    nc_file: str,
+    instrument_type: str | None = None,
+):
     """Plot for integrated quantities (LWP, IWV)."""
-    flag = _get_ret_flag(nc_file, time, name.rstrip("_scan"))
+    flag = _get_ret_flag(
+        nc_file, time, name.rstrip("_scan"), instrument_type=instrument_type
+    )
     data0, time0 = data_in[flag == 0], time[flag == 0]
     if len(data0) == 0:
         data0, time0 = data_in, time
@@ -1674,7 +1758,11 @@ def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
         vmin, vmax = np.nanmin(data0) - 1.0, np.nanmax(data0) + 1.0
     else:
         vmax = np.min([np.nanmax(data0) + 0.05, vmax])
-        vmin = np.max([np.nanmin(data0) - 0.05, vmin])
+        vmin = (
+            np.max([np.nanmin(data0) - 0.05, vmin])
+            if np.nanmin(data0) - 0.05 < vmax
+            else vmin
+        )
     _set_ax(ax, vmax, ATTRIBUTES[name].ylabel, min_y=vmin)
 
     flag_tmp = _calculate_rolling_mean(time, flag, win=1 / 60)
@@ -1707,6 +1795,7 @@ def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
             "tb_missing",
             (time_i, np.linspace(vmin, vmax, 2)),
             nc_file,
+            instrument_type,
         )
 
     ax.plot(time, data_in, ".", color="royalblue", markersize=1)
@@ -1727,7 +1816,15 @@ def _plot_int(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
     )
 
 
-def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, ax):
+def _plot_scan(
+    fig,
+    data_in: ma.MaskedArray,
+    name: str,
+    time: ndarray,
+    nc_file: str,
+    ax,
+    instrument_type: str | None = None,
+):
     """Plot for scans of integrated quantities (LWP, IWV)."""
     elevation = read_nc_fields(nc_file, "elevation_angle")
     angles = np.unique(np.round(elevation[(elevation > 1.0) & (elevation < 89.0)]))
@@ -1751,7 +1848,7 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
         fig.subplots_adjust(hspace=0.09)
         case_date = _read_date(nc_file)
         axt, ax1 = 0, 0
-
+        var_pl = None
         for ind in range(len(angles)):
             ele_range = (angles[ind] - 1.0, angles[ind] + 1.0)
             elevation_f = _elevation_filter(nc_file, elevation, ele_range=ele_range)
@@ -1760,7 +1857,9 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
             )
             time_s0 = _elevation_filter(nc_file, time, ele_range=ele_range)
             azi_f = _elevation_filter(nc_file, azimuth, ele_range=ele_range)
-            flag = _get_ret_flag(nc_file, time_s0, name.rstrip("_scan"), 1)
+            flag = _get_ret_flag(
+                nc_file, time_s0, name.rstrip("_scan"), 1, instrument_type
+            )
             data_s0 = ma.masked_where(flag > 0, data_s0)
 
             axi = axs[ind, :] if len(angles) > 1 else axs
@@ -1771,12 +1870,15 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
                 if ax1 == 0:
                     ax1 = ind
                 scan = pd.DataFrame({"time": time_s0, "azimuth": azi_f, "var": data_s0})
-                az_pl = np.unique(azi_f)
-                az_pl = az_pl[np.mod(az_pl - az_pl[0], 5) == 0]
-                if np.diff(az_pl).all() > 0:
-                    scan["blocks"] = (scan["azimuth"].diff() <= 0.0).cumsum()
+                if np.nanmedian(np.diff(azi_f.data)) > 0.0:
+                    az_pl = np.unique(azi_f.data)
                 else:
-                    scan["blocks"] = (scan["azimuth"].diff() >= 0.0).cumsum()
+                    indices = np.unique(azi_f, return_index=True)[1]
+                    az_pl = azi_f[np.sort(indices)]
+                az_pl = az_pl[np.mod(az_pl - az_pl[0], 5) == 0]
+                if az_pl[0] == 0.0 and az_pl[1] > 300.0:
+                    az_pl[0] = 360.0
+                scan["blocks"] = (scan["time"].diff() > 0.01).cumsum()
                 scan = scan[
                     scan.groupby(scan["blocks"]).transform("size") == len(az_pl)
                 ]
@@ -1839,6 +1941,7 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
                                 "tb_missing",
                                 (time_i, np.linspace(0, 360, 2)),
                                 nc_file,
+                                instrument_type,
                             )
 
                     axi[ip].set_facecolor(_COLORS["gray"])
@@ -1878,32 +1981,43 @@ def _plot_scan(data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str, 
                         colorbar.set_label("scan deviation (" + clab + ")", fontsize=13)
                         axi[ip].yaxis.set_tick_params(labelbottom=False)
 
-        axp = axs[axt, :] if len(angles) > 1 else axs
-        for ip in range(2):
-            axp[ip].xaxis.set_tick_params(labelbottom=True)
-            axp[ip].set_xlabel("Time (UTC)", fontsize=13)
+        if var_pl is None:
+            ax.set_title("empty")
+        else:
+            axp = axs[axt, :] if len(angles) > 1 else axs
+            for ip in range(2):
+                axp[ip].xaxis.set_tick_params(labelbottom=True)
+                axp[ip].set_xlabel("Time (UTC)", fontsize=13)
 
-        site_name = _read_location(nc_file)
-        text = _get_subtitle_text(case_date, site_name)
-        axp = axs[ax1, :] if len(angles) > 1 else axs
-        fig.suptitle(
-            text,
-            fontsize=13,
-            y=np.array(axp[0].get_position())[1][1]
-            + (
-                np.array(axp[0].get_position())[1][1]
-                - np.array(axp[0].get_position())[0][1]
+            site_name = _read_location(nc_file)
+            text = _get_subtitle_text(case_date, site_name)
+            axp = axs[ax1, :] if len(angles) > 1 else axs
+            fig.suptitle(
+                text,
+                fontsize=13,
+                y=np.array(axp[0].get_position())[1][1]
+                + (
+                    np.array(axp[0].get_position())[1][1]
+                    - np.array(axp[0].get_position())[0][1]
+                )
+                * 0.0065,
+                x=0.135,
+                horizontalalignment="left",
+                verticalalignment="bottom",
             )
-            * 0.0065,
-            x=0.135,
-            horizontalalignment="left",
-            verticalalignment="bottom",
-        )
+    return fig
 
 
-def _plot_sta(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: str):
+def _plot_sta(
+    ax,
+    data_in: ma.MaskedArray,
+    name: str,
+    time: ndarray,
+    nc_file: str,
+    instrument_type: str | None = None,
+):
     """Plot for stability indices."""
-    flag = _get_ret_flag(nc_file, time, "stability")
+    flag = _get_ret_flag(nc_file, time, "stability", instrument_type=instrument_type)
     data0, time0 = data_in[flag == 0], time[flag == 0]
     if len(data0) == 0:
         data0, time0 = data_in, time
@@ -2002,6 +2116,7 @@ def _plot_sta(ax, data_in: ma.MaskedArray, name: str, time: ndarray, nc_file: st
             "tb_missing",
             (time_i, np.linspace(vmin, vmax, 2)),
             nc_file,
+            instrument_type,
         )
 
 

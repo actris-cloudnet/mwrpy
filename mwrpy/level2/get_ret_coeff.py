@@ -1,5 +1,8 @@
 """Module to load in retrieval coefficient files."""
 
+from collections.abc import Sequence
+from os import PathLike
+
 import netCDF4 as nc
 import numpy as np
 from numpy import ma
@@ -8,7 +11,10 @@ from mwrpy.utils import get_coeff_list
 
 
 def get_mvr_coeff(
-    site: str | None, prefix: str, freq: np.ndarray, coeff_files: list | None
+    site: str | None,
+    prefix: str,
+    freq: np.ndarray,
+    coeff_files: Sequence[str | PathLike] | None,
 ):
     """This function extracts retrieval coefficients for given files.
 
@@ -314,18 +320,27 @@ def _parse_lines(prefix: str, lines: list) -> np.ndarray:
 
 def _reshape_array(data: list, n_rows: int, prefix: str) -> np.ndarray:
     data_squeezed: list[str] | list[list[str]]
-    if len(data) == 1 and isinstance(data[0], list) and len(data[0]) == 1:
-        data_squeezed = data[0]
+    if len(data) == 301 and prefix == "TL=":
+        tmp = np.zeros((301, 6), dtype=np.float32)
+        for i, line in enumerate(data):
+            if len(line) == 6:
+                tmp[i, :] = np.array(line).astype(np.float32)
+            else:
+                tmp[i, :] = np.array(line + [0.0] * (6 - len(line)))
+        array = np.transpose(np.reshape(tmp, (7, 43, 6)), (1, 2, 0))
     else:
-        data_squeezed = data
-    try:
-        array = np.array(data_squeezed).astype(np.float32)
-    except ValueError:
-        array = np.array(data_squeezed).astype(str)
+        if len(data) == 1 and isinstance(data[0], list) and len(data[0]) == 1:
+            data_squeezed = data[0]
+        else:
+            data_squeezed = data
+        try:
+            array = np.array(data_squeezed).astype(np.float32)
+        except ValueError:
+            array = np.array(data_squeezed).astype(str)
     if len(array) > n_rows and prefix not in ("TL=", "TQ="):
         array = np.reshape(array, (n_rows, -1, array.shape[1]))
         array = np.transpose(array, (1, 2, 0))
-    if array.ndim == 2 and array.shape[0] == 1:
+    if array.ndim == 2 and array.shape[0] == 1 and prefix not in ("TL=", "TQ="):
         array = np.squeeze(array)
     if array.ndim == 3 and array.shape[1] == 1:
         array = np.squeeze(array, axis=1)

@@ -14,19 +14,18 @@ classifiers = [
   "Topic :: Scientific/Engineering",
 ]
 dependencies = [
+  "atmoslib>=2.3.0",
   "matplotlib",
   "netCDF4",
   "pandas",
-  "pytz",
   "pyyaml",
   "scipy",
   "suncalc",
-  "timezonefinder",
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
-test = ["mypy", "pre-commit", "pytest", "pytest-flakefinder", "types-PyYAML", "types-pytz"]
+test = ["mypy", "pre-commit", "pytest", "pytest-flakefinder", "types-PyYAML"]
 dev = ["release-version"]
 
 [project.urls]
@@ -39,7 +38,16 @@ Changelog = "https://github.com/actris-cloudnet/mwrpy/blob/main/CHANGELOG.md"
 check_untyped_defs = true
 
 [[tool.mypy.overrides]]
-module = ["cftime.*", "matplotlib.*", "mpl_toolkits.*", "netCDF4.*", "pandas.*", "scipy.*", "suncalc.*", "timezonefinder.*"]
+module = [
+  "atmoslib.*",
+  "cftime.*",
+  "matplotlib.*",
+  "mpl_toolkits.*",
+  "netCDF4.*",
+  "pandas.*",
+  "scipy.*",
+  "suncalc.*",
+]
 ignore_missing_imports = true
 
 [tool.release-version]

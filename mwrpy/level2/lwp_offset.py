@@ -1,5 +1,6 @@
 """Module for LWP offset correction."""
 
+import logging
 from itertools import groupby
 
 import numpy as np
@@ -13,7 +14,7 @@ def correct_lwp_offset(
     lwp_org: np.ndarray,
     index: np.ndarray,
     qf: np.ndarray,
-    offset_xd: list[float | None] = [None, None],
+    offset_xd: tuple[float | None, float | None] = (None, None),
 ) -> tuple[np.ndarray, np.ndarray]:
     """This function corrects Lwp offset using the
     2min Lwp standard deviation and the water vapor
@@ -81,7 +82,6 @@ def correct_lwp_offset(
         lwp[
             (np.abs(lwp - np.nanmedian(lwp)) > 0.015)
             & (lwp_min["Lwp"].values - np.nanmedian(lwp) > -0.01)
-            & (lwp_max["Lwp"] > (tb_max["Tb"] * 0.0025 / 1.5))
         ] = np.nan
 
     seqs_all = [(key, len(list(val))) for key, val in groupby(np.isfinite(lwp))]
@@ -115,6 +115,7 @@ def correct_lwp_offset(
             > 12 * 3600
         )
     ):
+        logging.info("Applying LWP offset from previous day.")
         lwp_offset.loc[lwp_offset.index[0], "Lwp"] = offset_xd[0]
     if (
         (offset_xd[1] is not None)
@@ -125,6 +126,7 @@ def correct_lwp_offset(
             > 12 * 3600
         )
     ):
+        logging.info("Applying LWP offset from next day.")
         lwp_offset.loc[lwp_offset.index[-1], "Lwp"] = offset_xd[1]
     if (np.isnan(lwp_offset.values).all()) and any(offset_xd):
         lwp_offset.iloc[0] = np.nanmean(np.array(offset_xd).astype(float))
