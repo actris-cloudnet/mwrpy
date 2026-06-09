@@ -158,13 +158,10 @@ global_specs:
   # Type of last (automatic or manual) absolute calibration of receiver 2
   receiver2_type_of_last_absolute_calibration:
 
-  # Type of automatic calibrations performed for receiver 1
-  receiver1_type_of_automatic_calibrations: calibration with ambient temperature target and noise diode with high-frequency noise switching
+  # Type of automatic calibrations performed
+  type_of_automatic_calibrations:
 
-  # Type of automatic calibrations performed for receiver 2
-  receiver2_type_of_automatic_calibrations: calibration with ambient temperature target and noise diode with high-frequency noise switching
-
-  # Time of last covariance update as YYYYMMDD
+  # Time of last covariance update as YYYY-MM-DD
   date_of_last_covariance_matrix:
 
   # Logbook repair/replacement work performed

@@ -24,7 +24,9 @@ def stack_files(file_list: list[str]) -> tuple[dict, dict]:
             value = ma.array(value)
             if value.ndim > 0 and name in target:
                 if target[name].ndim == value.ndim:
-                    if (
+                    if name == "covariance_matrix":
+                        target[name] = np.array([target[name], value])
+                    elif (
                         value.ndim > 1
                         and value.shape[1] != target[name].shape[1]
                         and name in ("irt", "tb")
@@ -34,6 +36,10 @@ def stack_files(file_list: list[str]) -> tuple[dict, dict]:
                         )
                     else:
                         target[name] = fun((target[name], value))
+                elif target[name].ndim != value.ndim and name == "covariance_matrix":
+                    target[name] = np.concatenate(
+                        (target[name], value[np.newaxis, :, :])
+                    )
             elif value.ndim > 0 and name not in target:
                 target[name] = value
 
@@ -72,12 +78,13 @@ class RpgBin:
         self, file_list: list[str], time_offset: datetime.timedelta | None = None
     ):
         self.header, self.raw_data = stack_files(file_list)
-        self.raw_data["time"] = utils.epoch2unix(
-            self.raw_data["time"], self.header["_time_ref"], time_offset=time_offset
-        )
+        if str(file_list[0][-3:]).lower() not in ("log", "his"):
+            self.raw_data["time"] = utils.epoch2unix(
+                self.raw_data["time"], self.header["_time_ref"], time_offset=time_offset
+            )
         self.data: dict = {}
         self._init_data()
-        if str(file_list[0][-3:]).lower() != "his":
+        if str(file_list[0][-3:]).lower() not in ("log", "his"):
             try:
                 self.find_valid_times()
             except ValueError as err:
@@ -389,6 +396,247 @@ def read_met(file_name: str) -> tuple[dict, dict]:
     return header, data
 
 
+def read_log(file_name: str) -> tuple[dict, dict]:
+    """Reads LOG files and returns header and data as dictionary."""
+    header: dict = {}
+    data: dict = {}
+    # Reads covariance matrix
+    if "covmatrix" in file_name.lower():
+        with open(file_name, "r", encoding="utf-8") as file:
+            lines = file.readlines()
+            data["cal_date"] = np.array(
+                [
+                    datetime.datetime.strptime(
+                        str(lines[0].split(" ")[2] + lines[0].split(" ")[4]).strip(),
+                        "%d.%m.%Y%H:%M:%S",
+                    ).timestamp()
+                ]
+            )
+            for lineno, line in enumerate(lines):
+                if line.startswith("Frequencies [GHz]"):
+                    da = line.split(":")[1].split()
+                    header["_f"] = np.array([float(f) for f in da], dtype=float)
+                if line.startswith("Calibrated"):
+                    da = line.split(":")[1].split()
+                    data["status"] = np.array([int(f) for f in da], dtype=int, ndmin=2)
+                if line.startswith(("Alpha", "Gain", "Trec", "Tnoise")):
+                    da = line.split(":")[1].split()
+                    data[line.split("[")[0].strip()] = np.array(
+                        [float(f) for f in da], dtype=float, ndmin=2
+                    )
+                if line.startswith("Covariance Matrix [K^2]"):
+                    data["covariance_matrix"] = np.ndarray(
+                        (len(header["_f"]), len(header["_f"])), np.float32
+                    )
+                    for nf in range(len(header["_f"])):
+                        line_a = lines[lineno + nf + 1].split(":")[1].split()
+                        data["covariance_matrix"][nf, :] = np.array(
+                            [float(f) for f in line_a]
+                        )
+    # Reads absolute calibration log files
+    elif "abscal" in file_name.lower():
+        with open(file_name, "r", encoding="utf-8") as file:
+            text = file.read()
+            if (
+                "cancelled" in text
+                or "failed" in text
+                or "Rec1" not in text
+                or "Rec2" not in text
+                or "New" not in text
+            ):
+                return header, data
+        with open(file_name, "r", encoding="utf-8") as file:
+            lines = file.readlines()
+            data["cal_date"] = np.array(
+                [
+                    datetime.datetime.strptime(
+                        lines[1].split("_")[1] + lines[1].split("_")[2].split(".")[0],
+                        "%y%m%d%H%M%S",
+                    ).timestamp()
+                ]
+            )
+            for lineno, line in enumerate(lines):
+                if line.strip().startswith("Number of calibration cycles"):
+                    header["n"] = int(line.split(":")[1].strip())
+                if line.strip().startswith("New"):
+                    ll = 1
+                    while lines[lineno + ll].strip() != "":
+                        for varo, var in enumerate(("Trec", "Tnoise", "Gain", "Alpha")):
+                            if var in data:
+                                data[var] = np.append(
+                                    data[var],
+                                    np.array(
+                                        [
+                                            float(
+                                                lines[lineno + ll].split(" ")[
+                                                    varo * 4 + 1
+                                                ]
+                                            )
+                                        ],
+                                        dtype=float,
+                                        ndmin=2,
+                                    ),
+                                    axis=1,
+                                )
+                            else:
+                                data[var] = np.array(
+                                    [
+                                        float(
+                                            lines[lineno + ll].split(" ")[varo * 4 + 1]
+                                        )
+                                    ],
+                                    dtype=float,
+                                    ndmin=2,
+                                )
+                        ll += 1
+            # Assign frequencies based on number of channels (currently not working for LHATPRO)
+            header["_f"] = (
+                np.array([183.91, 184.81, 185.81, 186.81, 188.31, 190.81, 90.0])
+                if len(data["Trec"]) == 7
+                else np.array(
+                    [
+                        22.24,
+                        23.04,
+                        23.84,
+                        25.44,
+                        26.24,
+                        27.84,
+                        31.4,
+                        51.26,
+                        52.28,
+                        53.86,
+                        54.94,
+                        56.66,
+                        57.3,
+                        58.0,
+                    ]
+                )
+            )
+        data["Gain"] *= 1e3  # Convert to mV/K
+    else:
+        raise InvalidFileError(f"LOG file type not supported")
+
+    return header, data
+
+
+def read_his(file_name: str) -> tuple[dict, dict]:
+    """This function reads RPG MWR ABSCAL.HIS binary files."""
+    Fill_Value_Float = -999.0
+    Fill_Value_Int = -99
+
+    with open(file_name, "rb") as file:
+        code = np.fromfile(file, np.int32, 1)
+        if code != 39583209:
+            raise RuntimeError(["Error: CAL file code " + str(code) + " not supported"])
+
+        def _get_header():
+            """Read header info."""
+            n = int(np.fromfile(file, np.uint32, 1)[0])
+            time_ref = 1
+            header_names = ["_code", "n", "_time_ref"]
+            header_values = [code, n, time_ref]
+            return dict(zip(header_names, header_values))
+
+        def _create_variables():
+            """Initialize data arrays."""
+            vrs = {
+                "len": np.ones(header["n"], np.int32) * Fill_Value_Int,
+                "rad_id": np.ones(header["n"], np.int32) * Fill_Value_Int,
+                "cal1_t": np.ones(header["n"], np.int32) * Fill_Value_Int,
+                "cal2_t": np.ones(header["n"], np.int32) * Fill_Value_Int,
+                "t1": np.ones(header["n"], np.int32) * Fill_Value_Int,
+                "cal_date": np.ones(header["n"], np.int32) * Fill_Value_Int,
+                "t2": np.ones(header["n"], np.int32) * Fill_Value_Int,
+                "a_temp1": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "a_temp2": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "p1": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "p2": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "hl_temp1": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "hl_temp2": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "cl_temp1": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "cl_temp2": np.ones(header["n"], np.float32) * Fill_Value_Float,
+                "spare": np.ones([header["n"], 5], np.float32) * Fill_Value_Float,
+                "n_ch1": np.ones(header["n"], np.int32) * Fill_Value_Int,
+                "freq1": np.ones([header["n"], 7], np.float32) * Fill_Value_Float,
+                "n_ch2": np.ones(header["n"], np.int32) * Fill_Value_Int,
+                "freq2": np.ones([header["n"], 7], np.float32) * Fill_Value_Float,
+                "cal_flag": np.ones([header["n"], 14], np.int32) * Fill_Value_Int,
+                "Gain": np.ones([header["n"], 14], np.float32) * Fill_Value_Float,
+                "Tnoise": np.ones([header["n"], 14], np.float32) * Fill_Value_Float,
+                "Trec": np.ones([header["n"], 14], np.float32) * Fill_Value_Float,
+                "Alpha": np.ones([header["n"], 14], np.float32) * Fill_Value_Float,
+            }
+            return vrs
+
+        def _get_data():
+            """Loop over file to read data."""
+            data = _create_variables()
+            for sample in range(header["n"]):
+                data["len"][sample] = np.fromfile(file, np.int32, 1)[0]
+                data["rad_id"][sample] = np.fromfile(file, np.int32, 1)[0]
+                data["cal1_t"][sample] = np.fromfile(file, np.int32, 1)[0]
+                data["cal2_t"][sample] = np.fromfile(file, np.int32, 1)[0]
+                data["t1"][sample] = np.fromfile(file, np.int32, 1)[0]
+                data["cal_date"][sample] = utils.epoch2unix(data["t1"][sample], 1)
+                data["t2"][sample] = np.fromfile(file, np.int32, 1)[0]
+                data["a_temp1"][sample] = np.fromfile(file, np.float32, 1)[0]
+                data["a_temp2"][sample] = np.fromfile(file, np.float32, 1)[0]
+                data["p1"][sample] = np.fromfile(file, np.float32, 1)[0]
+                data["p2"][sample] = np.fromfile(file, np.float32, 1)[0]
+                data["hl_temp1"][sample] = np.fromfile(file, np.float32, 1)[0]
+                data["hl_temp2"][sample] = np.fromfile(file, np.float32, 1)[0]
+                data["cl_temp1"][sample] = np.fromfile(file, np.float32, 1)[0]
+                data["cl_temp2"][sample] = np.fromfile(file, np.float32, 1)[0]
+                data["spare"][sample,] = np.fromfile(file, np.float32, 5)
+                data["n_ch1"][sample] = np.fromfile(file, np.int32, 1)[0]
+                data["n_ch1"][sample] = data["n_ch1"][sample]
+                data["freq1"][sample, 0 : data["n_ch1"][sample]] = np.fromfile(
+                    file, np.float32, int(data["n_ch1"][sample])
+                )
+                data["n_ch2"][sample] = np.fromfile(file, np.int32, 1)[0]
+                data["freq2"][sample, 0 : int(data["n_ch2"][sample])] = np.fromfile(
+                    file, np.float32, int(data["n_ch2"][sample])
+                )
+                data["cal_flag"][
+                    sample, 0 : int(data["n_ch1"][sample] + data["n_ch2"][sample])
+                ] = np.fromfile(
+                    file, np.int32, int(data["n_ch1"][sample] + data["n_ch2"][sample])
+                )
+                data["Gain"][
+                    sample, 0 : int(data["n_ch1"][sample] + data["n_ch2"][sample])
+                ] = (
+                    np.fromfile(
+                        file,
+                        np.float32,
+                        int(data["n_ch1"][sample] + data["n_ch2"][sample]),
+                    )
+                    * 1000.0
+                )
+                data["Tnoise"][
+                    sample, 0 : int(data["n_ch1"][sample] + data["n_ch2"][sample])
+                ] = np.fromfile(
+                    file, np.float32, int(data["n_ch1"][sample] + data["n_ch2"][sample])
+                )
+                data["Trec"][
+                    sample, 0 : int(data["n_ch1"][sample] + data["n_ch2"][sample])
+                ] = np.fromfile(
+                    file, np.float32, int(data["n_ch1"][sample] + data["n_ch2"][sample])
+                )
+                data["Alpha"][
+                    sample, 0 : int(data["n_ch1"][sample] + data["n_ch2"][sample])
+                ] = np.fromfile(
+                    file, np.float32, int(data["n_ch1"][sample] + data["n_ch2"][sample])
+                )
+
+            file.close()
+            return data
+
+        header = _get_header()
+        data = _get_data()
+        header["_f"] = np.concatenate((data["freq1"][0, :], data["freq2"][0, :]))
+        return header, data
+
+
 def _read(file: BinaryIO, fields: list[Field], count: int) -> np.ndarray:
     arr = np.fromfile(file, np.dtype(fields), count)
     if (read := len(arr)) != count:
@@ -474,4 +722,6 @@ type_reader: dict[str, FuncType] = {
     "hkd": read_hkd,
     "blb": read_blb,
     "bls": read_bls,
+    "log": read_log,
+    "his": read_his,
 }

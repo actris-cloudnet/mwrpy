@@ -2,7 +2,8 @@
 
 import glob
 import locale
-from datetime import date, datetime
+import logging
+from datetime import date, datetime, timezone
 
 import atmoslib
 import matplotlib.pyplot as plt
@@ -94,6 +95,8 @@ def generate_figure(
     image_name: str | None = None,
     sub_title: bool = True,
     title: bool = True,
+    cov_data: dict | None = None,
+    site: str | None = None,
 ) -> str | None:
     """Generates a mwrpy figure.
 
@@ -113,6 +116,8 @@ def generate_figure(
             Overrides the *save_path* option. Default is None.
         sub_title (bool, optional): Add subtitle to image. Default is True.
         title (bool, optional): Add title to image. Default is True.
+        cov_data (dict, optional): Covariance data. Default is None.
+        site (str, optional): Site name for covariance plot. Default is None.
 
     Returns:
         Dimensions of the generated figure in pixels.
@@ -122,74 +127,144 @@ def generate_figure(
         >>> from mwrpy.plots import generate_figure
         >>> generate_figure('lev2_file.nc', ['lwp'], instrument_type='hatpro')
     """
-    valid_fields, valid_names = _find_valid_fields(nc_file, field_names)
-    if len(valid_fields) == 0:
-        return None
-
-    fig, axes = _initialize_figure(len(valid_fields), dpi)
-    time = _read_time_vector(nc_file)
-
-    for ax, field, name in zip(axes, valid_fields, valid_names):
-        ax.set_facecolor(_COLORS["lightgray"])
-        is_height = _is_height_dimension(nc_file, name)
-        if image_name and "_scan" in image_name:
-            name = image_name
-        pl_source = ATTRIBUTES[name].source
-        if "angle" not in name and pl_source not in (
-            "met",
-            "met2",
-            "irt",
-            "qf",
-            "mqf",
-            "hkd",
-            "scan",
-        ):
-            if pointing == 0:
-                if ax == axes[0]:
-                    time = _elevation_azimuth_filter(nc_file, time, ele_range)
-                field = _elevation_azimuth_filter(nc_file, field, ele_range)
-        elif pl_source in ("met", "met2", "irt", "qf", "mqf", "hkd"):
-            if ax == axes[0]:
-                time = _elevation_filter(nc_file, time, ele_range)
-            field = _elevation_filter(nc_file, field, ele_range)
-        if title:
-            _set_title(ax, name, nc_file, "")
-        if not is_height:
-            fig = _plot_instrument_data(
-                ax,
-                field,
-                name,
-                pl_source,
-                time,
-                fig,
-                nc_file,
-                ele_range,
-                pointing,
-                instrument_type,
+    if (
+        nc_file == ""
+        and cov_data is not None
+        and site is not None
+        and image_name == "cov"
+    ):
+        if cov_data[field_names[0]].ndim == 3:
+            valid_fields, valid_names = (
+                [cov_data[field_names[0]][0], cov_data[field_names[1]][0]],
+                field_names,
             )
         else:
-            ax_value = _read_ax_values(nc_file)
-            ax_value = (time, ax_value[1])
-            field, ax_value = _screen_high_altitudes(field, ax_value, max_y)
-            _set_ax(ax, max_y)
+            valid_fields, valid_names = (
+                [cov_data[field_names[0]], cov_data[field_names[1]]],
+                field_names,
+            )
+        time = cov_data["time"]
+        fig, axes = _initialize_figure(len(valid_fields), dpi)
+        for ax, field, name in zip(axes, valid_fields, valid_names):
+            ax.set_facecolor(_COLORS["lightgray"])
+            _plot_covariance(ax, field, name, cov_data["frequency"])
+        c_date = datetime.strptime(
+            datetime.fromtimestamp(
+                int(time),
+                tz=timezone.utc,
+            )
+            .date()
+            .isoformat(),
+            "%Y-%m-%d",
+        )
+        _add_subtitle(fig, c_date, site)
+        fig.set_size_inches(9.0, 7.0 * len(axes))
+        f_name = handle_saving(
+            nc_file, image_name, save_path, show, c_date, valid_names, site=site
+        )
+        return f_name
 
-            plot_type = ATTRIBUTES[name].plot_type
-            if plot_type == "mesh":
-                _plot_colormesh_data(
-                    ax, field, name, ax_value, nc_file, instrument_type
-                )
+    elif (
+        nc_file == ""
+        and cov_data is not None
+        and site is not None
+        and image_name == "his"
+    ):
+        valid_fields = [cov_data[name] for name in field_names]
+        time = np.atleast_1d(cov_data["time"])
+        fig, axes = _initialize_figure(len(valid_fields), dpi)
+        for ax, field, name in zip(axes, valid_fields, field_names):
+            ax.set_facecolor(_COLORS["lightgray"])
+            _plot_cal_history(ax, name, cov_data["frequency"], field, time)
+        _add_subtitle(fig, "history", site)
+        fig.set_size_inches(16.0, 7.0 * len(axes))
+        f_name = handle_saving(
+            nc_file, "abscal_his", save_path, show, "history", field_names, site=site
+        )
+        return f_name
 
-    if axes[-1].get_title() == "empty":
-        return None
     else:
-        case_date = (
-            _read_date(nc_file)
-            if image_name and "_scan" in image_name
-            else _set_labels(fig, axes[-1], nc_file, sub_title, instrument_type)
-        )
-        file_name = handle_saving(
-            nc_file, image_name, save_path, show, case_date, valid_names
-        )
+        valid_fields, valid_names = _find_valid_fields(nc_file, field_names)
+    if len(valid_fields) == 0:
+        return None
+    file_name = None
+    try:
+        fig, axes = _initialize_figure(len(valid_fields), dpi)
+        time = _read_time_vector(nc_file)
+
+        for ax, field, name in zip(axes, valid_fields, valid_names):
+            ax.set_facecolor(_COLORS["lightgray"])
+            is_height = _is_height_dimension(nc_file, name)
+            if image_name and "_scan" in image_name:
+                name = image_name
+            pl_source = ATTRIBUTES[name].source
+            if "angle" not in name and pl_source not in (
+                "met",
+                "met2",
+                "irt",
+                "qf",
+                "mqf",
+                "hkd",
+                "scan",
+                "cov",
+            ):
+                if pointing == 0:
+                    if ax == axes[0]:
+                        time = _elevation_azimuth_filter(nc_file, time, ele_range)
+                    field = _elevation_azimuth_filter(nc_file, field, ele_range)
+            elif pl_source in ("met", "met2", "irt", "qf", "mqf", "hkd"):
+                if ax == axes[0]:
+                    time = _elevation_filter(nc_file, time, ele_range)
+                field = _elevation_filter(nc_file, field, ele_range)
+            if title:
+                _set_title(ax, name, nc_file, "")
+            if not is_height:
+                fig = _plot_instrument_data(
+                    ax,
+                    field,
+                    name,
+                    pl_source,
+                    time,
+                    fig,
+                    nc_file,
+                    ele_range,
+                    pointing,
+                    instrument_type,
+                )
+            else:
+                ax_value = _read_ax_values(nc_file)
+                ax_value = (time, ax_value[1])
+                field, ax_value = _screen_high_altitudes(field, ax_value, max_y)
+                _set_ax(ax, max_y)
+
+                plot_type = ATTRIBUTES[name].plot_type
+                if plot_type == "mesh":
+                    _plot_colormesh_data(
+                        ax, field, name, ax_value, nc_file, instrument_type
+                    )
+
+        if axes[-1].get_title() != "empty":
+            if {"tb_cov_ln2", "tb_cov_amb"} & set(field_names):
+                case_date = _get_cal_date(nc_file)
+                site_name = _read_location(nc_file)
+                _add_subtitle(fig, case_date, site_name)
+                fig.set_size_inches(9.0, 7.0 * len(axes))
+            else:
+                case_date = (
+                    _read_date(nc_file)
+                    if image_name and "_scan" in image_name
+                    else _set_labels(fig, axes[-1], nc_file, sub_title, instrument_type)
+                )
+            file_name = handle_saving(
+                nc_file, image_name, save_path, show, case_date, valid_names
+            )
+        else:
+            return None
+
+    except Exception as e:
+        logging.error(f"Error in plotting: {e}.")
+    finally:
+        plt.close()
         return file_name
 
 
@@ -249,20 +324,28 @@ def handle_saving(
     image_name: str | None,
     save_path: str | None,
     show: bool,
-    case_date: date,
+    case_date: date | str,
     field_names: list,
     fix: str = "",
+    site: str | None = None,
 ) -> str:
     """Returns file name of plot."""
     file_name = ""
-    site_name = _read_location(nc_file)
+    site_name = _read_location(nc_file) if nc_file != "" else site
     if image_name:
-        date_string = case_date.strftime("%Y%m%d")
-        file_name = f"{save_path}{date_string}_{site_name}_{image_name}.png"
-        plt.savefig(
-            f"{save_path}{date_string}_{site_name}_{image_name}.png",
-            bbox_inches="tight",
-        )
+        if isinstance(case_date, str):
+            file_name = f"{save_path}{site_name}_{image_name}.png"
+            plt.savefig(
+                f"{save_path}{site_name}_{image_name}.png",
+                bbox_inches="tight",
+            )
+        else:
+            date_string = case_date.strftime("%Y%m%d")
+            file_name = f"{save_path}{date_string}_{site_name}_{image_name}.png"
+            plt.savefig(
+                f"{save_path}{date_string}_{site_name}_{image_name}.png",
+                bbox_inches="tight",
+            )
     elif save_path:
         file_name = _create_save_name(save_path, case_date, field_names, fix)
         plt.savefig(file_name, bbox_inches="tight")
@@ -452,9 +535,19 @@ def _read_date(nc_file: str) -> date:
     return case_date
 
 
-def _add_subtitle(fig, case_date: date, site_name: str):
+def _get_cal_date(nc_file: str) -> date:
+    """Returns calibration date."""
+    with netCDF4.Dataset(nc_file) as nc:
+        case_date = datetime.strptime(nc.date_of_last_covariance_matrix, "%Y-%m-%d")
+    return case_date
+
+
+def _add_subtitle(fig, case_date: date | str, site_name: str):
     """Adds subtitle into figure."""
-    text = _get_subtitle_text(case_date, site_name)
+    if isinstance(case_date, str):
+        text = f"{site_name}, {case_date}"
+    else:
+        text = _get_subtitle_text(case_date, site_name)
     fig.suptitle(
         text,
         fontsize=13,
@@ -472,9 +565,11 @@ def _get_subtitle_text(case_date: date, site_name: str) -> str:
 
 
 def _create_save_name(
-    save_path: str, case_date: date, field_names: list, fix: str = ""
+    save_path: str, case_date: date | str, field_names: list, fix: str = ""
 ) -> str:
     """Creates file name for saved images."""
+    if isinstance(case_date, str):
+        return f"{save_path}{case_date}_{'_'.join(field_names)}{fix}.png"
     date_string = case_date.strftime("%Y%m%d")
     return f"{save_path}{date_string}_{'_'.join(field_names)}{fix}.png"
 
@@ -507,6 +602,8 @@ def _plot_segment_data(
         variables = ATTRIBUTES[name]
         assert variables.clabel is not None
         clabel = [x[0] for x in variables.clabel]
+        if "receiver1_sanity_failed" in clabel and data.shape[1] < 14:
+            clabel.reverse()
         cbar = [x[1] for x in variables.clabel]
         cmap = ListedColormap(cbar)
         x, y = axes[0], axes[1]
@@ -744,6 +841,8 @@ def _plot_instrument_data(
         _plot_sen(ax, data, name, time, nc_file)
     elif product == "hkd":
         _plot_hkd(ax, data, name, time)
+    elif product == "cov":
+        _plot_covariance(ax, data, name, nc_file)
 
     pos = ax.get_position()
     ax.set_position([pos.x0, pos.y0, pos.width * 0.965, pos.height])
@@ -2019,3 +2118,85 @@ def _plot_sta(
             nc_file,
             instrument_type,
         )
+
+
+def _plot_covariance(ax, data_in: ma.MaskedArray, name, f_instance: str | ndarray):
+    """Plot for covariance."""
+    if isinstance(f_instance, str):
+        frequency = read_nc_fields(f_instance, "frequency")
+        receiver = read_nc_fields(f_instance, "receiver")
+        frequency = frequency[np.argsort(receiver)]
+    else:
+        frequency = f_instance
+    variables = ATTRIBUTES[name]
+    pl = ax.pcolormesh(np.flip(data_in, axis=0), cmap=variables.cbar, vmin=0.0)
+
+    colorbar = _init_colorbar(pl, ax, size="4%", pad=0.05)
+    locator = colorbar.ax.yaxis.get_major_locator()
+    locator.set_params(nbins=10)
+    colorbar.update_ticks()
+    colorbar.set_label(variables.clabel, fontsize=13)
+
+    ax.set_xticks(np.arange(len(frequency)) + 0.5)
+    ax.set_yticks(np.arange(len(frequency)) + 0.5)
+    ax.set_xticklabels(frequency.astype(str), rotation=30)
+    ax.set_yticklabels(np.flip(frequency).astype(str))
+    ax.set_xlabel("Frequency (GHz)")
+    ax.set_ylabel("Frequency (GHz)")
+    _set_title(ax, name, "", "")
+
+
+def _plot_cal_history(
+    ax, name: str, freq: np.ndarray, data_his: np.ndarray, time: np.ndarray
+):
+    if data_his.ndim == 1:
+        data_his = data_his.reshape((1, len(data_his)))
+    data_shape = data_his.shape
+    for ind in range(data_shape[0]):
+        if "cov" in name:
+            if data_his.ndim == 3:
+                cal_df = pd.DataFrame(
+                    np.squeeze(data_his[ind, :, :])
+                    .diagonal()
+                    .reshape((1, data_shape[1])),
+                    index=np.array([pd.to_datetime(np.squeeze(time[ind]), unit="s")]),
+                )
+            else:
+                cal_df = pd.DataFrame(
+                    np.squeeze(data_his[:, :]).diagonal().reshape((1, data_shape[1])),
+                    index=np.array([pd.to_datetime(time[0], unit="s")]),
+                )
+        else:
+            cal_df = pd.DataFrame(
+                data_his[ind, :].reshape((1, data_shape[1])),
+                index=np.array([pd.to_datetime(np.squeeze(time[ind]), unit="s")]),
+            )
+        colors = iter(plt.get_cmap("Spectral")(np.linspace(0, 1, data_shape[1])))
+        for line in range(data_shape[1]):
+            ax.plot(
+                cal_df.index,
+                np.sqrt(cal_df.values[0, line]),
+                marker="o",
+                markersize=5,
+                fillstyle="full",
+                linestyle="None",
+                color=next(colors),
+                label=str(freq[line]) + " GHz",
+            )
+
+    ax.set_xlim(
+        [
+            pd.to_datetime(np.squeeze(time[0]), unit="s") - pd.Timedelta(days=7),
+            pd.to_datetime(np.squeeze(time[-1]), unit="s") + pd.Timedelta(days=7),
+        ]
+    )
+    ax.set_ylabel(ATTRIBUTES[name].ylabel)
+    lines, labels = ax.get_legend_handles_labels()
+    ax.legend(
+        lines[: data_shape[1]],
+        labels[: data_shape[1]],
+        loc="center left",
+        bbox_to_anchor=(1.03, 0.5),
+        markerscale=3.0,
+    )
+    ax.set_title(ATTRIBUTES[name].name, fontsize=14)

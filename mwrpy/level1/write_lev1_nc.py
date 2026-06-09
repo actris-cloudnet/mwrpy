@@ -79,6 +79,7 @@ def lev1_to_nc(
         params = {**params, **instrument_config}
 
     rpg_bin = prepare_data(path_to_files, data_type, params, lidar_path, time_offset)
+    assert isinstance(rpg_bin, RpgBin)
 
     if data_type in ("1B01", "1C01"):
         apply_qc(site, rpg_bin, params, coeff_files)
@@ -89,6 +90,7 @@ def lev1_to_nc(
     mwr.data = get_data_attributes(mwr.data, data_type)
     if output_file is not None:
         global_attributes = read_config(site, instrument_type, "global_specs")
+        _update_calibration_attributes(rpg_bin, global_attributes)
         if data_type != "1C01":
             update_lev1_attributes(global_attributes, data_type)
         rpg_mwr.save_rpg(mwr, output_file, global_attributes, data_type)
@@ -101,7 +103,8 @@ def prepare_data(
     params: dict,
     lidar_path: str | PathLike | None,
     time_offset: datetime.timedelta | None = None,
-) -> RpgBin:
+    date: float | None = None,
+) -> RpgBin | dict:
     """Load and prepare data for netCDF writing."""
     if data_type in ("1B01", "1C01"):
         brt_files = get_file_list(path_to_files, "BRT")
@@ -181,6 +184,29 @@ def prepare_data(
             rpg_bin.data["azimuth_angle"] = (
                 rpg_bin.data["azimuth_angle"] + params["const_azi"]
             ) % 360
+
+        file_list_abscal = (
+            get_file_list(params["path_to_cal"] + "COVARIANCE/", "LOG")
+            if params.get("path_to_cal") is not None
+            else []
+        )
+        for cal in ["ln2", "amb"]:
+            file_list_type = [s for s in file_list_abscal if cal in s.lower()]
+            if len(file_list_type) > 0:
+                rpg_log = RpgBin(file_list_type, time_offset)
+                ind_cal = (
+                    np.searchsorted(rpg_log.data["cal_date"], rpg_bin.data["time"][0])
+                    - 1
+                )
+                rpg_bin.data["date_of_last_covariance_matrix"] = rpg_log.data[
+                    "cal_date"
+                ][ind_cal]
+                rpg_bin.data["calibration_status"] = rpg_log.data["status"][ind_cal, :]
+                rpg_bin.data[f"tb_cov_{cal}"] = (
+                    rpg_log.data["covariance_matrix"][ind_cal, :, :]
+                    if rpg_log.data["covariance_matrix"].ndim > 2
+                    else rpg_log.data["covariance_matrix"][:, :]
+                )
 
         if data_type == "1C01":
             if params["ir_flag"]:
@@ -273,6 +299,95 @@ def prepare_data(
             rpg_bin.data["air_pressure"] *= 100
         if "rainfall_rate" in rpg_bin.data:
             rpg_bin.data["rainfall_rate"] /= 3.6e6
+
+    elif data_type in ("cov", "his"):
+        rpg_cov = {}
+        if date is not None and params.get("path_to_cal") is not None:
+            file_list_abscal = get_file_list(
+                params["path_to_cal"] + "COVARIANCE/", "LOG"
+            )
+            for cal in ["ln2", "amb"]:
+                file_list_type = [s for s in file_list_abscal if cal in s.lower()]
+                if len(file_list_type) > 0:
+                    rpg_log = RpgBin(file_list_type, time_offset)
+                    ind_cal = (
+                        np.where(np.abs(date - rpg_log.data["cal_date"]) < 24 * 3600)[0]
+                        if data_type == "cov"
+                        else np.arange(len(rpg_log.data["cal_date"]))
+                    )
+                    if len(ind_cal) > 0:
+                        ind_cal = ind_cal[-1] if data_type == "cov" else ind_cal
+                        if rpg_log.data["covariance_matrix"].ndim < 3:
+                            rpg_cov[f"tb_cov_{cal}"] = rpg_log.data[
+                                "covariance_matrix"
+                            ][:, :]
+                        else:
+                            rpg_cov[f"tb_cov_{cal}"] = rpg_log.data[
+                                "covariance_matrix"
+                            ][ind_cal, :, :]
+                        rpg_cov["Gain"] = rpg_log.data["Gain"][ind_cal, :]
+                        rpg_cov["frequency"] = rpg_log.header["_f"]
+                        rpg_cov["time"] = rpg_log.data["cal_date"][ind_cal]
+
+        if data_type == "his" and params["path_to_cal"] is not None:
+            for ext in ["LOG", "HIS"]:
+                file_list_abscal = (
+                    get_file_list(params["path_to_cal"], ext)
+                    if ext == "HIS"
+                    else get_file_list(params["path_to_cal"] + "ABSCAL/", ext)
+                )
+                if len(file_list_abscal) > 0:
+                    rpg_log = RpgBin(file_list_abscal, time_offset)
+                    if "Gain" in rpg_cov:
+                        rpg_cov["Gain"] = np.vstack(
+                            [rpg_log.data["Gain"][:, :], rpg_cov["Gain"]]
+                        )
+                        rpg_cov["time"] = np.hstack(
+                            [rpg_log.data["cal_date"][:], rpg_cov["time"]]
+                        )
+                    else:
+                        rpg_cov["Gain"] = rpg_log.data["Gain"][:, :]
+                        rpg_cov["time"] = rpg_log.data["cal_date"][:]
+                        rpg_cov["frequency"] = rpg_log.header["_f"]
+                    for key in ["tb_cov_ln2", "tb_cov_amb"]:
+                        if key in rpg_cov:
+                            arr_len = len(rpg_cov[key]) if rpg_cov[key].ndim == 3 else 1
+                            rpg_cov[key] = np.vstack(
+                                [
+                                    np.ones(
+                                        (
+                                            len(rpg_log.data["cal_date"][:]),
+                                            len(rpg_cov["frequency"]),
+                                            len(rpg_cov["frequency"]),
+                                        )
+                                    )
+                                    * np.nan,
+                                    np.reshape(
+                                        np.atleast_3d(rpg_cov[key]),
+                                        (
+                                            arr_len,
+                                            len(rpg_cov["frequency"]),
+                                            len(rpg_cov["frequency"]),
+                                        ),
+                                    ),
+                                ]
+                            )
+            if len(rpg_cov) > 0:
+                # sort by time and remove duplicates
+                ind = np.argsort(rpg_cov["time"])
+                rpg_cov["time"] = rpg_cov["time"][ind]
+                _, unique_ind = np.unique(rpg_cov["time"], return_index=True)
+                rpg_cov["time"] = rpg_cov["time"][unique_ind]
+                for key in ["tb_cov_ln2", "tb_cov_amb"]:
+                    if key in rpg_cov:
+                        if rpg_cov[key].ndim == 3:
+                            rpg_cov[key] = rpg_cov[key][ind, :, :]
+                            rpg_cov[key] = rpg_cov[key][unique_ind, :, :]
+                if len(rpg_cov["Gain"].shape) > 1:
+                    rpg_cov["Gain"] = rpg_cov["Gain"][ind, :]
+                    rpg_cov["Gain"] = rpg_cov["Gain"][unique_ind, :]
+
+        return rpg_cov
 
     else:
         raise RuntimeError(
@@ -607,6 +722,37 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict) -> None:
             else:
                 brt.data[var[0]] = brt.data[var[0]][ind]
         brt.header["n"] = len(brt.data["time"])
+
+
+def _update_calibration_attributes(rpg_bin: RpgBin, global_attributes: dict) -> None:
+    global_attributes["type_of_automatic_calibrations"] = (
+        "calibration with ambient temperature target and noise diode with high-frequency noise switching"
+        if global_attributes["instrument_generation"] == "G5"
+        else "calibration with ambient temperature target and noise diode"
+    )
+
+    if "date_of_last_covariance_matrix" in rpg_bin.data:
+        global_attributes["date_of_last_covariance_matrix"] = (
+            datetime.datetime.fromtimestamp(
+                int(rpg_bin.data["date_of_last_covariance_matrix"]),
+                tz=datetime.timezone.utc,
+            )
+            .date()
+            .isoformat()
+        )
+
+    if "calibration_status" in rpg_bin.data:
+        for irec in range(2):
+            if np.all(
+                rpg_bin.data["calibration_status"][rpg_bin.data["receiver"] == irec + 1]
+                == 1
+            ):
+                global_attributes[
+                    f"receiver{irec + 1}_date_of_last_absolute_calibration"
+                ] = global_attributes["date_of_last_covariance_matrix"]
+                global_attributes[
+                    f"receiver{irec + 1}_type_of_last_absolute_calibration"
+                ] = "LN2"
 
 
 def _azi_correction(brt: dict, params: dict) -> None:
