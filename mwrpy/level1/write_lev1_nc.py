@@ -187,7 +187,7 @@ def prepare_data(
 
         file_list_abscal = (
             get_file_list(params["path_to_cal"] + "COVARIANCE/", "LOG")
-            if params["path_to_cal"] is not None
+            if params.get("path_to_cal") is not None
             else []
         )
         for cal in ["ln2", "amb"]:
@@ -302,7 +302,7 @@ def prepare_data(
 
     elif data_type in ("cov", "his"):
         rpg_cov = {}
-        if date is not None and params["path_to_cal"] is not None:
+        if date is not None and params.get("path_to_cal") is not None:
             file_list_abscal = get_file_list(
                 params["path_to_cal"] + "COVARIANCE/", "LOG"
             )
