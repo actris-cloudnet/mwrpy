@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.0 – 2026-06-09
+
+- Implement support for covariance data
+
 ## 1.5.1 – 2026-05-08
 
 - Drop pytz and timezonefinder dependencies
