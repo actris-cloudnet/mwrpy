@@ -12,11 +12,12 @@ COEFFICIENTS_DIR = f"{PACKAGE_DIR}/../mwrpy/site_config/"
 DATE = "2023-04-06"
 site = "hyytiala"
 product_list = ["1B01", "1B11", "1B21", "1C01"]
+DATA_FORMAT = "e-profile"
 
 
 def test_lev1_to_nc():
     for prod in product_list:
-        hatpro = lev1_to_nc(prod, DATA_DIR, site)
+        hatpro = lev1_to_nc(prod, DATA_DIR, DATA_FORMAT, site)
         assert str(hatpro.date) == DATE
         for t in hatpro.data["time"][:]:
             date = str(
@@ -28,7 +29,7 @@ def test_lev1_to_nc():
 def test_output_nc_file():
     for prod in product_list:
         temp_file = "temp_file.nc"
-        lev1_to_nc(prod, DATA_DIR, site, output_file=temp_file)
+        lev1_to_nc(prod, DATA_DIR, DATA_FORMAT, site, output_file=temp_file)
         with netCDF4.Dataset(temp_file) as nc:
             # Write tests for the created netCDF file here:
             assert nc.date == DATE
