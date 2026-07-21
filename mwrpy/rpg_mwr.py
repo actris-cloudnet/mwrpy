@@ -215,7 +215,9 @@ def save_rpg(
         dims = {
             "time": len(rpg.data["time"][:]),
             "bnds": 2,
-            "height": len(rpg.data["height"][:]),
+            "height": len(rpg.data["height"][:])
+            if data_format == "cloudnet"
+            else len(rpg.data["altitude"][:]),
         }
     elif data_type in ("2I01", "2I02", "2I06"):
         dims = {"time": len(rpg.data["time"][:]), "bnds": 2}
@@ -286,19 +288,16 @@ def _write_vars2nc(nc_file: netCDF4.Dataset, mwr_variables: dict) -> None:
 
 
 def _add_standard_global_attributes(nc_file: netCDF4.Dataset, att_global) -> None:
-    nc_file.mwrpy_version = version.__version__
-    nc_file.processed = (
-        datetime.datetime.now(tz=datetime.timezone.utc).strftime("%d %b %Y %H:%M:%S")
-        + " UTC"
-    )
     for name, value in att_global.items():
+        if name == "history":
+            value = f"{datetime.datetime.now(tz=datetime.timezone.utc).strftime('%d %b %Y %H:%M:%S')} UTC, mwrpy {version.__version__}"
         if value is None:
             value = ""
         setattr(nc_file, name, value)
 
 
 def _add_cloudnet_global_attributes(
-    nc_file: netCDF4.Dataset, add_global, data_type
+    nc_file: netCDF4.Dataset, add_global: dict, data_type: str
 ) -> None:
     t_zone = datetime.timezone.utc
     form = "%Y-%m-%d %H:%M:%S"
@@ -333,4 +332,6 @@ def _add_cloudnet_global_attributes(
         if value is None:
             value = ""
         setattr(nc_file, name, value)
-    nc_file.mwrpy_coefficients = ", ".join(add_global["coeff_files"])
+    nc_file.mwrpy_coefficients = ", ".join(
+        [file.split("/")[-1] for file in add_global["coeff_files"]]
+    )

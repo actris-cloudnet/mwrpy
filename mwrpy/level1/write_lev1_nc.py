@@ -98,6 +98,11 @@ def lev1_to_nc(
         azimuth_offset,
     )
 
+    if data_format == "e-profile":
+        keys = ["altitude", "latitude", "longitude"]
+        for key in keys:
+            rpg_bin.data[f"station_{key}"] = rpg_bin.data.pop(key)
+
     if data_type in ("1B01", "1C01"):
         apply_qc(site, rpg_bin, params, coeff_files)
     if data_type in ("1B21", "1C01"):

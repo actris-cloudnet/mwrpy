@@ -187,6 +187,9 @@ global_specs:
   # Logbook repair/replacement work performed
   instrument_history:
 
+  # Checks not executed in determination of level 1 quality flag
+  level1_quality_flag_status:
+
   # Manufacturer of the infrared radiometer
   ir_instrument_manufacturer: Heitronics
 

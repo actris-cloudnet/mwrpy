@@ -74,3 +74,6 @@ global_specs:
 
   # Logbook repair/replacement work performed
   met_instrument_history:
+
+  # Checks not executed in determination of level 1 quality flag
+  level1_quality_flag_status:

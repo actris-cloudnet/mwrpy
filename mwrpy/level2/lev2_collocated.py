@@ -68,10 +68,16 @@ def generate_lev2_single(
             netCDF4.Dataset(t_pot_file.name, "r") as nc_t_pot,
             netCDF4.Dataset(eq_temp_file.name, "r") as nc_eq_temp,
         ):
-            nc_output.createDimension("height", len(nc_t_prof.variables["height"][:]))
             nc_output.createDimension("time", len(nc_lwp.variables["time"][:]))
             if data_format == "e-profile":
+                nc_output.createDimension(
+                    "altitude", len(nc_t_prof.variables["altitude"][:])
+                )
                 nc_output.createDimension("bnds", 2)
+            else:
+                nc_output.createDimension(
+                    "height", len(nc_t_prof.variables["height"][:])
+                )
 
             for source, variables in (
                 (
@@ -100,7 +106,7 @@ def generate_lev2_single(
                         "temperature",
                         "temperature_random_error",
                         "temperature_systematic_error",
-                        "height",
+                        "height" if data_format == "cloudnet" else "altitude",
                         "temperature_quality_flag",
                         "temperature_quality_flag_status",
                     ),
@@ -110,9 +116,11 @@ def generate_lev2_single(
                     (
                         "time",
                         "time_bnds",
-                        "latitude",
-                        "longitude",
-                        "altitude",
+                        "latitude" if data_format == "cloudnet" else "station_latitude",
+                        "longitude"
+                        if data_format == "cloudnet"
+                        else "station_longitude",
+                        "altitude" if data_format == "cloudnet" else "station_altitude",
                         "lwp",
                         "lwp_offset",
                         "lwp_random_error",
@@ -234,10 +242,16 @@ def generate_lev2_lhumpro(
             netCDF4.Dataset(iwv_file.name, "r") as nc_iwv,
             netCDF4.Dataset(abs_hum_file.name, "r") as nc_abs_hum,
         ):
-            nc_output.createDimension("height", len(nc_abs_hum.variables["height"][:]))
             nc_output.createDimension("time", len(nc_lwp.variables["time"][:]))
             if data_format == "e-profile":
+                nc_output.createDimension(
+                    "altitude", len(nc_abs_hum.variables["altitude"][:])
+                )
                 nc_output.createDimension("bnds", 2)
+            else:
+                nc_output.createDimension(
+                    "height", len(nc_abs_hum.variables["height"][:])
+                )
 
             for source, variables in (
                 (
@@ -253,7 +267,7 @@ def generate_lev2_lhumpro(
                 (
                     nc_abs_hum,
                     (
-                        "height",
+                        "height" if data_format == "cloudnet" else "altitude",
                         "absolute_humidity",
                         "absolute_humidity_random_error",
                         "absolute_humidity_systematic_error",
@@ -266,9 +280,11 @@ def generate_lev2_lhumpro(
                     (
                         "time",
                         "time_bnds",
-                        "latitude",
-                        "longitude",
-                        "altitude",
+                        "latitude" if data_format == "cloudnet" else "station_latitude",
+                        "longitude"
+                        if data_format == "cloudnet"
+                        else "station_longitude",
+                        "altitude" if data_format == "cloudnet" else "station_altitude",
                         "lwp",
                         "lwp_offset",
                         "lwp_random_error",
@@ -336,9 +352,13 @@ def generate_lev2_multi(
             netCDF4.Dataset(eq_temp_file.name, "r") as nc_eq_temp,
         ):
             nc_output.createDimension("time", len(nc_temp.variables["time"][:]))
-            nc_output.createDimension("height", len(nc_temp.variables["height"][:]))
             if data_format == "e-profile":
+                nc_output.createDimension(
+                    "altitude", len(nc_temp.variables["altitude"][:])
+                )
                 nc_output.createDimension("bnds", 2)
+            else:
+                nc_output.createDimension("height", len(nc_temp.variables["height"][:]))
 
             for source, variables in (
                 (
@@ -346,10 +366,12 @@ def generate_lev2_multi(
                     (
                         "time",
                         "time_bnds",
-                        "height",
-                        "latitude",
-                        "longitude",
-                        "altitude",
+                        "height" if data_format == "cloudnet" else "altitude",
+                        "latitude" if data_format == "cloudnet" else "station_latitude",
+                        "longitude"
+                        if data_format == "cloudnet"
+                        else "station_longitude",
+                        "altitude" if data_format == "cloudnet" else "station_altitude",
                         "elevation_angle",
                         "azimuth_angle",
                         "temperature",

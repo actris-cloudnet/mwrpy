@@ -73,7 +73,11 @@ def lev2_to_nc(
     params = read_config(site, instrument_type, "params")
 
     with nc.Dataset(lev1_file) as lev1:
-        params["altitude"] = ma.median(lev1.variables["altitude"][:])
+        params["altitude"] = (
+            ma.median(lev1.variables["altitude"][:])
+            if data_format == "cloudnet"
+            else ma.median(lev1.variables["station_altitude"][:])
+        )
 
         rpg_dat, coeff, index, scan_time = get_products(
             site,
@@ -87,6 +91,8 @@ def lev2_to_nc(
         )
         _combine_lev1(lev1, rpg_dat, index, data_type, scan_time)
         _del_att(global_attributes)
+        if data_format == "e-profile" and "height" in rpg_dat:
+            rpg_dat["altitude"] = rpg_dat.pop("height")
         mwr = rpg_mwr.Rpg(
             rpg_dat,
             date=num2pydate(lev1.variables["time"][:][0], lev1.variables["time"].units),
@@ -110,6 +116,9 @@ def lev2_to_nc(
                 "instrument": instrument_type,
                 "coeff_files": c_files,
             }
+        else:
+            global_attributes["dependencies"] = str(lev1_file).split("/")[-1]
+            global_attributes["level1_quality_flag_status"] = str(params["flag_status"])
         rpg_mwr.save_rpg(mwr, output_file, global_attributes, data_type, data_format)
 
 
@@ -420,7 +429,7 @@ def get_products(
         ibl, tb, scan_time = (
             np.empty([0, len(coeff["AG"])], np.int32),
             ma.masked_all((len(freq_ind), len(coeff["AG"]), 0), np.float32),
-            np.empty([0], np.int32),
+            np.ma.empty([0], np.int32),
         )
 
         for ix0v in ix0:
@@ -446,7 +455,7 @@ def get_products(
                 tb = np.concatenate(
                     (
                         tb,
-                        np.expand_dims(
+                        np.ma.expand_dims(
                             lev1["tb"][np.ix_(ix0v + np.flip(ind_ang), freq_ind)].T, 2
                         ),
                     ),
@@ -531,8 +540,18 @@ def get_products(
 
         hum_time = _read_time(hum_dat.variables["time"])
         tem_time = _read_time(tem_dat.variables["time"])
+        hum_height = (
+            hum_dat.variables["height"][:]
+            if "height" in hum_dat.variables
+            else hum_dat.variables["altitude"][:]
+        )
+        tem_height = (
+            tem_dat.variables["height"][:]
+            if "height" in tem_dat.variables
+            else tem_dat.variables["altitude"][:]
+        )
 
-        if len(hum_dat.variables["height"][:]) == len(tem_dat.variables["height"][:]):
+        if len(hum_height) == len(tem_height):
             hum_int = interpol_2d(
                 hum_time,
                 hum_dat.variables["absolute_humidity"][:, :],
@@ -541,13 +560,13 @@ def get_products(
         else:
             hum_int = interpolate_2d(
                 hum_time,
-                hum_dat.variables["height"][:],
+                hum_height,
                 hum_dat.variables["absolute_humidity"][:, :],
                 tem_time,
-                tem_dat.variables["height"][:],
+                tem_height,
             )
 
-        rpg_dat["height"] = tem_dat.variables["height"][:]
+        rpg_dat["height"] = tem_height
         pres = np.interp(tem_time, lev1["time"][:], lev1["air_pressure"][:])
         if data_type == "2P04":
             rpg_dat["relative_humidity"] = rel_hum(
@@ -628,6 +647,9 @@ def _combine_lev1(
         "altitude",
         "latitude",
         "longitude",
+        "station_altitude",
+        "station_latitude",
+        "station_longitude",
     ]
     if index.any():
         for ivars in lev1_vars:
@@ -686,8 +708,16 @@ def retrieval_input(lev1: dict, coeff: dict) -> np.ndarray:
     )
     bias = np.ones((len(lev1["time"][:]), 1), np.float32)
 
-    latitude = float(ma.median(lev1["latitude"]))
-    longitude = float(ma.median(lev1["longitude"]))
+    latitude = (
+        float(ma.median(lev1["latitude"]))
+        if "latitude" in lev1
+        else float(ma.median(lev1["station_latitude"]))
+    )
+    longitude = (
+        float(ma.median(lev1["longitude"]))
+        if "longitude" in lev1
+        else float(ma.median(lev1["station_longitude"]))
+    )
 
     if coeff["RT"] == -1:
         ret_in = lev1["tb"][:, :]
