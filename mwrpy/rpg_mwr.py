@@ -215,10 +215,12 @@ def save_rpg(
         dims = {
             "time": len(rpg.data["time"][:]),
             "bnds": 2,
-            "height": len(rpg.data["height"][:])
-            if data_format == "cloudnet"
-            else len(rpg.data["altitude"][:]),
         }
+        dims = (
+            dict(dims, **{"height": len(rpg.data["height"][:])})
+            if data_format == "cloudnet"
+            else dict(dims, **{"altitude": len(rpg.data["altitude"][:])})
+        )
     elif data_type in ("2I01", "2I02", "2I06"):
         dims = {"time": len(rpg.data["time"][:]), "bnds": 2}
     elif data_type == "2S02":
