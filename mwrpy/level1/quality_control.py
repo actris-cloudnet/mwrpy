@@ -118,8 +118,8 @@ def orbpos(data: dict, params: dict) -> np.ndarray:
             for t in data["time"]
         ]
     )
-    lat = data["latitude"]
-    lng = data["longitude"]
+    lat = data["latitude"] if "latitude" in data else data["station_latitude"]
+    lng = data["longitude"] if "longitude" in data else data["station_longitude"]
     sol = suncalc.get_position(time, lat=lat, lng=lng)
     lun = suncalc.suncalc.getMoonPosition(time, lat=lat, lng=lng)
     sun = {

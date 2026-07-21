@@ -249,7 +249,7 @@ def add_interpol1d(
             interpolated_mask = (
                 np.interp(data0["time"], valid_time, valid_mask.astype(float)) < 0.5
             )
-            result = ma.masked_array(interpolated_values, mask=interpolated_mask)
+            result = np.ma.masked_array(interpolated_values, mask=interpolated_mask)
         interpolated_data = (
             result
             if len(interpolated_data) == 0
@@ -607,8 +607,19 @@ def _get_filename(prod: str, date_in: datetime.date, site: str) -> str:
         data_out_dir = os.path.join(
             params["data_out"], f"level{level}", date_in.strftime("%Y/%m/%d")
         )
-        wigos_id = global_attributes["wigos_station_id"]
-        filename = f"MWR_{prod}_{wigos_id}_{date_in.strftime('%Y%m%d')}.nc"
+        wigos_id = (
+            global_attributes["wigos_station_id"]
+            if global_attributes["wigos_station_id"] is not None
+            else site
+        )
+        instrument_id = (
+            global_attributes["instrument_id"]
+            if global_attributes["instrument_id"] is not None
+            else "A"
+        )
+        filename = (
+            f"MWR_{prod}_{wigos_id}_{instrument_id}{date_in.strftime('%Y%m%d')}.nc"
+        )
     return os.path.join(data_out_dir, filename)
 
 

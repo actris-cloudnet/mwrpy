@@ -3,6 +3,7 @@
 from collections.abc import Callable
 from typing import TypeAlias
 
+from mwrpy.level1.lev1_meta_nc import ATTRIBUTES_CN, ATTRIBUTES_EP, DEFINITIONS_QF
 from mwrpy.utils import MetaData
 
 
@@ -52,6 +53,14 @@ def get_data_attributes(
 
     read_att = att_reader[data_type]
     attributes = dict(ATTRIBUTES_COM, **read_att)
+    if data_format == "e-profile":
+        keys = ["latitude", "longitude", "altitude", "height"]
+        for key in keys:
+            if key in attributes:
+                attributes.pop(key)
+        attributes = dict(ATTRIBUTES_EP, **attributes)
+        if "altitude" in rpg_variables:
+            rpg_variables["altitude"].set_attributes(attributes["altitude"])
     for key in list(rpg_variables):
         if key in attributes:
             if getattr(attributes[key], "retrieval_type") is not None:
@@ -61,6 +70,9 @@ def get_data_attributes(
                             **{field: coeff[field]}
                         )
             rpg_variables[key].set_attributes(attributes[key])
+            if data_format == "e-profile":
+                if getattr(attributes[key], "dimensions") == ("time", "height"):
+                    setattr(rpg_variables[key], "dimensions", ("time", "altitude"))
         else:
             del rpg_variables[key]
 
@@ -74,43 +86,6 @@ def get_data_attributes(
     )
 
     return rpg_variables
-
-
-ATTRIBUTES_CN = {
-    "time": MetaData(
-        comment="Time indication of samples is at end of integration-time",
-        units="hours since ",
-        long_name="Time UTC",
-        standard_name="time",
-        calendar="standard",
-        dimensions=("time",),
-    ),
-}
-
-DEFINITIONS_COM = {
-    "quality_flag": (
-        "\n"
-        "Bit 1: missing_tb\n"
-        "Bit 2: tb_below_threshold\n"
-        "Bit 3: tb_above_threshold\n"
-        "Bit 4: spectral_consistency_above_threshold\n"
-        "Bit 5: receiver_sanity_failed\n"
-        "Bit 6: rain_detected\n"
-        "Bit 7: sun_moon_in_beam\n"
-        "Bit 8: tb_offset_above_threshold"
-    ),
-    "quality_flag_status": (
-        "\n"
-        "Bit 1: missing_tb_not_checked\n"
-        "Bit 2: tb_lower_threshold_not_checked\n"
-        "Bit 3: tb_upper_threshold_not_checked\n"
-        "Bit 4: spectral_consistency_not_checked\n"
-        "Bit 5: receiver_sanity_not_checked\n"
-        "Bit 6: rain_not_checked\n"
-        "Bit 7: sun_moon_in_beam_not_checked\n"
-        "Bit 8: tb_offset_not_checked"
-    ),
-}
 
 
 ATTRIBUTES_COM = {
@@ -189,7 +164,7 @@ ATTRIBUTES_2P01 = {
     "temperature_quality_flag": MetaData(
         long_name="Temperature quality flag",
         units="1",
-        definition=DEFINITIONS_COM["quality_flag"],
+        definition=DEFINITIONS_QF["quality_flag"],
         comment="0 indicates data with good quality according to applied tests.\n"
         "The list of (not) applied tests is encoded in quality_flag_status",
         dimensions=("time",),
@@ -197,7 +172,7 @@ ATTRIBUTES_2P01 = {
     "temperature_quality_flag_status": MetaData(
         long_name="Temperature quality flag status",
         units="1",
-        definition=DEFINITIONS_COM["quality_flag_status"],
+        definition=DEFINITIONS_QF["quality_flag_status"],
         comment="Checks not executed in determination of quality_flag.\n"
         "0 indicates quality check has been applied.",
         dimensions=("time",),
@@ -238,7 +213,7 @@ ATTRIBUTES_2P02 = {
     "temperature_quality_flag": MetaData(
         long_name="Temperature quality flag",
         units="1",
-        definition=DEFINITIONS_COM["quality_flag"],
+        definition=DEFINITIONS_QF["quality_flag"],
         comment="0 indicates data with good quality according to applied tests.\n"
         "The list of (not) applied tests is encoded in quality_flag_status",
         dimensions=("time",),
@@ -246,7 +221,7 @@ ATTRIBUTES_2P02 = {
     "temperature_quality_flag_status": MetaData(
         long_name="Temperature quality flag status",
         units="1",
-        definition=DEFINITIONS_COM["quality_flag_status"],
+        definition=DEFINITIONS_QF["quality_flag_status"],
         comment="Checks not executed in determination of quality_flag.\n"
         "0 indicates quality check has been applied.",
         dimensions=("time",),
@@ -280,7 +255,7 @@ ATTRIBUTES_2P03 = {
     "absolute_humidity_quality_flag": MetaData(
         long_name="Absolute humidity quality flag",
         units="1",
-        definition=DEFINITIONS_COM["quality_flag"],
+        definition=DEFINITIONS_QF["quality_flag"],
         comment="0 indicates data with good quality according to applied tests.\n"
         "The list of (not) applied tests is encoded in quality_flag_status",
         dimensions=("time",),
@@ -288,7 +263,7 @@ ATTRIBUTES_2P03 = {
     "absolute_humidity_quality_flag_status": MetaData(
         long_name="Absolute humidity quality flag status",
         units="1",
-        definition=DEFINITIONS_COM["quality_flag_status"],
+        definition=DEFINITIONS_QF["quality_flag_status"],
         comment="Checks not executed in determination of quality_flag.\n"
         "0 indicates quality check has been applied.",
         dimensions=("time",),
@@ -411,7 +386,7 @@ ATTRIBUTES_2I01 = {
     "lwp_quality_flag": MetaData(
         long_name="Liquid water path quality flag",
         units="1",
-        definition=DEFINITIONS_COM["quality_flag"],
+        definition=DEFINITIONS_QF["quality_flag"],
         comment="0 indicates data with good quality according to applied tests.\n"
         "The list of (not) applied tests is encoded in quality_flag_status",
         dimensions=("time",),
@@ -419,7 +394,7 @@ ATTRIBUTES_2I01 = {
     "lwp_quality_flag_status": MetaData(
         long_name="Liquid water path quality flag status",
         units="1",
-        definition=DEFINITIONS_COM["quality_flag_status"],
+        definition=DEFINITIONS_QF["quality_flag_status"],
         comment="Checks not executed in determination of quality_flag.\n"
         "0 indicates quality check has been applied.",
         dimensions=("time",),
@@ -448,7 +423,7 @@ ATTRIBUTES_2I02 = {
     "iwv_quality_flag": MetaData(
         long_name="Integrated water vapour quality flag",
         units="1",
-        definition=DEFINITIONS_COM["quality_flag"],
+        definition=DEFINITIONS_QF["quality_flag"],
         comment="0 indicates data with good quality according to applied tests.\n"
         "The list of (not) applied tests is encoded in quality_flag_status",
         dimensions=("time",),
@@ -456,7 +431,7 @@ ATTRIBUTES_2I02 = {
     "iwv_quality_flag_status": MetaData(
         long_name="Integrated water vapour quality flag status",
         units="1",
-        definition=DEFINITIONS_COM["quality_flag_status"],
+        definition=DEFINITIONS_QF["quality_flag_status"],
         comment="Checks not executed in determination of quality_flag.\n"
         "0 indicates quality check has been applied.",
         dimensions=("time",),
@@ -491,7 +466,7 @@ ATTRIBUTES_2I06 = {
     "stability_quality_flag": MetaData(
         long_name="Quality flag for stability products",
         units="1",
-        definition=DEFINITIONS_COM["quality_flag"],
+        definition=DEFINITIONS_QF["quality_flag"],
         comment="0 indicates data with good quality according to applied tests.\n"
         "The list of (not) applied tests is encoded in quality_flag_status",
         dimensions=("time",),
@@ -499,7 +474,7 @@ ATTRIBUTES_2I06 = {
     "stability_quality_flag_status": MetaData(
         long_name="Quality flag status for stability products",
         units="1",
-        definition=DEFINITIONS_COM["quality_flag_status"],
+        definition=DEFINITIONS_QF["quality_flag_status"],
         comment="Checks not executed in determination of quality_flag.\n"
         "0 indicates quality check has been applied.",
         dimensions=("time",),
