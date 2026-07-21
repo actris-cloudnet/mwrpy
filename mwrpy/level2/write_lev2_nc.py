@@ -452,11 +452,15 @@ def get_products(
                     axis=0,
                 )
                 ibl = np.append(ibl, [ix0v + np.flip(ind_ang)], axis=0)
-                tb = np.concatenate(
+                tb = np.ma.concatenate(
                     (
                         tb,
                         np.ma.expand_dims(
-                            lev1["tb"][np.ix_(ix0v + np.flip(ind_ang), freq_ind)].T, 2
+                            np.ma.array(
+                                lev1["tb"][np.ix_(ix0v + np.flip(ind_ang), freq_ind)].T,
+                                np.float32,
+                            ),
+                            2,
                         ),
                     ),
                     axis=2,
