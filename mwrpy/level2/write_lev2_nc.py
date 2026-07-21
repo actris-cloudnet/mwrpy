@@ -23,6 +23,7 @@ from mwrpy.utils import (
     interpol_2d,
     interpolate_2d,
     read_config,
+    read_site_config_yaml,
 )
 
 
@@ -68,6 +69,8 @@ def lev2_to_nc(
     ):
         raise ValueError(f"Data type {data_type} not recognised")
 
+    if instrument_type is None and site is not None:
+        instrument_type = read_site_config_yaml(site)["type"]
     assert instrument_type is not None
     global_attributes = read_config(site, instrument_type, "global_specs")
     params = read_config(site, instrument_type, "params")
