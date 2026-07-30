@@ -2,6 +2,7 @@
 
 import glob
 import locale
+import logging
 from datetime import date, datetime, timezone
 
 import atmoslib

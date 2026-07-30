@@ -369,6 +369,7 @@ def plot_product(prod: str, date, site: str, data_format: str, instrument: IType
     )
     if not os.path.isfile(filename):
         logging.warning("Nothing to plot for product " + prod)
+    params = read_config(site, None, "params")
     output_dir = f"{os.path.dirname(filename)}/"
 
     # Plot level 1 data

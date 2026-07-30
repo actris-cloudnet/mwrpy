@@ -2,6 +2,7 @@
 
 import atmoslib
 import numpy as np
+from numpy import ma
 
 from mwrpy.utils import setbit
 
