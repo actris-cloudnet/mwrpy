@@ -24,6 +24,7 @@ from mwrpy.utils import (
     get_file_list,
     isbit,
     read_config,
+    read_lidar,
     update_lev1_attributes,
 )
 
@@ -117,20 +118,31 @@ def lev1_to_nc(
             c_files = (
                 get_coeff_list(
                     site,
-                    ["spc", "ins", "lwp", "iwv", "hpt", "tpt", "tpb", "tbx"],
+                    ["spc", "ins", "tbx"],
                     None,
                     params.get("coeff_path", None),
                 )
                 if coeff_files is None
                 else coeff_files
             )
+            i_gen = read_config(None, instrument_type, "global_specs")[
+                "instrument_generation"
+            ]
+            _, lidar_meta = read_lidar(lidar_path) if lidar_path else (None, None)
             global_attributes = {
                 "site": site,
                 "instrument": instrument_type,
                 "coeff_files": c_files,
+                "instrument_generation": i_gen,
+                "history": lidar_meta["history"] if lidar_meta else None,
+                "source": lidar_meta["source"] if lidar_meta else None,
             }
         else:
             global_attributes = read_config(site, instrument_type, "global_specs")
+            global_attributes["site_location"] = site
+            global_attributes["dependencies"] = (
+                str(lidar_path).split("/")[-1] if lidar_path else None
+            )
         _update_calibration_attributes(rpg_bin, global_attributes)
         if data_type != "1C01":
             update_lev1_attributes(global_attributes, data_type)
@@ -145,8 +157,8 @@ def prepare_data(
     lidar_path: str | PathLike | None,
     time_offset: datetime.timedelta | None = None,
     altitude: float | None = None,
-    date: float | None = None,
     azimuth_offset: float | None = None,
+    date: float | None = None,
 ) -> RpgBin | dict:
     """Load and prepare data for netCDF writing."""
     if data_type in ("1B01", "1C01"):

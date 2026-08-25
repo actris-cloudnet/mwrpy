@@ -131,6 +131,22 @@ ATTRIBUTES_COM = {
         comment="0=horizon, 90=zenith",
         dimensions=("time",),
     ),
+    "quality_flag": MetaData(
+        long_name="General quality flag",
+        units="1",
+        definition=DEFINITIONS_QF["quality_flag"],
+        comment="0 indicates data with good quality according to applied tests.\n"
+        "The list of (not) applied tests is encoded in quality_flag_status",
+        dimensions=("time",),
+    ),
+    "quality_flag_status": MetaData(
+        long_name="General quality flag status",
+        units="1",
+        definition=DEFINITIONS_QF["quality_flag_status"],
+        comment="Checks not executed in determination of quality_flag.\n"
+        "0 indicates quality check has been applied.",
+        dimensions=("time",),
+    ),
 }
 
 

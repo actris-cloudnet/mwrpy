@@ -359,15 +359,18 @@ def read_config(
     instrument_type: str | None,
     key: Literal["global_specs", "params"],
 ) -> dict:
-    if site is not None:
-        itype = read_site_config_yaml(site)["type"]
+    site_config = read_site_config_yaml(site)
+    if site is not None and len(site_config) == 0 and instrument_type is None:
+        raise ValueError(f"site_config file or instrument_type is required")
+    if site is not None and len(site_config) > 0:
+        itype = site_config["type"]
     elif instrument_type is not None:
         itype = instrument_type
     else:
         raise ValueError("site or instrument_type is required")
     data = _read_itype_config_yaml(itype)[key]
-    if site is not None:
-        data.update(read_site_config_yaml(site)[key])
+    if len(site_config) > 0:
+        data.update(site_config[key])
     return data
 
 
@@ -383,12 +386,13 @@ def _read_itype_config_yaml(itype: str) -> dict:
         return yaml.load(f, Loader=SafeLoader)
 
 
-def read_site_config_yaml(site: str) -> dict:
+def read_site_config_yaml(site: str | None) -> dict:
     """Reads configuration file for specific site."""
     dir_name = os.path.dirname(os.path.realpath(__file__))
+    site = "" if site is None else site
     site_file = os.path.join(dir_name, "site_config", site, "config.yaml")
     if not os.path.isfile(site_file):
-        raise NotImplementedError(f"Error: site config file {site_file} not found")
+        return dict()
     with open(site_file, "r", encoding="utf8") as f:
         return yaml.load(f, Loader=SafeLoader)
 
@@ -466,10 +470,14 @@ def read_nc_fields(nc_file: str, name: str) -> np.ndarray:
         return nc.variables[name][:]
 
 
-def read_lidar(path_to_lidar: str | PathLike) -> dict:
+def read_lidar(path_to_lidar: str | PathLike) -> tuple[dict, dict]:
     """Reads lidar data."""
     data, names = {}, ["time", "height", "beta"]
     with netCDF4.Dataset(path_to_lidar) as nc:
+        meta = {
+            "history": nc.history,
+            "source": nc.source,
+        }
         for key in names:
             data[key] = nc.variables[key][:].data
             if key == "time":
@@ -484,7 +492,7 @@ def read_lidar(path_to_lidar: str | PathLike) -> dict:
             if key == "beta":
                 data[key][data[key] == nc.variables[key].get_fill_value()] = np.nan
 
-    return data
+    return data, meta
 
 
 def n_elements(array: np.ndarray, dist: float, var: str | None = None) -> int:
@@ -591,9 +599,11 @@ def get_processing_dates(args) -> tuple[str, str]:
     return start_date, stop_date
 
 
-def _get_filename(prod: str, date_in: datetime.date, site: str) -> str:
-    global_attributes = read_config(site, None, "global_specs")
-    params = read_config(site, None, "params")
+def _get_filename(
+    prod: str, date_in: datetime.date, site: str, instrument: IType
+) -> str:
+    params = read_config(site, instrument, "params")
+    global_attributes = read_config(site, instrument, "global_specs")
     if np.char.isnumeric(prod[0]):
         level = prod[0]
     else:
@@ -626,17 +636,23 @@ def _get_filename(prod: str, date_in: datetime.date, site: str) -> str:
 def _get_filename_cloudnet(
     prod: str, date_in: datetime.date, site: str, instrument: IType
 ) -> str:
+    params = read_config(None, instrument, "params")
     if np.char.isnumeric(prod[0]):
         level = prod[0]
         name = "l1c"
     else:
         level = "2"
         name = prod
-    params = read_config(None, instrument, "params")
-    data_out_dir = os.path.join(
-        params["data_out"], f"level{level}", date_in.strftime("%Y/%m/%d")
-    )
-    filename = f"{date_in.strftime('%Y%m%d')}_{site}_{instrument}-{name}.nc"
+    if name == "lwp_offset":
+        data_out_dir = os.path.join(
+            params["data_out"], f"level{level}", date_in.strftime("%Y")
+        )
+        filename = f"{site}_{prod}_{date_in.strftime('%Y')}.csv"
+    else:
+        data_out_dir = os.path.join(
+            params["data_out"], f"level{level}", date_in.strftime("%Y/%m/%d")
+        )
+        filename = f"{date_in.strftime('%Y%m%d')}_{site}_{instrument}-{name}.nc"
     return os.path.join(data_out_dir, filename)
 
 

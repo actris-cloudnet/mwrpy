@@ -77,11 +77,9 @@ def lev2_to_nc(
     ):
         raise ValueError(f"Data type {data_type} not recognised")
 
-    if instrument_type is None and site is not None:
-        instrument_type = read_site_config_yaml(site)["type"]
-    assert instrument_type is not None
-    global_attributes = read_config(site, instrument_type, "global_specs")
     params = read_config(site, instrument_type, "params")
+    global_attributes = read_config(site, instrument_type, "global_specs")
+    global_attributes["site_location"] = site
 
     with nc.Dataset(lev1_file) as lev1:
         params["altitude"] = (
@@ -104,9 +102,12 @@ def lev2_to_nc(
         _del_att(global_attributes)
         if data_format == "e-profile" and "height" in rpg_dat:
             rpg_dat["altitude"] = rpg_dat.pop("height")
+        l2_date = num2pydate(
+            lev1.variables["time"][:][0], lev1.variables["time"].units
+        ).strftime("%Y%m%d")
         mwr = rpg_mwr.Rpg(
             rpg_dat,
-            date=num2pydate(lev1.variables["time"][:][0], lev1.variables["time"].units),
+            date=datetime.strptime(l2_date, "%Y%m%d").date(),
         )
         mwr.data = get_data_attributes(mwr.data, data_type, coeff, data_format)
         if data_format == "cloudnet":
@@ -126,9 +127,15 @@ def lev2_to_nc(
                 "site": site,
                 "instrument": instrument_type,
                 "coeff_files": c_files,
+                "history": lev1.history,
+                "source": lev1.source,
             }
         else:
-            global_attributes["dependencies"] = str(lev1_file).split("/")[-1]
+            global_attributes["dependencies"] = (
+                (f"{lev1.dependencies}\n" f"{str(lev1_file).split('/')[-1]}")
+                if lev1.dependencies
+                else str(lev1_file).split("/")[-1]
+            )
             global_attributes["level1_quality_flag_status"] = str(params["flag_status"])
         rpg_mwr.save_rpg(mwr, output_file, global_attributes, data_type, data_format)
 
@@ -159,7 +166,11 @@ def get_products(
 
     if data_type in ("2I01", "2I02", "2I06"):
         product = (
-            "lwp" if data_type == "2I01" else "iwv" if data_type == "2I02" else "sta"
+            "lwp"
+            if data_type == "2I01"
+            else "iwv"
+            if data_type == "2I02"
+            else "stability"
         )
 
         coeff = get_mvr_coeff(
@@ -226,7 +237,7 @@ def get_products(
             hidden_layer[:, 1:] = np.tanh(
                 fac[:] * np.einsum("ijk,ij->ik", c_w1, ret_in[index, :])
             )
-            if product == "sta":
+            if product == "stability":
                 tmp_product = np.squeeze(
                     np.tanh(fac[:] * np.einsum("ij,ikj->ik", hidden_layer, c_w2))
                     * op_sc
@@ -260,10 +271,10 @@ def get_products(
                 axis=1,
             )
         )[0]  # type: ignore
+        _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
         if product in ("lwp", "iwv"):
             ret_product = ma.masked_all(len(index), np.float32)
             ret_product[index_ret] = tmp_product[index_ret]
-            _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
             if product == "lwp":
                 if params["flag_status"][3] == 0 and np.all(
                     isbit(lev1["met_quality_flag"][index], 3)
@@ -312,8 +323,6 @@ def get_products(
                 ret_product = ma.masked_all(len(index), np.float32)
                 ret_product[index_ret] = tmp_product[index_ret, ind]
                 rpg_dat[prd] = ret_product
-
-            _get_qf(rpg_dat, lev1, coeff, index, index_ret, "stability")
 
     elif data_type in ("2P01", "2P03"):
         if data_type == "2P01":
@@ -625,6 +634,14 @@ def get_products(
                     atmoslib.equivalent_potential_temperature(T, p_baro, q_moist)
                 )
 
+        _get_qf(
+            rpg_dat,
+            lev1,
+            coeff,
+            np.array(range(len(tem_time))),
+            np.array(range(len(tem_time))),
+            "derived",
+        )
         _combine_lev1(
             tem_dat,
             rpg_dat,
@@ -644,28 +661,37 @@ def _get_qf(
     product: str,
     scan: np.ndarray = np.empty([0], np.int32),
 ) -> None:
-    rpg_dat[product + "_quality_flag"] = ma.masked_all((len(index)), np.int32)
-    rpg_dat[product + "_quality_flag_status"] = ma.masked_all((len(index)), np.int32)
-
-    _, freq_ind, _ = np.intersect1d(
-        lev1["frequency"][:],
-        coeff["FR"][:],
-        assume_unique=False,
-        return_indices=True,
+    rpg_dat["quality_flag"] = np.bitwise_or.reduce(
+        lev1["quality_flag"][index[index_ret], :], axis=1
     )
-    if scan.any():
-        for ind, _ in enumerate(scan[:, 0]):
-            flg = np.bitwise_or.reduce(
-                lev1["quality_flag"][np.ix_(scan[ind, :], freq_ind)], axis=1
-            )
-            rpg_dat[product + "_quality_flag"][ind] = np.bitwise_or.reduce(flg)
-    else:
-        rpg_dat[product + "_quality_flag"][index_ret] = np.bitwise_or.reduce(
-            lev1["quality_flag"][np.ix_(index[index_ret], freq_ind)], axis=1
+    rpg_dat["quality_flag_status"] = np.bitwise_or.reduce(
+        lev1["quality_flag_status"][index[index_ret], :], axis=1
+    )
+    if product != "derived":
+        rpg_dat[product + "_quality_flag"] = ma.masked_all((len(index)), np.int32)
+        rpg_dat[product + "_quality_flag_status"] = ma.masked_all(
+            (len(index)), np.int32
         )
-    rpg_dat[product + "_quality_flag_status"][index_ret] = lev1["quality_flag_status"][
-        :, freq_ind[0]
-    ][index[index_ret]]
+
+        _, freq_ind, _ = np.intersect1d(
+            lev1["frequency"][:],
+            coeff["FR"][:],
+            assume_unique=False,
+            return_indices=True,
+        )
+        if scan.any():
+            for ind, _ in enumerate(scan[:, 0]):
+                flg = np.bitwise_or.reduce(
+                    lev1["quality_flag"][np.ix_(scan[ind, :], freq_ind)], axis=1
+                )
+                rpg_dat[product + "_quality_flag"][ind] = np.bitwise_or.reduce(flg)
+        else:
+            rpg_dat[product + "_quality_flag"][index_ret] = np.bitwise_or.reduce(
+                lev1["quality_flag"][np.ix_(index[index_ret], freq_ind)], axis=1
+            )
+        rpg_dat[product + "_quality_flag_status"][index_ret] = lev1[
+            "quality_flag_status"
+        ][:, freq_ind[0]][index[index_ret]]
 
 
 def _combine_lev1(

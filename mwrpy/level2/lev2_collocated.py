@@ -121,6 +121,8 @@ def generate_lev2_single(
                         if data_format == "cloudnet"
                         else "station_longitude",
                         "altitude" if data_format == "cloudnet" else "station_altitude",
+                        "quality_flag",
+                        "quality_flag_status",
                         "lwp",
                         "lwp_offset",
                         "lwp_random_error",
@@ -285,6 +287,8 @@ def generate_lev2_lhumpro(
                         if data_format == "cloudnet"
                         else "station_longitude",
                         "altitude" if data_format == "cloudnet" else "station_altitude",
+                        "quality_flag",
+                        "quality_flag_status",
                         "lwp",
                         "lwp_offset",
                         "lwp_random_error",
@@ -372,6 +376,8 @@ def generate_lev2_multi(
                         if data_format == "cloudnet"
                         else "station_longitude",
                         "altitude" if data_format == "cloudnet" else "station_altitude",
+                        "quality_flag",
+                        "quality_flag_status",
                         "elevation_angle",
                         "azimuth_angle",
                         "temperature",

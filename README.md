@@ -55,10 +55,10 @@ The folder `mwrpy/site_config/` contains configuration files for each instrument
 type, which defines the input and output data paths etc.
 For example, this is the [configuration file for RPG-HATPRO](mwrpy/site_config/hatpro.yaml).
 
-The folders for each site, e.g. `mwrpy/site_config/hyytiala/`, contain a
-site and instrument specific configuration file (`config.yaml`) and retrieval coefficients.
-For example, this is the [configuration file for Hyytiälä](mwrpy/site_config/hyytiala/config.yaml).
-This site configuration file is not needed when using the Cloudnet file format.
+The folders for each site, e.g. `mwrpy/site_config/hyytiala/`, contain a folder with retrieval coefficients
+(`mwrpy/site_config/hyytiala/coefficients/`) and a site and instrument specific configuration file (`config.yaml`).
+For example, this is the [configuration file for Hyytiälä](mwrpy/site_config/hyytiala/config.yaml), which is optional
+and helps with configuring multiple instruments of the same type.
 
 ## Command line usage
 

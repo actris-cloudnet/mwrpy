@@ -35,22 +35,14 @@ def get_data_attributes(rpg_variables: dict, data_type: str, data_format: str) -
         )
 
     if data_type in ("1B01", "1B11", "1B21"):
-        read_att = att_reader[data_type]
-        attributes = dict(ATTRIBUTES_COM, **read_att)
+        attributes = att_reader[data_type]
     else:
-        attributes = dict(
-            ATTRIBUTES_COM, **ATTRIBUTES_1B01, **ATTRIBUTES_1B11, **ATTRIBUTES_1B21
-        )
-        if data_format == "cloudnet":
-            attributes.pop("time")
-            attributes = dict(ATTRIBUTES_CN, **attributes)
-
-    if data_format == "e-profile":
-        keys = ["latitude", "longitude", "altitude", "height"]
-        for key in keys:
-            if key in attributes:
-                attributes.pop(key)
-        attributes = dict(ATTRIBUTES_EP, **attributes)
+        attributes = dict(ATTRIBUTES_1B01, **ATTRIBUTES_1B11, **ATTRIBUTES_1B21)
+    attributes = (
+        dict(ATTRIBUTES_CN, **attributes)
+        if data_format == "cloudnet"
+        else dict(ATTRIBUTES_EP, **attributes)
+    )
 
     for key in list(rpg_variables):
         if key in attributes:
@@ -75,10 +67,39 @@ ATTRIBUTES_CN = {
         calendar="standard",
         dimensions=("time",),
     ),
+    "latitude": MetaData(
+        long_name="Latitude of measurement station",
+        standard_name="latitude",
+        units="degrees_north",
+        dimensions=("time",),
+    ),
+    "longitude": MetaData(
+        long_name="Longitude of measurement station",
+        standard_name="longitude",
+        units="degrees_east",
+        dimensions=("time",),
+    ),
+    "altitude": MetaData(
+        long_name="Altitude above mean sea level of measurement station",
+        standard_name="altitude",
+        units="m",
+        dimensions=("time",),
+    ),
 }
 
 
 ATTRIBUTES_EP = {
+    "time": MetaData(
+        long_name="Time (UTC) of the measurement",
+        units="seconds since 1970-01-01 00:00:00.000",
+        comment="Time indication of samples is at end of integration-time",
+        dimensions=("time",),
+    ),
+    "time_bnds": MetaData(
+        long_name="Start and end time (UTC) of the measurements",
+        units="seconds since 1970-01-01 00:00:00.000",
+        dimensions=("time", "bnds"),
+    ),
     "station_latitude": MetaData(
         long_name="Latitude of measurement station",
         standard_name="latitude",
@@ -102,39 +123,6 @@ ATTRIBUTES_EP = {
         standard_name="height_above_mean_sea_level",
         units="m",
         dimensions=("altitude",),
-    ),
-}
-
-
-ATTRIBUTES_COM = {
-    "time": MetaData(
-        long_name="Time (UTC) of the measurement",
-        units="seconds since 1970-01-01 00:00:00.000",
-        comment="Time indication of samples is at end of integration-time",
-        dimensions=("time",),
-    ),
-    "time_bnds": MetaData(
-        long_name="Start and end time (UTC) of the measurements",
-        units="seconds since 1970-01-01 00:00:00.000",
-        dimensions=("time", "bnds"),
-    ),
-    "latitude": MetaData(
-        long_name="Latitude of measurement station",
-        standard_name="latitude",
-        units="degrees_north",
-        dimensions=("time",),
-    ),
-    "longitude": MetaData(
-        long_name="Longitude of measurement station",
-        standard_name="longitude",
-        units="degrees_east",
-        dimensions=("time",),
-    ),
-    "altitude": MetaData(
-        long_name="Altitude above mean sea level of measurement station",
-        standard_name="altitude",
-        units="m",
-        dimensions=("time",),
     ),
 }
 

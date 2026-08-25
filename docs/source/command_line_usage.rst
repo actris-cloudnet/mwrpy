@@ -2,9 +2,9 @@
 Command line usage
 ==================
 
-After defining the instrument type configuration (``mwrpy/site_config/{instrument_type}.yaml``) and site specific
-information (``mwrpy/site_config/{site}.yaml``, only for E-PROFILE format) files, including input/output data
-paths, MWRpy can also be run using the command line tool `mwrpy/cli.py`:
+After defining the instrument type configuration (``mwrpy/site_config/{instrument_type}.yaml``) and optional site
+specific information (``mwrpy/site_config/{site}/config.yaml``, only for E-PROFILE format) files, MWRpy can also be
+run using the command line tool `mwrpy/cli.py`:
 
 .. code-block::
 
@@ -42,34 +42,15 @@ paths, MWRpy can also be run using the command line tool `mwrpy/cli.py`:
    * - `-p`
      - `--products`
      - 1C01, single, multi
-     - Processed products, e.g, `1C01, 2I02, 2P03, single`, see Data Types below.
+     - Processed products, e.g, `1C01, 2I02, 2P03, single`, see Data Types.
    * - `-f`
      - `--format`
      - cloudnet
      - Data format to be used (`cloudnet`, `e-profile`).
-
-The following arguments are used for the Cloudnet file format:
-
-.. list-table:: Arguments
-   :widths: 10 20 20 50
-   :header-rows: 1
-
-   * - Short
-     - Long
-     - Default
-     - Description
    * - `-i`
      - `--instrument`
      - hatpro
      - Instrument to be processed (`hatpro`, `lhatpro`, `lhumpro_u90`).
-   * - `-a`
-     - `--altitude`
-     - 0.0
-     - Altitude above mean sea level of site (m).
-   * - `-o`
-     - `--azimuth_offset`
-     - None
-     - Azimuth offset of the instrument (degrees). Or `None`.
 
 These commands are available to select the processing mode:
 
@@ -98,7 +79,7 @@ To process and plot Level 1 & 2 data (1C01, single, multi) for the site `Hyytial
     python mwrpy/cli.py -s hyytiala -d 2023-04-06 -f e-profile process
 
 
-Run the following command for the Cloudnet format (with site altitude 150 m) and no plots:
+Run the following command for the Cloudnet format and no plots:
 
 .. code-block::
 

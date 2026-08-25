@@ -8,6 +8,13 @@ params:
   # path to retrieval coefficients
   coeff_path:
 
+  # path to Cloudnet lidar file and lidar model (optional)
+  path_to_lidar:
+  lidar_model:
+
+  # path to ABSCAL.HIS file
+  path_to_cal: /tmp/data/
+
   # availability of IR
   ir_flag: True
 
@@ -22,12 +29,18 @@ params:
   # Bit 8: tb_offset_above_threshold
   flag_status: [0, 0, 0, 0, 0, 0, 0, 1]
 
+  # integration time for BL scans in seconds
+  scan_time: 100.
+
   # integration time of measurements in seconds
   int_time: 1
 
   # Azimuth angle is transformed to geographical coordinates (E=90 and W=270), currently only for RPG scanners.
   # If you do not want to transform the coordinates set azi_cor to -999.
   azi_cor: -999.
+  # Azimuth correction:
+  # Set az_cor to the angle that RPG software gives when instrument is pointing to the North.
+  const_azi: -999.
 
   # some default values:
   # -------------------
@@ -101,7 +114,7 @@ params:
       [0., 100.],
     ]
 
-# Missing entries are filled with site specific config file
+# Missing entries can also be filled with site specific config file
 global_specs:
   # Name of the conventions followed by the dataset
   conventions: CF-1.8

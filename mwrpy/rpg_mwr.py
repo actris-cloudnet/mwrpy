@@ -306,9 +306,8 @@ def _add_cloudnet_global_attributes(
     instrument = add_global["instrument"].upper()
     site = add_global["site"]
     if data_type == "1C01":
-        level = "mwr-l1c"
+        level = history = "mwr-l1c"
         title = f"{instrument} microwave radiometer Level 1c from {site}"
-        history = level
     elif data_type == "2P02":
         level = "mwr-multi"
         title = f"MWR multiple-pointing from {site}"
@@ -325,11 +324,18 @@ def _add_cloudnet_global_attributes(
         "references": "https://doi.org/10.21105/joss.06733",
         "cloudnet_file_type": level,
         "title": title,
-        "history": f"{datetime.datetime.now(tz=t_zone).strftime(form)} +00:00"
-        + " - "
-        + history
-        + " file created",
+        "history": f"{datetime.datetime.now(tz=t_zone).strftime(form)} +00:00 - {history} file created",
     }
+    if "history" in add_global and add_global["history"]:
+        att_global["source"] = (
+            (f"{att_global['source']}\n" f"{add_global['source']}")
+            if data_type == "1C01"
+            else f"{add_global['source']}"
+        )
+        att_global["history"] = (
+            f"{datetime.datetime.now(tz=t_zone).strftime(form)} +00:00 - {history} file created\n"
+            f"{add_global['history']}"
+        )
     for name, value in att_global.items():
         if value is None:
             value = ""

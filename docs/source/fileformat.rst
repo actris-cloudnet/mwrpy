@@ -51,19 +51,19 @@ All MWRpy files use ``NETCDF4_CLASSIC`` data model, i.e., ``HDF5`` file format.
      - seconds since 1970-01-01 00:00:00.000
      - int32
      -
-   * - latitude
+   * - station_latitude
      - Latitude of measurement station
      - time
      - degree_north
      - float32
      - latitude
-   * - longitude
+   * - station_longitude
      - Longitude of measurement station
      - time
      - degree_east
      - float32
      - longitude
-   * - altitude
+   * - station_altitude
      - Altitude above mean sea level of measurement station
      - time
      - m
@@ -408,13 +408,26 @@ MWR-Level 2 files
      - degree
      - float32
      - sensor_elevation_angle
+   * - quality_flag
+     - General quality flag
+     - time
+     - 1
+     - int32
+     -
+   * - quality_flag_status
+     - General quality flag status
+     - time
+     - 1
+     - int32
+     -
 
 Single pointing file
 ~~~~~~~~~~~~~~~~~~~~
 
 The Level 2 default file type ``single`` contains all variables from the file types
 ``2I01``, ``2I02``, ``2I06``, ``2P01``, and ``2P03`` (if the respective retrieval coefficients are available) and is
-available for the E-PROFILE and Cloudnet data format.
+available for the E-PROFILE and Cloudnet data format. The variable / dimension ``height`` is named ``altitude`` in
+the E-PROFILE data format.
 
 **Variables (MWR_2I01 specific)**
 
@@ -631,7 +644,8 @@ Multiple pointing file
 
 The Level 2 default file type ``multi`` contains all variables from the file types
 ``2P02``, ``2P04``, ``2P07``, and ``2P08`` (if the respective retrieval coefficients are available) and is
-available for the E-PROFILE and Cloudnet data format.
+available for the E-PROFILE and Cloudnet data format. The variable / dimension ``height`` is named ``altitude`` in
+the E-PROFILE data format.
 
 **Variables (MWR_2P02 specific)**
 

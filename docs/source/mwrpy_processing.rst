@@ -19,17 +19,17 @@ quality control and visualization. This example utilizes files taken from the AC
 
 First steps for processing examples:
 
-First we define the instrument type configuration (``mwrpy/site_config/{instrument_type}.yaml``) and site specific
-information (``mwrpy/site_config/{site}.yaml``, only for E-PROFILE format) files, including input/output data paths.
-Then the data path is specified:
+First we define the instrument type configuration file (``mwrpy/site_config/{i_type}.yaml``), including instrument
+specific information. An optional site specific configuration file (e.g. ``mwrpy/site_config/{site_name}/config
+.yaml``) can be configured, when dealing with multiple instruments of the same type. Then the data path is specified:
 
 .. code-block:: python
 
     import os
 
     package_dir = os.getcwd()
-    site = "hyytiala"
-    data_path = f"{package_dir}/tests/data/{site}"
+    site_name = "hyytiala"
+    data_path = f"{package_dir}/tests/data/{site_name}"
 
 E-PROFILE format
 ----------------
@@ -53,10 +53,10 @@ flags are derived:
 Quality flags are stored as bits and Bit 1-3 include checks for missing brightness temperature values and their valid
 range (2.7 - 330 K). The spectral consistency flag (Bit 4) compares measured and retrieved TB. For this flag, it is
 expected to have the corresponding RPG retrieval coefficient file (``SPC*.RET``) in
-``/mwrpy/site_config/{site}/coefficients/``. Data from HKD files are used to determine the stability of the receiver
-components (Bit 5). The sensor from the attached weather station detects rain for quality Bit 6 and the sun and moon
-orbits are calculated and compared to the measurement geometry to detect potential interferences (Bit 7). A quality
-flag status variable contains information whether the flag is active.
+``/mwrpy/site_config/{site_name}/coefficients/``. Data from HKD files are used to determine the stability of the
+receiver components (Bit 5). The sensor from the attached weather station detects rain for quality Bit 6 and the sun
+and moon orbits are calculated and compared to the measurement geometry to detect potential interferences (Bit 7). A
+quality flag status variable contains information whether the flag is active.
 
 .. code-block:: python
 
@@ -66,8 +66,9 @@ flag status variable contains information whether the flag is active.
         data_type="1C01",
         path_to_files=data_path,
         data_format="e-profile",
-        site=site,
-        output_file="mwr_1c.nc",
+        site=site_name,
+        instrument_type="hatpro",
+        output_file=f"{data_path}/mwr_1c.nc",
     )
 
 The data format of the generated ``mwr_1c.nc`` file, including metadata information and variable names, is
@@ -80,7 +81,7 @@ Variables such as brightness temperature can be plotted from the newly generated
 
     from mwrpy.plots.generate_plots import generate_figure
 
-    generate_figure('mwr_1c.nc', ['tb'], save_path=f"{package_dir}/")
+    generate_figure(f"{data_path}/mwr_1c.nc", ['tb'], save_path=f"{data_path}/")
 
 .. figure:: _static/20230406_hyytiala_tb.png
 
@@ -96,10 +97,11 @@ are applied to generate the Level 2 single pointing product:
     from mwrpy.level2.lev2_collocated import generate_lev2_single
 
     mwr_prod = generate_lev2_single(
-        site="hyytiala",
+        site=site_name,
+        instrument_type="hatpro",
         data_format="e-profile",
-        mwr_l1c_file="mwr_1c.nc",
-        output_file="mwr-single.nc",
+        mwr_l1c_file=f"{data_path}/mwr_1c.nc",
+        output_file=f"{data_path}/mwr-single.nc",
     )
 
 Variables such as integrated water vapor
@@ -110,7 +112,7 @@ can be plotted from the newly generated file.
 
     from mwrpy.plots.generate_plots import generate_figure
 
-    generate_figure('mwr-single.nc', ['iwv'], save_path=f"{package_dir}/")
+    generate_figure(f"{data_path}/mwr-single.nc", ['iwv'], save_path=f"{data_path}/")
 
 .. figure:: _static/20230406_hyytiala_iwv.png
 
@@ -126,10 +128,11 @@ product:
     from mwrpy.level2.lev2_collocated import generate_lev2_multi
 
     mwr_prod = generate_lev2_multi(
-        site="hyytiala",
+        site=site_name,
+        instrument_type="hatpro",
         data_format="e-profile",
-        mwr_l1c_file="mwr_1c.nc",
-        output_file="mwr-multi.nc",
+        mwr_l1c_file=f"{data_path}/mwr_1c.nc",
+        output_file=f"{data_path}/mwr-multi.nc",
     )
 
 Variables such as temperature profiles can be plotted from the newly generated file.
@@ -138,7 +141,7 @@ Variables such as temperature profiles can be plotted from the newly generated f
 
     from mwrpy.plots.generate_plots import generate_figure
 
-    generate_figure('mwr-multi.nc', ['temperature'], save_path=f"{package_dir}/")
+    generate_figure(f"{data_path}/mwr-multi.nc", ['temperature'], save_path=f"{data_path}/")
 
 .. figure:: _static/20230406_hyytiala_temperature.png
 
@@ -159,8 +162,8 @@ Download raw data (binary files):
     instrument_pid = "https://hdl.handle.net/21.12132/3.f360a2375f3e4e4f" # check https://cloudnet.fmi.fi/instruments to find the PID of your instrument
     client = APIClient()
     instruments = client.instruments()
-    instrument_type = [i.instrument_id for i in instruments if i.pid == instrument_pid][0]
-    files = client.raw_files(site_id=site, instrument_id=instrument_type, date=date)
+    i_type = [i.instrument_id for i in instruments if i.pid == instrument_pid][0]
+    files = client.raw_files(site_id=site_name, instrument_id=i_type, date=date)
     binary_files = [f for f in files]
 
     binary_filepaths = await client.adownload(binary_files, data_path)
@@ -176,7 +179,7 @@ Download retrieval files:
 
     retrieval_files = []
     for file in retrieval["coefficientLinks"]:
-        filename = data_path + file.split("/")[-1]
+        filename = f"{data_path}/{file.split('/')[-1]}"
         response = requests.get(file)
         with open(filename, "wb") as f:
             f.write(response.content)
@@ -189,7 +192,7 @@ defined. Also, the retrieval files are set as an argument.
 
 .. code-block:: python
 
-    site_info = client.site(site_id=site)
+    site_info = client.site(site_id=site_name)
     site_meta = {
         "name": site_info.id,
         "altitude": site_info.altitude,
@@ -202,8 +205,8 @@ defined. Also, the retrieval files are set as an argument.
         data_type="1C01",
         path_to_files=data_path,
         data_format="cloudnet",
-        instrument_type=instrument_type,
-        output_file="mwr_1c.nc",
+        instrument_type=i_type,
+        output_file=f"{data_path}/mwr_1c_cn.nc",
         coeff_files=retrieval_files,
         instrument_config=site_meta,
     )
@@ -213,7 +216,7 @@ For plotting, the instrument needs to be defined. In this example, the figure is
 .. code-block:: python
 
     from mwrpy.plots.generate_plots import generate_figure
-    fig_name = generate_figure('mwr_1c.nc', ['tb'], show=True, instrument_type=instrument_type)
+    fig_name = generate_figure(f"{data_path}/mwr_1c.nc", ['tb'], show=True, instrument_type=i_type)
 
 Process and plot Level 2 data (single & multiple pointing)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -226,22 +229,24 @@ displayed.
     mwr_prod = generate_lev2_single(
         site=None,
         data_format="cloudnet",
-        mwr_l1c_file="mwr_1c.nc",
-        output_file="mwr-single.nc",
+        mwr_l1c_file=f"{data_path}/mwr_1c.nc",
+        output_file=f"{data_path}/mwr-single.nc",
         coeff_files=retrieval_files,
+        instrument_type=i_type,
     )
 
     from mwrpy.plots.generate_plots import generate_figure
-    fig_name = generate_figure('mwr-single.nc', ['iwv'], show=True, instrument_type=instrument_type)
+    fig_name = generate_figure(f"{data_path}/mwr-single.nc", ['iwv'], show=True, instrument_type=i_type)
 
     from mwrpy.level2.lev2_collocated import generate_lev2_multi
     mwr_prod = generate_lev2_multi(
         site=None,
         data_format="cloudnet",
-        mwr_l1c_file="mwr_1c.nc",
-        output_file="mwr-multi.nc",
+        mwr_l1c_file=f"{data_path}/mwr_1c.nc",
+        output_file=f"{data_path}/mwr-multi.nc",
         coeff_files=retrieval_files,
+        instrument_type=i_type,
     )
 
     from mwrpy.plots.generate_plots import generate_figure
-    fig_name = generate_figure('mwr-multi.nc', ['temperature'], show=True, instrument_type=instrument_type)
+    fig_name = generate_figure(f"{data_path}/mwr-multi.nc", ['temperature'], show=True, instrument_type=i_type)
