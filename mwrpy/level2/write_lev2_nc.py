@@ -24,7 +24,6 @@ from mwrpy.utils import (
     interpolate_2d,
     isbit,
     read_config,
-    read_site_config_yaml,
 )
 
 
@@ -661,10 +660,12 @@ def _get_qf(
     product: str,
     scan: np.ndarray = np.empty([0], np.int32),
 ) -> None:
-    rpg_dat["quality_flag"] = np.bitwise_or.reduce(
+    rpg_dat["quality_flag"] = ma.masked_all((len(index)), np.int32)
+    rpg_dat["quality_flag_status"] = ma.masked_all((len(index)), np.int32)
+    rpg_dat["quality_flag"][index_ret] = np.bitwise_or.reduce(
         lev1["quality_flag"][index[index_ret], :], axis=1
     )
-    rpg_dat["quality_flag_status"] = np.bitwise_or.reduce(
+    rpg_dat["quality_flag_status"][index_ret] = np.bitwise_or.reduce(
         lev1["quality_flag_status"][index[index_ret], :], axis=1
     )
     if product != "derived":
