@@ -7,12 +7,46 @@ params:
   longitude: 14.118
   latitude: 52.208
 
-  # path to ABSCAL.HIS file
-  path_to_cal:
+  # path to raw input data and processed files
+  data_in: /path/to/raw/data/
+  data_out: /path/to/processed/files/
+
+  # path to retrieval coefficients (optional, default: mwrpy/site_config/'site'/coefficients/)
+  coeff_path:
 
   # path to Cloudnet lidar file and lidar model (optional)
-  path_to_lidar: /tmp/data/
+  path_to_lidar:
   lidar_model: chm15k
+
+  # path to ABSCAL.HIS file (optional)
+  path_to_cal:
+
+  # availability of IR
+  ir_flag: True
+
+  # quality flag status for level 1 data; 0: flag active
+  # Bit 1: missing_tb
+  # Bit 2: tb_below_threshold
+  # Bit 3: tb_above_threshold
+  # Bit 4: spectral_consistency_above_threshold
+  # Bit 5: receiver_sanity_failed
+  # Bit 6: rain_detected
+  # Bit 7: sun_moon_in_beam
+  # Bit 8: tb_offset_above_threshold
+  flag_status: [0, 0, 0, 0, 0, 0, 0, 1]
+
+  # integration time for BL scans in seconds
+  scan_time: 50.
+
+  # integration time of measurements in seconds
+  int_time: 1
+
+  # Azimuth angle is transformed to geographical coordinates (E=90 and W=270).
+  # This is needed in older RPG software versions.
+  azi_cor: False
+  # Azimuth offset correction; needed if the instrument is not aligned to the North.
+  # Set const_azi to the angle that RPG software gives when instrument is pointing to the North.
+  const_azi:
 
 global_specs:
   # A succinct description of what is in the dataset, composed of instrument type and site name

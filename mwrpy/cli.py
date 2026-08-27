@@ -79,20 +79,6 @@ def _parse_args(args):
         help="Instrument to be processed (hatpro, lhatpro, lhumpro_u90).",
         default="hatpro",
     )
-    group.add_argument(
-        "-a",
-        "--altitude",
-        type=float,
-        help="Altitude above mean sea level of site (m).",
-        default=0.0,
-    )
-    group.add_argument(
-        "-o",
-        "--azimuth_offset",
-        type=float,
-        help="Azimuth offset of the instrument (degrees).",
-        default=None,
-    )
     return parser.parse_args(args)
 
 

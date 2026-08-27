@@ -360,14 +360,12 @@ def read_config(
     key: Literal["global_specs", "params"],
 ) -> dict:
     site_config = read_site_config_yaml(site)
-    if site is not None and len(site_config) == 0 and instrument_type is None:
-        raise ValueError(f"site_config file or instrument_type is required")
-    if site is not None and len(site_config) > 0:
+    if len(site_config) > 0:
         itype = site_config["type"]
     elif instrument_type is not None:
         itype = instrument_type
     else:
-        raise ValueError("site or instrument_type is required")
+        raise ValueError("site_config file or instrument_type is required")
     data = _read_itype_config_yaml(itype)[key]
     if len(site_config) > 0:
         data.update(site_config[key])
@@ -599,7 +597,7 @@ def get_processing_dates(args) -> tuple[str, str]:
     return start_date, stop_date
 
 
-def _get_filename(
+def get_filename(
     prod: str, date_in: datetime.date, site: str, instrument: IType
 ) -> str:
     params = read_config(site, instrument, "params")
@@ -633,7 +631,7 @@ def _get_filename(
     return os.path.join(data_out_dir, filename)
 
 
-def _get_filename_cloudnet(
+def get_filename_cloudnet(
     prod: str, date_in: datetime.date, site: str, instrument: IType
 ) -> str:
     params = read_config(None, instrument, "params")
@@ -654,6 +652,53 @@ def _get_filename_cloudnet(
         )
         filename = f"{date_in.strftime('%Y%m%d')}_{site}_{instrument}-{name}.nc"
     return os.path.join(data_out_dir, filename)
+
+
+def get_raw_file_path(
+    date_in: datetime.date, site: str | None, instrument: str | None
+) -> str:
+    """Get the raw file path for a given date and site.
+
+    Args:
+        date_in: Date for which the raw file path is needed.
+        site: Site identifier.
+        instrument: Instrument identifier.
+
+    Returns:
+        The raw file path as a string.
+    """
+    params = read_config(site, instrument, "params")
+    return os.path.join(params["data_in"], date_in.strftime("%Y/%m/%d/"))
+
+
+def get_lidar_file_path(date_in: datetime.date, site: str, params: dict) -> str | None:
+    """Get the lidar file path for a given date and site.
+
+    Args:
+        date_in: Date for which the lidar file path is needed.
+        site: Site identifier.
+        params: Configuration parameters.
+
+    Returns:
+        The lidar file path as a string or None if not found.
+    """
+    path = ""
+    lidar_model = params.get("lidar_model", "unknown")
+    lidar_model = "unknown" if lidar_model is None else lidar_model.lower()
+    if "path_to_lidar" in params and params["path_to_lidar"] is not None:
+        path = os.path.join(
+            params["path_to_lidar"],
+            date_in.strftime("%Y/%m/%d/"),
+        )
+    file = glob.glob(
+        path + date_in.strftime("%Y%m%d") + "_" + site + "_" + lidar_model + "*.nc"
+    )
+    if len(file) == 0:
+        logging.info(
+            "No lidar file of type " + lidar_model + " found in directory " + str(path)
+        )
+        return None
+    return file[0]
 
 
 def isodate2date(date_str: str) -> datetime.date:

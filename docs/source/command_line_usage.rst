@@ -2,8 +2,8 @@
 Command line usage
 ==================
 
-After defining the instrument type configuration (``mwrpy/site_config/{instrument_type}.yaml``) and optional site
-specific information (``mwrpy/site_config/{site}/config.yaml``, only for E-PROFILE format) files, MWRpy can also be
+With the instrument type configuration (``mwrpy/site_config/{instrument_type}.yaml``) and optional site
+specific information (``mwrpy/site_config/{site}/config.yaml``) files, MWRpy can also be
 run using the command line tool `mwrpy/cli.py`:
 
 .. code-block::
@@ -72,15 +72,14 @@ These commands are available to select the processing mode:
 Example usage
 -------------
 To process and plot Level 1 & 2 data (1C01, single, multi) for the site `Hyytiala` (HATPRO instrument) for April 6,
-2023, in the E-PROFILE format, run:
+2023, in the Cloudnet format, run:
 
 .. code-block::
 
-    python mwrpy/cli.py -s hyytiala -d 2023-04-06 -f e-profile process
+    python mwrpy/cli.py -s hyytiala -d 2023-04-06
 
-
-Run the following command for the Cloudnet format and no plots:
+Run the following command for the E-Profile format and no plots:
 
 .. code-block::
 
-    python mwrpy/cli.py -s hyytiala -d 2023-04-06 -a 150 no-plot
+    python mwrpy/cli.py -s hyytiala -d 2023-04-06 -f e-profile no-plot

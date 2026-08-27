@@ -1,19 +1,24 @@
 # Config file for all HATPRO instruments
 
+# Missing entries can also be filled with site specific config file
 params:
-  # path to level1 data and path for processed files
-  data_in: /tmp/data/
-  data_out: /tmp/data/
+  altitude:
+  longitude:
+  latitude:
 
-  # path to retrieval coefficients
+  # path to raw input data and processed files
+  data_in: /path/to/raw/data/
+  data_out: /path/to/processed/files/
+
+  # path to retrieval coefficients (optional, default: mwrpy/site_config/'site'/coefficients/)
   coeff_path:
 
   # path to Cloudnet lidar file and lidar model (optional)
   path_to_lidar:
   lidar_model:
 
-  # path to ABSCAL.HIS file
-  path_to_cal: /tmp/data/
+  # path to ABSCAL.HIS file (optional)
+  path_to_cal:
 
   # availability of IR
   ir_flag: True
@@ -35,12 +40,12 @@ params:
   # integration time of measurements in seconds
   int_time: 1
 
-  # Azimuth angle is transformed to geographical coordinates (E=90 and W=270), currently only for RPG scanners.
-  # If you do not want to transform the coordinates set azi_cor to -999.
-  azi_cor: -999.
-  # Azimuth correction:
-  # Set az_cor to the angle that RPG software gives when instrument is pointing to the North.
-  const_azi: -999.
+  # Azimuth angle is transformed to geographical coordinates (E=90 and W=270).
+  # This is needed in older RPG software versions.
+  azi_cor: False
+  # Azimuth offset correction; needed if the instrument is not aligned to the North.
+  # Set const_azi to the angle that RPG software gives when instrument is pointing to the North.
+  const_azi:
 
   # some default values:
   # -------------------
@@ -114,7 +119,6 @@ params:
       [0., 100.],
     ]
 
-# Missing entries can also be filled with site specific config file
 global_specs:
   # Name of the conventions followed by the dataset
   conventions: CF-1.8

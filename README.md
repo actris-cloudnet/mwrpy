@@ -52,7 +52,7 @@ MWRpy requires Python 3.10 or newer.
 ## Configuration
 
 The folder `mwrpy/site_config/` contains configuration files for each instrument
-type, which defines the input and output data paths etc.
+type, which also define the input and output data paths etc.
 For example, this is the [configuration file for RPG-HATPRO](mwrpy/site_config/hatpro.yaml).
 
 The folders for each site, e.g. `mwrpy/site_config/hyytiala/`, contain a folder with retrieval coefficients
@@ -69,19 +69,16 @@ MWRpy can be run using the command line tool `mwrpy/cli.py`:
 
 Arguments:
 
-| Short                                                          | Long               | Default                   | Description                                                                        |
-| :------------------------------------------------------------- | :----------------- | :------------------------ | :--------------------------------------------------------------------------------- |
-| `-h`                                                           | `--help`           |                           | Show help and exit.                                                                |
-| `-s`                                                           | `--site`           |                           | Site to process data from, e.g, `hyytiala`. Required.                              |
-| `-d`                                                           | `--date`           |                           | Single date to be processed. Alternatively, `--start` and `--stop` can be defined. |
-|                                                                | `--start`          | `current day - 1`         | Starting date.                                                                     |
-|                                                                | `--stop`           | `current day `            | Stopping date.                                                                     |
-| `-p`                                                           | `--products`       | `1C01`, `single`, `multi` | Processed products, e.g, `1C01, 2I02, 2P03, single`, see below.                    |
-| `-f`                                                           | `--format`         | `cloudnet`                | Data format to be used (`cloudnet`, `e-profile`).                                  |
-| The following arguments are used for the Cloudnet file format: |
-| `-i`                                                           | `--instrument`     | `hatpro`                  | Instrument to be processed (`hatpro`, `lhatpro`, `lhumpro_u90`).                   |
-| `-a`                                                           | `--altitude`       | `0.0`                     | Altitude above mean sea level of site (m).                                         |
-| `-o`                                                           | `--azimuth_offset` | `None`                    | Azimuth offset of the instrument (degrees). Or `None`.                             |
+| Short | Long           | Default                   | Description                                                                        |
+| :---- | :------------- | :------------------------ | :--------------------------------------------------------------------------------- |
+| `-h`  | `--help`       |                           | Show help and exit.                                                                |
+| `-s`  | `--site`       |                           | Site to process data from, e.g, `hyytiala`. Required.                              |
+| `-d`  | `--date`       |                           | Single date to be processed. Alternatively, `--start` and `--stop` can be defined. |
+|       | `--start`      | `current day - 1`         | Starting date.                                                                     |
+|       | `--stop`       | `current day `            | Stopping date.                                                                     |
+| `-p`  | `--products`   | `1C01`, `single`, `multi` | Processed products, e.g, `1C01, 2I02, 2P03, single`, see below.                    |
+| `-f`  | `--format`     | `cloudnet`                | Data format to be used (`cloudnet`, `e-profile`).                                  |
+| `-i`  | `--instrument` | `hatpro`                  | Instrument to be processed (`hatpro`, `lhatpro`, `lhumpro_u90`).                   |
 
 Commands:
 

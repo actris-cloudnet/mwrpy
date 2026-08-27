@@ -77,16 +77,7 @@ def lev1_to_nc(
             f"No coefficient files given, using files in repository for {site}."
         )
 
-    if data_format == "e-profile" and instrument_config is None:
-        logging.info(
-            f"No instrument config given, using config file in repository for {site}."
-        )
-
-    params = (
-        read_config(site, instrument_type, "params")
-        if data_format == "e-profile"
-        else read_config(None, instrument_type, "params")
-    )
+    params = read_config(site, instrument_type, "params")
     if instrument_config is not None:
         params = {**params, **instrument_config}
 
@@ -114,6 +105,7 @@ def lev1_to_nc(
     mwr.find_valid_times()
     mwr.data = get_data_attributes(mwr.data, data_type, data_format)
     if output_file is not None:
+        global_attributes = read_config(site, instrument_type, "global_specs")
         if data_format == "cloudnet":
             c_files = (
                 get_coeff_list(
@@ -125,10 +117,8 @@ def lev1_to_nc(
                 if coeff_files is None
                 else coeff_files
             )
-            i_gen = read_config(None, instrument_type, "global_specs")[
-                "instrument_generation"
-            ]
             _, lidar_meta = read_lidar(lidar_path) if lidar_path else (None, None)
+            i_gen = global_attributes["instrument_generation"]
             global_attributes = {
                 "site": site,
                 "instrument": instrument_type,
@@ -138,7 +128,6 @@ def lev1_to_nc(
                 "source": lidar_meta["source"] if lidar_meta else None,
             }
         else:
-            global_attributes = read_config(site, instrument_type, "global_specs")
             global_attributes["site_location"] = site
             global_attributes["dependencies"] = (
                 str(lidar_path).split("/")[-1] if lidar_path else None
@@ -232,13 +221,15 @@ def prepare_data(
                 rpg_blb = RpgBin(file_list_blb, time_offset)
                 _add_blb(rpg_bin, rpg_blb, rpg_hkd, params)
 
-        if params["azi_cor"] != -999.0:
+        if params["azi_cor"]:
+            logging.info("Performing azimuth angle correction.")
             _azi_correction(rpg_bin.data, params)
 
         azimuth_offset = (
-            params["azimuth_offset"] if "azimuth_offset" in params else azimuth_offset
+            params.get("const_azi") if azimuth_offset is None else azimuth_offset
         )
         if azimuth_offset is not None:
+            logging.info(f"Adding azimuth offset of {azimuth_offset} degrees.")
             rpg_bin.data["azimuth_angle"] = (
                 rpg_bin.data["azimuth_angle"] + azimuth_offset
             ) % 360
@@ -454,8 +445,10 @@ def prepare_data(
 
     file_list_hkd = get_file_list(path_to_files, "HKD")
     _append_hkd(file_list_hkd, rpg_bin, data_type, params, time_offset)
-    alt = params.get("altitude", altitude)
-    alt = ma.masked if alt is None else alt
+    alt = params.get("altitude") if altitude is None else altitude
+    if alt is None:
+        alt = 0.0
+        logging.info("Site altitude not provided. Taking default of 0 m.")
     rpg_bin.data["altitude"] = np.ones(len(rpg_bin.data["time"]), np.float32) * alt
 
     return rpg_bin

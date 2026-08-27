@@ -1,7 +1,6 @@
 """Module for processing."""
 
 import datetime
-import glob
 import logging
 import os
 import time
@@ -108,8 +107,6 @@ def main(args):
                         f"Product {product} not available in cloudnet format. Skipping."
                     )
                     continue
-                if args.altitude is None:
-                    logging.info("Site altitude not provided. Taking default of 0 m.")
             start = time.process_time()
             if args.command != "plot":
                 logging.info(f"Processing {product} product, {args.site} {date}")
@@ -121,8 +118,6 @@ def main(args):
                             args.site,
                             args.format,
                             args.instrument,
-                            args.altitude,
-                            args.azimuth_offset,
                         )
                     except Exception as e:
                         logging.error(
@@ -136,8 +131,6 @@ def main(args):
                         args.site,
                         args.format,
                         args.instrument,
-                        args.altitude,
-                        args.azimuth_offset,
                     )
                 if output_file:
                     logging.info("Processed %s: %s", product, output_file)
@@ -156,8 +149,6 @@ def process_product(
     site: str,
     data_format: str,
     instrument: IType,
-    altitude: float,
-    azimuth_offset: float | None,
 ):
     """Process a given product for a specific date and site.
     This function handles the processing of different products based on their type
@@ -170,15 +161,13 @@ def process_product(
         site: Site identifier.
         data_format: Data format of the netCDF file (cloudnet, e-profile).
         instrument: Specific instrument type (hatpro, lhatpro, etc.).
-        altitude: Altitude of the site in meters above mean sea level.
-        azimuth_offset: Azimuth offset to be added to azimuth angle.
 
     Returns:
         output_file: Name of output file.
     """
     filename = getattr(
         mwrpy.utils,
-        "_get_filename_cloudnet" if data_format == "cloudnet" else "_get_filename",
+        "get_filename_cloudnet" if data_format == "cloudnet" else "get_filename",
     )
     output_file = filename(prod, date, site, instrument)
     output_dir = os.path.dirname(output_file)
@@ -222,29 +211,15 @@ def process_product(
     # Process level 1 data
     if prod[0] == "1":
         params = mwrpy.utils.read_config(site, instrument, "params")
-        if data_format == "e-profile":
-            altitude = params["altitude"]
-            if altitude is None:
-                altitude = 0.0
-                logging.info("Site altitude not provided. Taking default of 0 m.")
-            azimuth_offset = (
-                params["azimuth_offset"]
-                if "azimuth_offset" in params and params["azimuth_offset"] is not None
-                else 0.0
-            )
         lev1_to_nc(
             prod,
-            _get_raw_file_path(date, site, instrument)
-            if instrument is None
-            else _get_raw_file_path(date, None, instrument),
+            mwrpy.utils.get_raw_file_path(date, site, instrument),
             data_format,
             site=site,
             output_file=output_file,
-            lidar_path=_get_lidar_file_path(date, site, params),
+            lidar_path=mwrpy.utils.get_lidar_file_path(date, site, params),
             date=date,
             instrument_type=instrument,
-            altitude=altitude,
-            azimuth_offset=azimuth_offset,
         )
 
     # Process level 2 single products
@@ -570,50 +545,3 @@ def plot_product(prod: str, date, site: str, data_format: str, instrument: IType
             logging.warning("Nothing to plot for product " + prod)
     else:
         logging.warning("Nothing to plot for product " + prod)
-
-
-def _get_raw_file_path(
-    date_in: datetime.date, site: str | None, instrument: str | None
-) -> str:
-    """Get the raw file path for a given date and site.
-
-    Args:
-        date_in: Date for which the raw file path is needed.
-        site: Site identifier.
-        instrument: Instrument identifier.
-
-    Returns:
-        The raw file path as a string.
-    """
-    params = mwrpy.utils.read_config(site, instrument, "params")
-    return os.path.join(params["data_in"], date_in.strftime("%Y/%m/%d/"))
-
-
-def _get_lidar_file_path(date_in: datetime.date, site: str, params: dict) -> str | None:
-    """Get the lidar file path for a given date and site.
-
-    Args:
-        date_in: Date for which the lidar file path is needed.
-        site: Site identifier.
-        params: Configuration parameters.
-
-    Returns:
-        The lidar file path as a string or None if not found.
-    """
-    path = ""
-    lidar_model = params.get("lidar_model", "unknown")
-    lidar_model = "unknown" if lidar_model is None else lidar_model.lower()
-    if "path_to_lidar" in params and params["path_to_lidar"] is not None:
-        path = os.path.join(
-            params["path_to_lidar"],
-            date_in.strftime("%Y/%m/%d/"),
-        )
-    file = glob.glob(
-        path + date_in.strftime("%Y%m%d") + "_" + site + "_" + lidar_model + "*.nc"
-    )
-    if len(file) == 0:
-        logging.info(
-            "No lidar file of type " + lidar_model + " found in directory " + str(path)
-        )
-        return None
-    return file[0]
