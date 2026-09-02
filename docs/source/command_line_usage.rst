@@ -2,9 +2,8 @@
 Command line usage
 ==================
 
-With the instrument type configuration (``mwrpy/site_config/{instrument_type}.yaml``) and optional site
-specific information (``mwrpy/site_config/{site}/config.yaml``) files, MWRpy can also be
-run using the command line tool `mwrpy/cli.py`:
+With the instrument type configuration (``mwrpy/site_config/{instrument_type}.yaml``) and retrieval files in
+``mwrpy/site_config/{site}/coefficients/``, MWRpy can also be run using the command line tool `mwrpy/cli.py`:
 
 .. code-block::
 
@@ -50,7 +49,7 @@ run using the command line tool `mwrpy/cli.py`:
    * - `-i`
      - `--instrument`
      - hatpro
-     - Instrument to be processed (`hatpro`, `lhatpro`, `lhumpro_u90`).
+     - Instrument type to be processed (`hatpro`, `lhatpro`, `lhumpro_u90`).
 
 These commands are available to select the processing mode:
 

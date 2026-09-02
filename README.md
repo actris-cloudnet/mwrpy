@@ -15,7 +15,7 @@ Level 2 data products and visualization and is based on the IDL code
 
 The netCDF data format including metadata information, variable names and file naming
 is designed to be compliant with either the data structure and naming convention
-developed in the [EUMETNET Profiling Programme E-PROFILE](https://www.eumetnet.eu/), or within ACTRIS.
+developed in the [EUMETNET Profiling Programme E-PROFILE](https://www.eumetnet.eu/), or within [ACTRIS Cloudnet](https://cloudnet.fmi.fi/).
 
 MWRpy documentation: <https://actris-cloudnet.github.io/mwrpy/>
 
@@ -51,14 +51,14 @@ MWRpy requires Python 3.10 or newer.
 
 ## Configuration
 
-The folder `mwrpy/site_config/` contains configuration files for each instrument
-type, which also define the input and output data paths etc.
+The folder `mwrpy/site_config/` contains mandatory configuration files for each instrument
+type, which also define the input and output data paths, metadata, etc.
 For example, this is the [configuration file for RPG-HATPRO](mwrpy/site_config/hatpro.yaml).
 
-The folders for each site, e.g. `mwrpy/site_config/hyytiala/`, contain a folder with retrieval coefficients
-(`mwrpy/site_config/hyytiala/coefficients/`) and a site and instrument specific configuration file (`config.yaml`).
-For example, this is the [configuration file for Hyytiälä](mwrpy/site_config/hyytiala/config.yaml), which is optional
-and helps with configuring multiple instruments of the same type.
+The folders for each site, e.g. `mwrpy/site_config/hyytiala/`, contain a folder with the required retrieval coefficients
+(`mwrpy/site_config/hyytiala/coefficients/`) and an optional site and instrument specific configuration file (`config.
+yaml`). For example, this is the [configuration file for Hyytiälä](mwrpy/site_config/hyytiala/config.yaml), which can
+help with configuring multiple instruments of the same type.
 
 ## Command line usage
 
@@ -78,7 +78,7 @@ Arguments:
 |       | `--stop`       | `current day `            | Stopping date.                                                                     |
 | `-p`  | `--products`   | `1C01`, `single`, `multi` | Processed products, e.g, `1C01, 2I02, 2P03, single`, see below.                    |
 | `-f`  | `--format`     | `cloudnet`                | Data format to be used (`cloudnet`, `e-profile`).                                  |
-| `-i`  | `--instrument` | `hatpro`                  | Instrument to be processed (`hatpro`, `lhatpro`, `lhumpro_u90`).                   |
+| `-i`  | `--instrument` | `hatpro`                  | Instrument type to be processed (`hatpro`, `lhatpro`, `lhumpro_u90`).              |
 
 Commands:
 

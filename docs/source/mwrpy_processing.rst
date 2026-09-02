@@ -4,7 +4,7 @@ MWRpy processing
 
 In this tutorial `MWRpy <https://github.com/actris-cloudnet/mwrpy/>`_ products are generated from raw data, including
 quality control and visualization. This example utilizes files taken from the ACTRIS site
-`Hyytiala <https://cloudnet.fmi.fi/site/hyytiala>`_:
+`Hyytiala <https://cloudnet.fmi.fi/site/hyytiala>`_ equipped with a RPG-HATPRO instrument:
 
 - RPG microwave radiometer:
     - Brightness temperatures: `230406.BRT <https://github.com/actris-cloudnet/mwrpy/blob/main/tests/data/hyytiala/230406.BRT>`_
@@ -17,30 +17,31 @@ quality control and visualization. This example utilizes files taken from the AC
 
     .BRT and .HKD files are mandatory in MWRpy for processing
 
-First steps for processing examples:
-
-First we define the instrument type configuration file (``mwrpy/site_config/{i_type}.yaml``), including instrument
-specific information. An optional site specific configuration file (e.g. ``mwrpy/site_config/{site_name}/config
-.yaml``) can be configured, when dealing with multiple instruments of the same type. Then the data path is specified:
+First step for the processing examples is to specify the site name and data path:
 
 .. code-block:: python
 
     import os
 
-    package_dir = os.getcwd()
     site_name = "hyytiala"
+    package_dir = os.getcwd()
     data_path = f"{package_dir}/tests/data/{site_name}"
 
 E-PROFILE format
 ----------------
 
+First E-Profile specific metadata can be configured in the instrument type configuration file
+(``mwrpy/site_config/hatpro.yaml``), which also includes instrument specific information. An optional site specific
+configuration file (e.g. ``mwrpy/site_config/{site_name}/config.yaml``) can be configured, when dealing with multiple
+ instruments of the same type.
+
 Level 1c
 ~~~~~~~~~
 
 Now we convert RPG microwave radiometer (MWR) binary files, including brightness temperature (TB) and
-housekeeping data (\*.BRT, \*.HKD), into a Level 1c netCDF file. Data from optional elevation scans (\*.BLB, \*.BLS),
-weather station (\*.MET) and infrared radiometer (\*.IRT) are combined in this process and the following quality
-flags are derived:
+housekeeping data (\*.BRT, \*.HKD), into a Level 1c netCDF file (1C01, default). Data from optional elevation scans (\*
+.BLB, \*.BLS), weather station (\*.MET) and infrared radiometer (\*.IRT) are combined in this process and the
+following quality flags are derived:
 
 - Bit 1: missing_tb
 - Bit 2: tb_below_threshold
@@ -63,11 +64,9 @@ quality flag status variable contains information whether the flag is active.
     from mwrpy.level1.write_lev1_nc import lev1_to_nc
 
     mwr_raw = lev1_to_nc(
-        data_type="1C01",
         path_to_files=data_path,
         data_format="e-profile",
         site=site_name,
-        instrument_type="hatpro",
         output_file=f"{data_path}/mwr_1c.nc",
     )
 
@@ -97,11 +96,9 @@ are applied to generate the Level 2 single pointing product:
     from mwrpy.level2.lev2_collocated import generate_lev2_single
 
     mwr_prod = generate_lev2_single(
-        site=site_name,
-        instrument_type="hatpro",
-        data_format="e-profile",
         mwr_l1c_file=f"{data_path}/mwr_1c.nc",
         output_file=f"{data_path}/mwr-single.nc",
+        data_format="e-profile",
     )
 
 Variables such as integrated water vapor
@@ -128,11 +125,9 @@ product:
     from mwrpy.level2.lev2_collocated import generate_lev2_multi
 
     mwr_prod = generate_lev2_multi(
-        site=site_name,
-        instrument_type="hatpro",
-        data_format="e-profile",
         mwr_l1c_file=f"{data_path}/mwr_1c.nc",
         output_file=f"{data_path}/mwr-multi.nc",
+        data_format="e-profile",
     )
 
 Variables such as temperature profiles can be plotted from the newly generated file.
@@ -147,8 +142,8 @@ Variables such as temperature profiles can be plotted from the newly generated f
 
 Cloudnet format
 ---------------
-In this example the Cloudnet API is used to fetch data and retrieval files and the Cloudnet data format is selected
-for processing. More details can be found in the E-PROFILE example above.
+In this example the `Cloudnet API client <https://github.com/actris-cloudnet/cloudnet-api-client/>`_ is used to fetch
+data and retrieval files and the Cloudnet data format is selected for processing (default).
 
 Using Cloudnet API to fetch data and retrieval files
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -187,14 +182,14 @@ Download retrieval files:
 
 Process and plot Level 1 data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-In contrast to the E-PROFILE data format, no site specific information file is required, but metadata needs to be
-defined. Also, the retrieval files are set as an argument.
+In contrast to the E-PROFILE data format, no additional metadata needs to be defined in the configuration file. The
+fetched retrieval files are set as an argument together with site information (e.g. site name, altitude, etc.).
 
 .. code-block:: python
 
     site_info = client.site(site_id=site_name)
     site_meta = {
-        "name": site_info.id,
+        "site": site_info.id,
         "altitude": site_info.altitude,
         "latitude": site_info.latitude,
         "longitude": site_info.longitude,
@@ -202,51 +197,41 @@ defined. Also, the retrieval files are set as an argument.
 
     from mwrpy.level1.write_lev1_nc import lev1_to_nc
     mwr_raw = lev1_to_nc(
-        data_type="1C01",
         path_to_files=data_path,
-        data_format="cloudnet",
-        instrument_type=i_type,
-        output_file=f"{data_path}/mwr_1c_cn.nc",
+        output_file=f"{data_path}/mwr_1c.nc",
         coeff_files=retrieval_files,
         instrument_config=site_meta,
     )
 
-For plotting, the instrument needs to be defined. In this example, the figure is only displayed and not saved.
+In this example, the figure is only displayed and not saved.
 
 .. code-block:: python
 
     from mwrpy.plots.generate_plots import generate_figure
-    fig_name = generate_figure(f"{data_path}/mwr_1c.nc", ['tb'], show=True, instrument_type=i_type)
+    fig_name = generate_figure(f"{data_path}/mwr_1c.nc", ['tb'], show=True)
 
 Process and plot Level 2 data (single & multiple pointing)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-The site name is set to ``None``, since no site specific information file is needed. Again, no plots are saved, only
-displayed.
+Again, no plots are saved, only displayed.
 
 .. code-block:: python
 
     from mwrpy.level2.lev2_collocated import generate_lev2_single
     mwr_prod = generate_lev2_single(
-        site=None,
-        data_format="cloudnet",
         mwr_l1c_file=f"{data_path}/mwr_1c.nc",
         output_file=f"{data_path}/mwr-single.nc",
         coeff_files=retrieval_files,
-        instrument_type=i_type,
     )
 
     from mwrpy.plots.generate_plots import generate_figure
-    fig_name = generate_figure(f"{data_path}/mwr-single.nc", ['iwv'], show=True, instrument_type=i_type)
+    fig_name = generate_figure(f"{data_path}/mwr-single.nc", ['iwv'], show=True)
 
     from mwrpy.level2.lev2_collocated import generate_lev2_multi
     mwr_prod = generate_lev2_multi(
-        site=None,
-        data_format="cloudnet",
         mwr_l1c_file=f"{data_path}/mwr_1c.nc",
         output_file=f"{data_path}/mwr-multi.nc",
         coeff_files=retrieval_files,
-        instrument_type=i_type,
     )
 
     from mwrpy.plots.generate_plots import generate_figure
-    fig_name = generate_figure(f"{data_path}/mwr-multi.nc", ['temperature'], show=True, instrument_type=i_type)
+    fig_name = generate_figure(f"{data_path}/mwr-multi.nc", ['temperature'], show=True)
