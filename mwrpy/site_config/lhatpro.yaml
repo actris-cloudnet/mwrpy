@@ -117,7 +117,8 @@ params:
       [0., 100.],
     ]
 
-global_specs:
+# Metadata for E-Profile data format
+e-profile_specs:
   # Name of the conventions followed by the dataset
   conventions: CF-1.8
 

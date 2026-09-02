@@ -89,7 +89,6 @@ def generate_figure(
         91.0,
     ),
     pointing: int = 0,
-    instrument_type: str | None = None,
     dpi: int = 120,
     image_name: str | None = None,
     sub_title: bool = True,
@@ -108,7 +107,6 @@ def generate_figure(
         max_y (int, optional): Upper limit in the plots (km). Default is 12.
         ele_range (tuple, optional): Range of elevation angles to be plotted.
         pointing (int, optional): Type of observation (0: single pointing, 1: BL scan).
-        instrument_type (str, optional): Type of instrument (hatpro, lhatpro, lhumpro).
         dpi (int, optional): Figure quality (if saved). Higher value means
             more pixels, i.e., better image quality. Default is 120.
         image_name (str, optional): Name (and full path) of the output image.
@@ -124,7 +122,7 @@ def generate_figure(
 
     Examples:
         >>> from mwrpy.plots import generate_figure
-        >>> generate_figure('lev2_file.nc', ['lwp'], instrument_type='hatpro')
+        >>> generate_figure('lev2_file.nc', ['lwp'])
     """
     if (
         nc_file == ""
@@ -189,6 +187,7 @@ def generate_figure(
 
     fig, axes = _initialize_figure(len(valid_fields), dpi)
     time = _read_time_vector(nc_file)
+    instrument_type = _read_instrument_type(nc_file)
 
     for ax, field, name in zip(axes, valid_fields, valid_names):
         ax.set_facecolor(_COLORS["lightgray"])
@@ -479,6 +478,17 @@ def _read_time_vector(nc_file: str) -> ndarray:
     with netCDF4.Dataset(nc_file) as nc:
         time = nc.variables["time"][:]
     return seconds2hours(time) if time.max() > 24 else time
+
+
+def _read_instrument_type(nc_file: str) -> str:
+    """Reads instrument type from netCDF file."""
+    with netCDF4.Dataset(nc_file) as nc:
+        instrument_type = (
+            nc.instrument_model.lower()
+            if "instrument_model" in nc.ncattrs()
+            else nc.source.split()[2].lower()
+        )
+    return instrument_type
 
 
 def _screen_high_altitudes(data_field: ndarray, ax_values: tuple, max_y: int) -> tuple:

@@ -212,8 +212,8 @@ def process_product(
     if prod[0] == "1":
         params = mwrpy.utils.read_config(site, instrument, "params")
         lev1_to_nc(
-            prod,
             mwrpy.utils.get_raw_file_path(date, site, instrument),
+            prod,
             data_format,
             site=site,
             output_file=output_file,
@@ -235,44 +235,36 @@ def process_product(
         lev2_to_nc(
             prod,
             filename("1C01", date, site, instrument),
+            output_file,
             data_format,
-            output_file=output_file,
-            site=site,
             temp_file=temp_file,
             hum_file=hum_file,
             lwp_offset=lwp_offset_tuple,
-            instrument_type=instrument,
         )
 
     # Process level 2 combined products
     elif prod == "single" and instrument != "lhumpro_u90":
         generate_lev2_single(
-            site,
-            data_format,
             l1_filename,
             output_file,
+            data_format,
             lwp_offset_tuple,
             None,
-            instrument,
         )
     elif instrument == "lhumpro_u90":
         generate_lev2_lhumpro(
-            site,
-            data_format,
             l1_filename,
             output_file,
+            data_format,
             lwp_offset_tuple,
             None,
-            instrument,
         )
     elif prod == "multi":
         generate_lev2_multi(
-            site,
-            data_format,
             l1_filename,
             output_file,
+            data_format,
             None,
-            instrument,
         )
 
     # Update LWP offset file if necessary
@@ -341,7 +333,7 @@ def plot_product(prod: str, date, site: str, data_format: str, instrument: IType
     """
     filename = getattr(
         mwrpy.utils,
-        "_get_filename_cloudnet" if data_format == "cloudnet" else "_get_filename",
+        "get_filename_cloudnet" if data_format == "cloudnet" else "get_filename",
     )
     input_file = filename(prod, date, site, instrument)
     if not os.path.isfile(input_file):
@@ -387,7 +379,6 @@ def plot_product(prod: str, date, site: str, data_format: str, instrument: IType
                         else ["Gain"],
                         save_path=params["path_to_cal"],
                         image_name=key,
-                        instrument_type=instrument,
                         cov_data=his_data,
                         site=site,
                     )
@@ -404,7 +395,6 @@ def plot_product(prod: str, date, site: str, data_format: str, instrument: IType
                         if key == "cov"
                         else output_dir,
                         image_name=key,
-                        instrument_type=instrument,
                     )
 
     # Plot level 2 single products
@@ -431,7 +421,6 @@ def plot_product(prod: str, date, site: str, data_format: str, instrument: IType
                     save_path=output_dir,
                     image_name=PRODUCT_NAME[prod][0],
                     title=False,
-                    instrument_type=instrument,
                 )
             elif key in ("lwp_scan", "iwv_scan"):
                 generate_figure(
@@ -441,7 +430,6 @@ def plot_product(prod: str, date, site: str, data_format: str, instrument: IType
                     save_path=output_dir,
                     image_name=key,
                     title=False,
-                    instrument_type=instrument,
                 )
             else:
                 generate_figure(
@@ -451,7 +439,6 @@ def plot_product(prod: str, date, site: str, data_format: str, instrument: IType
                     save_path=output_dir,
                     image_name=key,
                     pointing=pointing,
-                    instrument_type=instrument,
                 )
 
     # Plot level 2 combined products
@@ -492,7 +479,6 @@ def plot_product(prod: str, date, site: str, data_format: str, instrument: IType
                         save_path=output_dir,
                         image_name=key,
                         title=False,
-                        instrument_type=instrument,
                     )
                 else:
                     generate_figure(
@@ -503,7 +489,6 @@ def plot_product(prod: str, date, site: str, data_format: str, instrument: IType
                         image_name=key,
                         title=title,
                         pointing=pointing,
-                        instrument_type=instrument,
                     )
 
     # Plot covariance data and calibration history even if 1C01 file is not available
@@ -518,7 +503,6 @@ def plot_product(prod: str, date, site: str, data_format: str, instrument: IType
                 "",
                 ["tb_cov_ln2", "tb_cov_amb"],
                 save_path=output_dir + "COVARIANCE/",
-                instrument_type=instrument,
                 image_name="cov",
                 cov_data=cov_data,
                 site=site,
@@ -536,7 +520,6 @@ def plot_product(prod: str, date, site: str, data_format: str, instrument: IType
                 if "tb_cov_ln2" in his_data
                 else ["Gain"],
                 save_path=output_dir,
-                instrument_type=instrument,
                 image_name="his",
                 cov_data=his_data,
                 site=site,

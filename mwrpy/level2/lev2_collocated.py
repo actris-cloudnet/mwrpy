@@ -2,7 +2,6 @@ import logging
 from collections.abc import Sequence
 from os import PathLike
 from tempfile import NamedTemporaryFile
-from typing import Literal
 
 import netCDF4
 
@@ -11,13 +10,11 @@ from mwrpy.utils import copy_global, copy_variables
 
 
 def generate_lev2_single(
-    site: str | None,
-    data_format: str,
     mwr_l1c_file: str | PathLike,
     output_file: str | PathLike,
+    data_format: str = "cloudnet",
     lwp_offset: tuple[float | None, float | None] = (None, None),
     coeff_files: Sequence[str | PathLike] | None = None,
-    instrument_type: Literal["hatpro", "lhatpro", "lhumpro_u90"] | None = None,
 ):
     with (
         NamedTemporaryFile() as lwp_file,
@@ -44,9 +41,8 @@ def generate_lev2_single(
             lev2_to_nc(
                 prod,
                 mwr_l1c_file,
-                data_format=data_format,
-                output_file=file,
-                site=site,
+                file,
+                data_format,
                 temp_file=t_prof_file.name
                 if prod in ("2P04", "2P07", "2P08")
                 else None,
@@ -55,7 +51,6 @@ def generate_lev2_single(
                 else None,
                 lwp_offset=lwp_offset,
                 coeff_files=coeff_files,
-                instrument_type=instrument_type,
             )
 
         with (
@@ -168,9 +163,8 @@ def generate_lev2_single(
                     lev2_to_nc(
                         prod,
                         mwr_l1c_file,
-                        data_format=data_format,
-                        output_file=file,
-                        site=site,
+                        file,
+                        data_format,
                         temp_file=t_prof_file.name
                         if prod in ("2P04", "2P07", "2P08")
                         else None,
@@ -179,7 +173,6 @@ def generate_lev2_single(
                         else None,
                         lwp_offset=(None, None),
                         coeff_files=coeff_files,
-                        instrument_type=instrument_type,
                     )
                     with netCDF4.Dataset(stability_file.name, "r") as nc_sta:
                         var_2I06 = (
@@ -203,13 +196,11 @@ def generate_lev2_single(
 
 
 def generate_lev2_lhumpro(
-    site: str | None,
-    data_format: str,
     mwr_l1c_file: str | PathLike,
     output_file: str | PathLike,
+    data_format: str = "cloudnet",
     lwp_offset: tuple[float | None, float | None] = (None, None),
     coeff_files: Sequence[str | PathLike] | None = None,
-    instrument_type: Literal["hatpro", "lhatpro", "lhumpro_u90"] | None = None,
 ):
     with (
         NamedTemporaryFile() as lwp_file,
@@ -228,14 +219,12 @@ def generate_lev2_lhumpro(
             lev2_to_nc(
                 prod,
                 mwr_l1c_file,
-                data_format=data_format,
-                output_file=file,
-                site=site,
+                file,
+                data_format,
                 temp_file=None,
                 hum_file=None,
                 lwp_offset=lwp_offset,
                 coeff_files=coeff_files,
-                instrument_type=instrument_type,
             )
 
         with (
@@ -308,12 +297,10 @@ def generate_lev2_lhumpro(
 
 
 def generate_lev2_multi(
-    site: str | None,
-    data_format: str,
     mwr_l1c_file: str | PathLike,
     output_file: str | PathLike,
+    data_format: str = "cloudnet",
     coeff_files: Sequence[str | PathLike] | None = None,
-    instrument_type: Literal["hatpro", "lhatpro", "lhumpro_u90"] | None = None,
 ):
     with (
         NamedTemporaryFile() as temperature_file,
@@ -336,16 +323,14 @@ def generate_lev2_multi(
             lev2_to_nc(
                 prod,
                 mwr_l1c_file,
-                data_format=data_format,
-                output_file=file,
-                site=site,
+                file,
+                data_format,
                 temp_file=temperature_file.name
                 if prod not in ("2P02", "2P03")
                 else None,
                 hum_file=abs_hum_file.name if prod not in ("2P02", "2P03") else None,
                 lwp_offset=(None, None),
                 coeff_files=coeff_files,
-                instrument_type=instrument_type,
             )
 
         with (

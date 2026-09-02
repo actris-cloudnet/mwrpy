@@ -29,12 +29,13 @@ from mwrpy.utils import (
 )
 
 FuncType: TypeAlias = Callable[[str], np.ndarray]
+IType = Literal["hatpro", "lhatpro", "lhumpro_u90"]
 
 
 def lev1_to_nc(
-    data_type: str,
     path_to_files: str | PathLike,
-    data_format: str,
+    data_type: str = "1C01",
+    data_format: str = "cloudnet",
     site: str | None = None,
     output_file: str | PathLike | None = None,
     lidar_path: str | PathLike | None = None,
@@ -42,7 +43,7 @@ def lev1_to_nc(
     instrument_config: dict | None = None,
     date: datetime.date | None = None,
     time_offset: datetime.timedelta | None = None,
-    instrument_type: Literal["hatpro", "lhatpro", "lhumpro_u90"] | None = None,
+    instrument_type: IType | None = "hatpro",
     altitude: float | None = None,
     azimuth_offset: float | None = None,
 ) -> rpg_mwr.Rpg:
@@ -50,8 +51,8 @@ def lev1_to_nc(
     adds attributes and writes it into netCDF file.
 
     Args:
-        data_type: Data type of the netCDF file.
         path_to_files: Folder containing one day of RPG MWR binary files.
+        data_type: Data type of the netCDF file (1C01, 1B01, etc.).
         data_format: Data format of the netCDF file (cloudnet, e-profile).
         site: Name of site.
         output_file: Output file name.
@@ -80,6 +81,7 @@ def lev1_to_nc(
     params = read_config(site, instrument_type, "params")
     if instrument_config is not None:
         params = {**params, **instrument_config}
+        site = params.get("site") if site is None else site
 
     rpg_bin = prepare_data(
         path_to_files,
@@ -105,7 +107,6 @@ def lev1_to_nc(
     mwr.find_valid_times()
     mwr.data = get_data_attributes(mwr.data, data_type, data_format)
     if output_file is not None:
-        global_attributes = read_config(site, instrument_type, "global_specs")
         if data_format == "cloudnet":
             c_files = (
                 get_coeff_list(
@@ -118,23 +119,22 @@ def lev1_to_nc(
                 else coeff_files
             )
             _, lidar_meta = read_lidar(lidar_path) if lidar_path else (None, None)
-            i_gen = global_attributes["instrument_generation"]
             global_attributes = {
                 "site": site,
-                "instrument": instrument_type,
+                "instrument": params["type"],
                 "coeff_files": c_files,
-                "instrument_generation": i_gen,
                 "history": lidar_meta["history"] if lidar_meta else None,
                 "source": lidar_meta["source"] if lidar_meta else None,
             }
         else:
+            global_attributes = read_config(site, instrument_type, "e-profile_specs")
             global_attributes["site_location"] = site
             global_attributes["dependencies"] = (
                 str(lidar_path).split("/")[-1] if lidar_path else None
             )
-        _update_calibration_attributes(rpg_bin, global_attributes)
-        if data_type != "1C01":
-            update_lev1_attributes(global_attributes, data_type)
+            _update_calibration_attributes(rpg_bin, global_attributes)
+            if data_type != "1C01":
+                update_lev1_attributes(global_attributes, data_type)
         rpg_mwr.save_rpg(mwr, output_file, global_attributes, data_type, data_format)
     return mwr
 
@@ -779,9 +779,9 @@ def _add_blb(brt: RpgBin, blb: RpgBin, hkd: RpgBin, params: dict) -> None:
 
 def _update_calibration_attributes(rpg_bin: RpgBin, global_attributes: dict) -> None:
     global_attributes["type_of_automatic_calibrations"] = (
-        "calibration with ambient temperature target and noise diode with high-frequency noise switching"
-        if global_attributes["instrument_generation"] == "G5"
-        else "calibration with ambient temperature target and noise diode"
+        "calibration with ambient temperature target and noise diode"
+        if global_attributes["instrument_generation"] != "G5"
+        else "calibration with ambient temperature target and noise diode with high-frequency noise switching"
     )
 
     if "date_of_last_covariance_matrix" in rpg_bin.data:

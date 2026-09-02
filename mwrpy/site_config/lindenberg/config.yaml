@@ -48,7 +48,8 @@ params:
   # Set const_azi to the angle that RPG software gives when instrument is pointing to the North.
   const_azi:
 
-global_specs:
+# Metadata for E-Profile data format
+e-profile_specs:
   # A succinct description of what is in the dataset, composed of instrument type and site name
   title: HATPRO G5 MWR at Lindenberg, Germany
 

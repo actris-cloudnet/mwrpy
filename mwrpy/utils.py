@@ -357,7 +357,7 @@ def get_file_list(path_to_files: str | PathLike, extension: str) -> list[str]:
 def read_config(
     site: str | None,
     instrument_type: str | None,
-    key: Literal["global_specs", "params"],
+    key: Literal["e-profile_specs", "params"],
 ) -> dict:
     site_config = read_site_config_yaml(site)
     if len(site_config) > 0:
@@ -367,6 +367,7 @@ def read_config(
     else:
         raise ValueError("site_config file or instrument_type is required")
     data = _read_itype_config_yaml(itype)[key]
+    data["type"] = itype
     if len(site_config) > 0:
         data.update(site_config[key])
     return data
@@ -601,7 +602,7 @@ def get_filename(
     prod: str, date_in: datetime.date, site: str, instrument: IType
 ) -> str:
     params = read_config(site, instrument, "params")
-    global_attributes = read_config(site, instrument, "global_specs")
+    global_attributes = read_config(site, instrument, "e-profile_specs")
     if np.char.isnumeric(prod[0]):
         level = prod[0]
     else:
@@ -634,7 +635,7 @@ def get_filename(
 def get_filename_cloudnet(
     prod: str, date_in: datetime.date, site: str, instrument: IType
 ) -> str:
-    params = read_config(None, instrument, "params")
+    params = read_config(site, instrument, "params")
     if np.char.isnumeric(prod[0]):
         level = prod[0]
         name = "l1c"

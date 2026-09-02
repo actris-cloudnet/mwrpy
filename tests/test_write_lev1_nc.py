@@ -17,7 +17,7 @@ DATA_FORMAT = "e-profile"
 
 def test_lev1_to_nc():
     for prod in product_list:
-        hatpro = lev1_to_nc(prod, DATA_DIR, DATA_FORMAT, site)
+        hatpro = lev1_to_nc(DATA_DIR, prod, DATA_FORMAT, site)
         assert str(hatpro.date) == DATE
         for t in hatpro.data["time"][:]:
             date = str(
@@ -29,7 +29,7 @@ def test_lev1_to_nc():
 def test_output_nc_file():
     for prod in product_list:
         temp_file = "temp_file.nc"
-        lev1_to_nc(prod, DATA_DIR, DATA_FORMAT, site, output_file=temp_file)
+        lev1_to_nc(DATA_DIR, prod, DATA_FORMAT, site, output_file=temp_file)
         with netCDF4.Dataset(temp_file) as nc:
             # Write tests for the created netCDF file here:
             assert nc.date == DATE

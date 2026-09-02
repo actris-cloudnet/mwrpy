@@ -4,7 +4,6 @@ import calendar
 from collections.abc import Sequence
 from datetime import datetime, timedelta, timezone
 from os import PathLike
-from typing import Literal
 
 import atmoslib
 import atmoslib.constants as ac
@@ -37,14 +36,12 @@ def _local_solar_time(unix_seconds: float, longitude: float) -> datetime:
 def lev2_to_nc(
     data_type: str,
     lev1_file: str | PathLike,
-    data_format: str,
     output_file: str | PathLike,
-    site: str | None = None,
+    data_format: str,
     temp_file: str | PathLike | None = None,
     hum_file: str | PathLike | None = None,
     lwp_offset: tuple[float | None, float | None] = (None, None),
     coeff_files: Sequence[str | PathLike] | None = None,
-    instrument_type: Literal["hatpro", "lhatpro", "lhumpro_u90"] | None = None,
 ):
     """This function reads Level 1 files,
     applies retrieval coefficients for Level 2 products
@@ -53,14 +50,12 @@ def lev2_to_nc(
     Args:
         data_type: Data type of the netCDF file.
         lev1_file: Path of Level 1 file.
-        data_format: Data format of the netCDF file (cloudnet, e-profile).
         output_file: Name of output file.
-        site: Name of site.
+        data_format: Data format of the netCDF file (cloudnet, e-profile).
         temp_file: Name of temperature product file.
         hum_file: Name of humidity product file.
         lwp_offset: LWP offset with the previous day's last and next day's first reliable values.
         coeff_files: List of coefficient files.
-        instrument_type: Specific instrument type (HATPRO, LHATPRO, etc.).
 
     """
     if data_type not in (
@@ -76,11 +71,14 @@ def lev2_to_nc(
     ):
         raise ValueError(f"Data type {data_type} not recognised")
 
-    params = read_config(site, instrument_type, "params")
-    global_attributes = read_config(site, instrument_type, "global_specs")
-    global_attributes["site_location"] = site
-
     with nc.Dataset(lev1_file) as lev1:
+        site = lev1.location if data_format == "cloudnet" else lev1.site_location
+        instrument_type = (
+            lev1.source.split()[2].lower()
+            if data_format == "cloudnet"
+            else lev1.instrument_model.lower()
+        )
+        params = read_config(site, instrument_type, "params")
         params["altitude"] = (
             ma.median(lev1.variables["altitude"][:])
             if data_format == "cloudnet"
@@ -98,7 +96,6 @@ def lev2_to_nc(
             lwp_offset=lwp_offset,
         )
         _combine_lev1(lev1, rpg_dat, index, data_type, scan_time)
-        _del_att(global_attributes)
         if data_format == "e-profile" and "height" in rpg_dat:
             rpg_dat["altitude"] = rpg_dat.pop("height")
         l2_date = num2pydate(
@@ -130,6 +127,9 @@ def lev2_to_nc(
                 "source": lev1.source,
             }
         else:
+            global_attributes = read_config(site, instrument_type, "e-profile_specs")
+            _del_att(global_attributes)
+            global_attributes["site_location"] = site
             global_attributes["dependencies"] = (
                 (f"{lev1.dependencies}\n" f"{str(lev1_file).split('/')[-1]}")
                 if lev1.dependencies
