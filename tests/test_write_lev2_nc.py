@@ -32,7 +32,7 @@ def l1_file(request):
 def test_generate_lev2_single_site(l1_file):
     fd, path = tempfile.mkstemp()
     os.close(fd)
-    generate_lev2_single(DATA_FORMAT, l1_file, path)
+    generate_lev2_single(l1_file, path, DATA_FORMAT)
     os.unlink(path)
 
 
