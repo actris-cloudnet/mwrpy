@@ -21,6 +21,7 @@ SECONDS_PER_MINUTE = 60
 SECONDS_PER_HOUR = 3600
 SECONDS_PER_DAY = 86400
 Epoch = tuple[int, int, int]
+IType = Literal["hatpro", "lhatpro", "lhumpro_u90"]
 
 
 class MetaData(NamedTuple):
@@ -35,6 +36,8 @@ class MetaData(NamedTuple):
     retrieval_frequencies: str | None = None
     retrieval_auxiliary_input: str | None = None
     retrieval_description: str | None = None
+    axis: str | None = None
+    calendar: str | None = None
 
 
 def seconds2hours(time_in_seconds: np.ndarray) -> np.ndarray:
@@ -246,7 +249,7 @@ def add_interpol1d(
             interpolated_mask = (
                 np.interp(data0["time"], valid_time, valid_mask.astype(float)) < 0.5
             )
-            result = ma.masked_array(interpolated_values, mask=interpolated_mask)
+            result = np.ma.masked_array(interpolated_values, mask=interpolated_mask)
         interpolated_data = (
             result
             if len(interpolated_data) == 0
@@ -276,10 +279,14 @@ def add_time_bounds(time_arr: np.ndarray, int_time: int) -> np.ndarray:
 
 
 def get_coeff_list(
-    site: str | None, prefix: str, coeff_files: Sequence[str | PathLike] | None
+    site: str | None,
+    prefix: str | list,
+    coeff_files: Sequence[str | PathLike] | None,
+    coeff_dir: str | None = None,
 ) -> list[str]:
     """Returns list of .nc coefficient file(s)."""
     if coeff_files is not None:
+        assert isinstance(prefix, str)
         c_list = []
         for file in coeff_files:
             basename = os.path.basename(file)
@@ -289,32 +296,41 @@ def get_coeff_list(
         return sorted(c_list)
 
     assert isinstance(site, str)
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    c_list = glob.glob(
-        dir_path
-        + "/site_config/"
-        + site
-        + "/coefficients/"
-        + "*"
-        + prefix.lower()
-        + "*"
-    )
-    if len(c_list) == 0:
-        c_list = glob.glob(
-            dir_path
+    if coeff_dir is not None:
+        dir_path = coeff_dir
+    else:
+        dir_path = (
+            os.path.dirname(os.path.realpath(__file__))
             + "/site_config/"
             + site
             + "/coefficients/"
-            + "*"
-            + prefix.upper()
-            + "*"
         )
+    if isinstance(prefix, str):
+        prefix = [prefix]
+    c_list = []
+    for p in prefix:
+        tmp = glob.glob(dir_path + "*" + p.lower() + "*")
+        if len(tmp) == 0:
+            tmp = glob.glob(dir_path + "*" + p.upper() + "*")
+        if len(c_list) == 0:
+            c_list = tmp
+        elif len(tmp) > 0 and len(c_list) > 0:
+            c_list = c_list + tmp
 
     if len(c_list) > 0:
+        if "spc" in c_list and "ins" in c_list:
+            c_list.remove("spc")
         return sorted(c_list)
     logging.warning(
         "No coefficient files for product "
-        + prefix
+        + str(prefix)
+        + " found in directory "
+        + "/site_config/"
+        + site
+        + "/coefficients/"
+    ) if len(prefix) == 1 else logging.warning(
+        "No coefficient files for products "
+        + ", ".join(prefix)
         + " found in directory "
         + "/site_config/"
         + site
@@ -341,17 +357,19 @@ def get_file_list(path_to_files: str | PathLike, extension: str) -> list[str]:
 def read_config(
     site: str | None,
     instrument_type: str | None,
-    key: Literal["global_specs", "params"],
+    key: Literal["e-profile_specs", "params"],
 ) -> dict:
-    if site is not None:
-        itype = _read_site_config_yaml(site)["type"]
+    site_config = read_site_config_yaml(site)
+    if len(site_config) > 0:
+        itype = site_config["type"]
     elif instrument_type is not None:
         itype = instrument_type
     else:
-        raise ValueError("site or instrument_type is required")
+        raise ValueError("site_config file or instrument_type is required")
     data = _read_itype_config_yaml(itype)[key]
-    if site is not None:
-        data.update(_read_site_config_yaml(site)[key])
+    data["type"] = itype
+    if len(site_config) > 0:
+        data.update(site_config[key])
     return data
 
 
@@ -367,12 +385,13 @@ def _read_itype_config_yaml(itype: str) -> dict:
         return yaml.load(f, Loader=SafeLoader)
 
 
-def _read_site_config_yaml(site: str) -> dict:
+def read_site_config_yaml(site: str | None) -> dict:
     """Reads configuration file for specific site."""
     dir_name = os.path.dirname(os.path.realpath(__file__))
+    site = "" if site is None else site
     site_file = os.path.join(dir_name, "site_config", site, "config.yaml")
     if not os.path.isfile(site_file):
-        raise NotImplementedError(f"Error: site config file {site_file} not found")
+        return dict()
     with open(site_file, "r", encoding="utf8") as f:
         return yaml.load(f, Loader=SafeLoader)
 
@@ -450,10 +469,14 @@ def read_nc_fields(nc_file: str, name: str) -> np.ndarray:
         return nc.variables[name][:]
 
 
-def read_lidar(path_to_lidar: str | PathLike) -> dict:
+def read_lidar(path_to_lidar: str | PathLike) -> tuple[dict, dict]:
     """Reads lidar data."""
     data, names = {}, ["time", "height", "beta"]
     with netCDF4.Dataset(path_to_lidar) as nc:
+        meta = {
+            "history": nc.history,
+            "source": nc.source,
+        }
         for key in names:
             data[key] = nc.variables[key][:].data
             if key == "time":
@@ -468,7 +491,7 @@ def read_lidar(path_to_lidar: str | PathLike) -> dict:
             if key == "beta":
                 data[key][data[key] == nc.variables[key].get_fill_value()] = np.nan
 
-    return data
+    return data, meta
 
 
 def n_elements(array: np.ndarray, dist: float, var: str | None = None) -> int:
@@ -575,9 +598,11 @@ def get_processing_dates(args) -> tuple[str, str]:
     return start_date, stop_date
 
 
-def _get_filename(prod: str, date_in: datetime.date, site: str) -> str:
-    global_attributes = read_config(site, None, "global_specs")
-    params = read_config(site, None, "params")
+def get_filename(
+    prod: str, date_in: datetime.date, site: str, instrument: IType
+) -> str:
+    params = read_config(site, instrument, "params")
+    global_attributes = read_config(site, instrument, "e-profile_specs")
     if np.char.isnumeric(prod[0]):
         level = prod[0]
     else:
@@ -591,9 +616,90 @@ def _get_filename(prod: str, date_in: datetime.date, site: str) -> str:
         data_out_dir = os.path.join(
             params["data_out"], f"level{level}", date_in.strftime("%Y/%m/%d")
         )
-        wigos_id = global_attributes["wigos_station_id"]
-        filename = f"MWR_{prod}_{wigos_id}_{date_in.strftime('%Y%m%d')}.nc"
+        wigos_id = (
+            global_attributes["wigos_station_id"]
+            if global_attributes["wigos_station_id"] is not None
+            else site
+        )
+        instrument_id = (
+            global_attributes["instrument_id"]
+            if global_attributes["instrument_id"] is not None
+            else "A"
+        )
+        filename = (
+            f"MWR_{prod}_{wigos_id}_{instrument_id}{date_in.strftime('%Y%m%d')}.nc"
+        )
     return os.path.join(data_out_dir, filename)
+
+
+def get_filename_cloudnet(
+    prod: str, date_in: datetime.date, site: str, instrument: IType
+) -> str:
+    params = read_config(site, instrument, "params")
+    if np.char.isnumeric(prod[0]):
+        level = prod[0]
+        name = "l1c"
+    else:
+        level = "2"
+        name = prod
+    if name == "lwp_offset":
+        data_out_dir = os.path.join(
+            params["data_out"], f"level{level}", date_in.strftime("%Y")
+        )
+        filename = f"{site}_{prod}_{date_in.strftime('%Y')}.csv"
+    else:
+        data_out_dir = os.path.join(
+            params["data_out"], f"level{level}", date_in.strftime("%Y/%m/%d")
+        )
+        filename = f"{date_in.strftime('%Y%m%d')}_{site}_{instrument}-{name}.nc"
+    return os.path.join(data_out_dir, filename)
+
+
+def get_raw_file_path(
+    date_in: datetime.date, site: str | None, instrument: str | None
+) -> str:
+    """Get the raw file path for a given date and site.
+
+    Args:
+        date_in: Date for which the raw file path is needed.
+        site: Site identifier.
+        instrument: Instrument identifier.
+
+    Returns:
+        The raw file path as a string.
+    """
+    params = read_config(site, instrument, "params")
+    return os.path.join(params["data_in"], date_in.strftime("%Y/%m/%d/"))
+
+
+def get_lidar_file_path(date_in: datetime.date, site: str, params: dict) -> str | None:
+    """Get the lidar file path for a given date and site.
+
+    Args:
+        date_in: Date for which the lidar file path is needed.
+        site: Site identifier.
+        params: Configuration parameters.
+
+    Returns:
+        The lidar file path as a string or None if not found.
+    """
+    path = ""
+    lidar_model = params.get("lidar_model", "unknown")
+    lidar_model = "unknown" if lidar_model is None else lidar_model.lower()
+    if "path_to_lidar" in params and params["path_to_lidar"] is not None:
+        path = os.path.join(
+            params["path_to_lidar"],
+            date_in.strftime("%Y/%m/%d/"),
+        )
+    file = glob.glob(
+        path + date_in.strftime("%Y%m%d") + "_" + site + "_" + lidar_model + "*.nc"
+    )
+    if len(file) == 0:
+        logging.info(
+            "No lidar file of type " + lidar_model + " found in directory " + str(path)
+        )
+        return None
+    return file[0]
 
 
 def isodate2date(date_str: str) -> datetime.date:

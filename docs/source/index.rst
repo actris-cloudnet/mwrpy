@@ -11,7 +11,9 @@ Welcome to MWRpy's documentation!
 
    overview
    installation
+   data_types
    mwrpy_processing
+   command_line_usage
    fileformat
    guide
 

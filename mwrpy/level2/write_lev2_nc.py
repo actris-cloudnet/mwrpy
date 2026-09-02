@@ -18,6 +18,7 @@ from mwrpy.level2.get_ret_coeff import get_mvr_coeff
 from mwrpy.level2.lev2_meta_nc import get_data_attributes
 from mwrpy.level2.lwp_offset import correct_lwp_offset
 from mwrpy.utils import (
+    get_coeff_list,
     interpol_2d,
     interpolate_2d,
     isbit,
@@ -36,7 +37,7 @@ def lev2_to_nc(
     data_type: str,
     lev1_file: str | PathLike,
     output_file: str | PathLike,
-    site: str | None = None,
+    data_format: str,
     temp_file: str | PathLike | None = None,
     hum_file: str | PathLike | None = None,
     lwp_offset: tuple[float | None, float | None] = (None, None),
@@ -50,7 +51,7 @@ def lev2_to_nc(
         data_type: Data type of the netCDF file.
         lev1_file: Path of Level 1 file.
         output_file: Name of output file.
-        site: Name of site.
+        data_format: Data format of the netCDF file (cloudnet, e-profile).
         temp_file: Name of temperature product file.
         hum_file: Name of humidity product file.
         lwp_offset: LWP offset with the previous day's last and next day's first reliable values.
@@ -70,11 +71,19 @@ def lev2_to_nc(
     ):
         raise ValueError(f"Data type {data_type} not recognised")
 
-    global_attributes = read_config(site, "hatpro", "global_specs")
-    params = read_config(site, "hatpro", "params")
-
     with nc.Dataset(lev1_file) as lev1:
-        params["altitude"] = ma.median(lev1.variables["altitude"][:])
+        site = lev1.location if data_format == "cloudnet" else lev1.site_location
+        instrument_type = (
+            lev1.source.split()[2].lower()
+            if data_format == "cloudnet"
+            else lev1.instrument_model.lower()
+        )
+        params = read_config(site, instrument_type, "params")
+        params["altitude"] = (
+            ma.median(lev1.variables["altitude"][:])
+            if data_format == "cloudnet"
+            else ma.median(lev1.variables["station_altitude"][:])
+        )
 
         rpg_dat, coeff, index, scan_time = get_products(
             site,
@@ -87,10 +96,47 @@ def lev2_to_nc(
             lwp_offset=lwp_offset,
         )
         _combine_lev1(lev1, rpg_dat, index, data_type, scan_time)
-        _del_att(global_attributes)
-        mwr = rpg_mwr.Rpg(rpg_dat)
-        mwr.data = get_data_attributes(mwr.data, data_type, coeff)
-        rpg_mwr.save_rpg(mwr, output_file, global_attributes, data_type)
+        if data_format == "e-profile" and "height" in rpg_dat:
+            rpg_dat["altitude"] = rpg_dat.pop("height")
+        l2_date = num2pydate(
+            lev1.variables["time"][:][0], lev1.variables["time"].units
+        ).strftime("%Y%m%d")
+        mwr = rpg_mwr.Rpg(
+            rpg_dat,
+            date=datetime.strptime(l2_date, "%Y%m%d").date(),
+        )
+        mwr.data = get_data_attributes(mwr.data, data_type, coeff, data_format)
+        if data_format == "cloudnet":
+            c_files = (
+                get_coeff_list(
+                    site,
+                    prefix=["tpb"]
+                    if data_type in ("2P02", "2P04", "2P07", "2P08")
+                    else ["lwp", "iwv", "hpt", "tpt"],
+                    coeff_files=None,
+                    coeff_dir=params.get("coeff_path", None),
+                )
+                if coeff_files is None
+                else coeff_files
+            )
+            global_attributes = {
+                "site": site,
+                "instrument": instrument_type,
+                "coeff_files": c_files,
+                "history": lev1.history,
+                "source": lev1.source,
+            }
+        else:
+            global_attributes = read_config(site, instrument_type, "e-profile_specs")
+            _del_att(global_attributes)
+            global_attributes["site_location"] = site
+            global_attributes["dependencies"] = (
+                (f"{lev1.dependencies}\n" f"{str(lev1_file).split('/')[-1]}")
+                if lev1.dependencies
+                else str(lev1_file).split("/")[-1]
+            )
+            global_attributes["level1_quality_flag_status"] = str(params["flag_status"])
+        rpg_mwr.save_rpg(mwr, output_file, global_attributes, data_type, data_format)
 
 
 def get_products(
@@ -115,16 +161,23 @@ def get_products(
         np.empty([0], np.int32),
         np.empty([0], np.int32),
     )
+    coeff_path = params.get("coeff_path", None)
 
     if data_type in ("2I01", "2I02", "2I06"):
         product = (
-            "lwp" if data_type == "2I01" else "iwv" if data_type == "2I02" else "sta"
+            "lwp"
+            if data_type == "2I01"
+            else "iwv"
+            if data_type == "2I02"
+            else "stability"
         )
 
-        coeff = get_mvr_coeff(site, product, lev1["frequency"][:], coeff_files)
+        coeff = get_mvr_coeff(
+            site, product, lev1["frequency"][:], coeff_files, coeff_path
+        )
         if coeff[0]["RT"] < 2:
             coeff, offset, lin, quad = get_mvr_coeff(
-                site, product, lev1["frequency"][:], coeff_files
+                site, product, lev1["frequency"][:], coeff_files, coeff_path
             )
         else:
             # pylint: disable-next=unbalanced-tuple-unpacking
@@ -183,7 +236,7 @@ def get_products(
             hidden_layer[:, 1:] = np.tanh(
                 fac[:] * np.einsum("ijk,ij->ik", c_w1, ret_in[index, :])
             )
-            if product == "sta":
+            if product == "stability":
                 tmp_product = np.squeeze(
                     np.tanh(fac[:] * np.einsum("ij,ikj->ik", hidden_layer, c_w2))
                     * op_sc
@@ -217,10 +270,10 @@ def get_products(
                 axis=1,
             )
         )[0]  # type: ignore
+        _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
         if product in ("lwp", "iwv"):
             ret_product = ma.masked_all(len(index), np.float32)
             ret_product[index_ret] = tmp_product[index_ret]
-            _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
             if product == "lwp":
                 if params["flag_status"][3] == 0 and np.all(
                     isbit(lev1["met_quality_flag"][index], 3)
@@ -270,18 +323,16 @@ def get_products(
                 ret_product[index_ret] = tmp_product[index_ret, ind]
                 rpg_dat[prd] = ret_product
 
-            _get_qf(rpg_dat, lev1, coeff, index, index_ret, "stability")
-
     elif data_type in ("2P01", "2P03"):
         if data_type == "2P01":
             product, ret = "temperature", "tpt"
         else:
             product, ret = "absolute_humidity", "hpt"
 
-        coeff = get_mvr_coeff(site, ret, lev1["frequency"][:], coeff_files)
+        coeff = get_mvr_coeff(site, ret, lev1["frequency"][:], coeff_files, coeff_path)
         if coeff[0]["RT"] < 2:
             coeff, offset, lin, quad = get_mvr_coeff(
-                site, ret, lev1["frequency"][:], coeff_files
+                site, ret, lev1["frequency"][:], coeff_files, coeff_path
             )
         else:
             # pylint: disable-next=unbalanced-tuple-unpacking
@@ -294,7 +345,7 @@ def get_products(
                 weights1,
                 weights2,
                 factor,
-            ) = get_mvr_coeff(site, ret, lev1["frequency"][:], coeff_files)
+            ) = get_mvr_coeff(site, ret, lev1["frequency"][:], coeff_files, coeff_path)
 
         ret_in = retrieval_input(lev1, coeff)
 
@@ -379,15 +430,17 @@ def get_products(
         _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
 
     elif data_type == "2P02":
-        coeff = get_mvr_coeff(site, "tpb", lev1["frequency"][:], coeff_files)
+        coeff = get_mvr_coeff(
+            site, "tpb", lev1["frequency"][:], coeff_files, coeff_path
+        )
         if coeff[0]["RT"] < 2:
             coeff, offset, lin, quad = get_mvr_coeff(
-                site, "tpb", lev1["frequency"][:], coeff_files
+                site, "tpb", lev1["frequency"][:], coeff_files, coeff_path
             )
         else:
             # pylint: disable-next=unbalanced-tuple-unpacking
             coeff, _, _, _, _, _, _, _ = get_mvr_coeff(
-                site, "tpb", lev1["frequency"][:], coeff_files
+                site, "tpb", lev1["frequency"][:], coeff_files, coeff_path
             )
 
         coeff["AG"] = np.flip(np.sort(coeff["AG"]))
@@ -411,7 +464,7 @@ def get_products(
         ibl, tb, scan_time = (
             np.empty([0, len(coeff["AG"])], np.int32),
             ma.masked_all((len(freq_ind), len(coeff["AG"]), 0), np.float32),
-            np.empty([0], np.int32),
+            np.ma.empty([0], np.int32),
         )
 
         for ix0v in ix0:
@@ -434,11 +487,15 @@ def get_products(
                     axis=0,
                 )
                 ibl = np.append(ibl, [ix0v + np.flip(ind_ang)], axis=0)
-                tb = np.concatenate(
+                tb = np.ma.concatenate(
                     (
                         tb,
-                        np.expand_dims(
-                            lev1["tb"][np.ix_(ix0v + np.flip(ind_ang), freq_ind)].T, 2
+                        np.ma.expand_dims(
+                            np.ma.array(
+                                lev1["tb"][np.ix_(ix0v + np.flip(ind_ang), freq_ind)].T,
+                                np.float32,
+                            ),
+                            2,
                         ),
                     ),
                     axis=2,
@@ -522,8 +579,18 @@ def get_products(
 
         hum_time = _read_time(hum_dat.variables["time"])
         tem_time = _read_time(tem_dat.variables["time"])
+        hum_height = (
+            hum_dat.variables["height"][:]
+            if "height" in hum_dat.variables
+            else hum_dat.variables["altitude"][:]
+        )
+        tem_height = (
+            tem_dat.variables["height"][:]
+            if "height" in tem_dat.variables
+            else tem_dat.variables["altitude"][:]
+        )
 
-        if len(hum_dat.variables["height"][:]) == len(tem_dat.variables["height"][:]):
+        if len(hum_height) == len(tem_height):
             hum_int = interpol_2d(
                 hum_time,
                 hum_dat.variables["absolute_humidity"][:, :],
@@ -532,13 +599,13 @@ def get_products(
         else:
             hum_int = interpolate_2d(
                 hum_time,
-                hum_dat.variables["height"][:],
+                hum_height,
                 hum_dat.variables["absolute_humidity"][:, :],
                 tem_time,
-                tem_dat.variables["height"][:],
+                tem_height,
             )
 
-        rpg_dat["height"] = tem_dat.variables["height"][:]
+        rpg_dat["height"] = tem_height
         pres = np.interp(tem_time, lev1["time"][:], lev1["air_pressure"][:])
         T = tem_dat.variables["temperature"][:, :]
         # hum_int is absolute humidity (kg m-3) from the 2P03 product; vapor
@@ -566,6 +633,14 @@ def get_products(
                     atmoslib.equivalent_potential_temperature(T, p_baro, q_moist)
                 )
 
+        _get_qf(
+            rpg_dat,
+            lev1,
+            coeff,
+            np.array(range(len(tem_time))),
+            np.array(range(len(tem_time))),
+            "derived",
+        )
         _combine_lev1(
             tem_dat,
             rpg_dat,
@@ -585,28 +660,39 @@ def _get_qf(
     product: str,
     scan: np.ndarray = np.empty([0], np.int32),
 ) -> None:
-    rpg_dat[product + "_quality_flag"] = ma.masked_all((len(index)), np.int32)
-    rpg_dat[product + "_quality_flag_status"] = ma.masked_all((len(index)), np.int32)
-
-    _, freq_ind, _ = np.intersect1d(
-        lev1["frequency"][:],
-        coeff["FR"][:],
-        assume_unique=False,
-        return_indices=True,
+    rpg_dat["quality_flag"] = ma.masked_all((len(index)), np.int32)
+    rpg_dat["quality_flag_status"] = ma.masked_all((len(index)), np.int32)
+    rpg_dat["quality_flag"][index_ret] = np.bitwise_or.reduce(
+        lev1["quality_flag"][index[index_ret], :], axis=1
     )
-    if scan.any():
-        for ind, _ in enumerate(scan[:, 0]):
-            flg = np.bitwise_or.reduce(
-                lev1["quality_flag"][np.ix_(scan[ind, :], freq_ind)], axis=1
-            )
-            rpg_dat[product + "_quality_flag"][ind] = np.bitwise_or.reduce(flg)
-    else:
-        rpg_dat[product + "_quality_flag"][index_ret] = np.bitwise_or.reduce(
-            lev1["quality_flag"][np.ix_(index[index_ret], freq_ind)], axis=1
+    rpg_dat["quality_flag_status"][index_ret] = np.bitwise_or.reduce(
+        lev1["quality_flag_status"][index[index_ret], :], axis=1
+    )
+    if product != "derived":
+        rpg_dat[product + "_quality_flag"] = ma.masked_all((len(index)), np.int32)
+        rpg_dat[product + "_quality_flag_status"] = ma.masked_all(
+            (len(index)), np.int32
         )
-    rpg_dat[product + "_quality_flag_status"][index_ret] = lev1["quality_flag_status"][
-        :, freq_ind[0]
-    ][index[index_ret]]
+
+        _, freq_ind, _ = np.intersect1d(
+            lev1["frequency"][:],
+            coeff["FR"][:],
+            assume_unique=False,
+            return_indices=True,
+        )
+        if scan.any():
+            for ind, _ in enumerate(scan[:, 0]):
+                flg = np.bitwise_or.reduce(
+                    lev1["quality_flag"][np.ix_(scan[ind, :], freq_ind)], axis=1
+                )
+                rpg_dat[product + "_quality_flag"][ind] = np.bitwise_or.reduce(flg)
+        else:
+            rpg_dat[product + "_quality_flag"][index_ret] = np.bitwise_or.reduce(
+                lev1["quality_flag"][np.ix_(index[index_ret], freq_ind)], axis=1
+            )
+        rpg_dat[product + "_quality_flag_status"][index_ret] = lev1[
+            "quality_flag_status"
+        ][:, freq_ind[0]][index[index_ret]]
 
 
 def _combine_lev1(
@@ -626,6 +712,9 @@ def _combine_lev1(
         "altitude",
         "latitude",
         "longitude",
+        "station_altitude",
+        "station_latitude",
+        "station_longitude",
     ]
     if index.any():
         for ivars in lev1_vars:
@@ -684,8 +773,16 @@ def retrieval_input(lev1: dict, coeff: dict) -> np.ndarray:
     )
     bias = np.ones((len(lev1["time"][:]), 1), np.float32)
 
-    latitude = float(ma.median(lev1["latitude"]))
-    longitude = float(ma.median(lev1["longitude"]))
+    latitude = (
+        float(ma.median(lev1["latitude"]))
+        if "latitude" in lev1
+        else float(ma.median(lev1["station_latitude"]))
+    )
+    longitude = (
+        float(ma.median(lev1["longitude"]))
+        if "longitude" in lev1
+        else float(ma.median(lev1["station_longitude"]))
+    )
 
     if coeff["RT"] == -1:
         ret_in = lev1["tb"][:, :]

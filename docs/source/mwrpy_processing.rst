@@ -4,7 +4,7 @@ MWRpy processing
 
 In this tutorial `MWRpy <https://github.com/actris-cloudnet/mwrpy/>`_ products are generated from raw data, including
 quality control and visualization. This example utilizes files taken from the ACTRIS site
-`Hyytiala <https://cloudnet.fmi.fi/site/hyytiala>`_:
+`Hyytiala <https://cloudnet.fmi.fi/site/hyytiala>`_ equipped with a RPG-HATPRO instrument:
 
 - RPG microwave radiometer:
     - Brightness temperatures: `230406.BRT <https://github.com/actris-cloudnet/mwrpy/blob/main/tests/data/hyytiala/230406.BRT>`_
@@ -17,13 +17,31 @@ quality control and visualization. This example utilizes files taken from the AC
 
     .BRT and .HKD files are mandatory in MWRpy for processing
 
+First step for the processing examples is to specify the site name and data path:
+
+.. code-block:: python
+
+    import os
+
+    site_name = "hyytiala"
+    package_dir = os.getcwd()
+    data_path = f"{package_dir}/tests/data/{site_name}"
+
+E-PROFILE format
+----------------
+
+First E-Profile specific metadata can be configured in the instrument type configuration file
+(``mwrpy/site_config/hatpro.yaml``), which also includes instrument specific information. An optional site specific
+configuration file (e.g. ``mwrpy/site_config/{site_name}/config.yaml``) can be configured, when dealing with multiple
+ instruments of the same type.
+
 Level 1c
 ~~~~~~~~~
 
-First we convert RPG microwave radiometer (MWR) binary files, including brightness temperature (TB) and
-housekeeping data (\*.BRT, \*.HKD), into a Level 1c netCDF file. Data from optional elevation scans (\*.BLB, \*.BLS),
-weather station (\*.MET) and infrared radiometer (\*.IRT) are combined in this process and the following quality
-flags are derived:
+Now we convert RPG microwave radiometer (MWR) binary files, including brightness temperature (TB) and
+housekeeping data (\*.BRT, \*.HKD), into a Level 1c netCDF file (1C01, default). Data from optional elevation scans (\*
+.BLB, \*.BLS), weather station (\*.MET) and infrared radiometer (\*.IRT) are combined in this process and the
+following quality flags are derived:
 
 - Bit 1: missing_tb
 - Bit 2: tb_below_threshold
@@ -36,25 +54,20 @@ flags are derived:
 Quality flags are stored as bits and Bit 1-3 include checks for missing brightness temperature values and their valid
 range (2.7 - 330 K). The spectral consistency flag (Bit 4) compares measured and retrieved TB. For this flag, it is
 expected to have the corresponding RPG retrieval coefficient file (``SPC*.RET``) in
-``/mwrpy/site_config/{site}/coefficients/``. Data from HKD files are used to determine the stability of the receiver
-components (Bit 5). The sensor from the attached weather station detects rain for quality Bit 6 and the sun and moon
-orbits are calculated and compared to the measurement geometry to detect potential interferences (Bit 7). A quality
-flag status variable contains information whether the flag is active.
+``/mwrpy/site_config/{site_name}/coefficients/``. Data from HKD files are used to determine the stability of the
+receiver components (Bit 5). The sensor from the attached weather station detects rain for quality Bit 6 and the sun
+and moon orbits are calculated and compared to the measurement geometry to detect potential interferences (Bit 7). A
+quality flag status variable contains information whether the flag is active.
 
 .. code-block:: python
 
-    import os
     from mwrpy.level1.write_lev1_nc import lev1_to_nc
 
-    SITE = "hyytiala"
-    PACKAGE_DIR = os.getcwd()
-    DATA_DIR = f"{PACKAGE_DIR}/tests/data/{SITE}"
-
     mwr_raw = lev1_to_nc(
-        "1C01",
-        DATA_DIR,
-        site=SITE,
-        output_file="mwr_1c.nc",
+        path_to_files=data_path,
+        data_format="e-profile",
+        site=site_name,
+        output_file=f"{data_path}/mwr_1c.nc",
     )
 
 The data format of the generated ``mwr_1c.nc`` file, including metadata information and variable names, is
@@ -65,10 +78,9 @@ Variables such as brightness temperature can be plotted from the newly generated
 
 .. code-block:: python
 
-    import os
     from mwrpy.plots.generate_plots import generate_figure
-    PACKAGE_DIR = os.getcwd()
-    generate_figure('mwr_1c.nc', ['tb'], save_path=f"{PACKAGE_DIR}/")
+
+    generate_figure(f"{data_path}/mwr_1c.nc", ['tb'], save_path=f"{data_path}/")
 
 .. figure:: _static/20230406_hyytiala_tb.png
 
@@ -82,7 +94,12 @@ are applied to generate the Level 2 single pointing product:
 .. code-block:: python
 
     from mwrpy.level2.lev2_collocated import generate_lev2_single
-    mwr_prod = generate_lev2_single("hyytiala", "mwr_1c.nc", "mwr-single.nc")
+
+    mwr_prod = generate_lev2_single(
+        mwr_l1c_file=f"{data_path}/mwr_1c.nc",
+        output_file=f"{data_path}/mwr-single.nc",
+        data_format="e-profile",
+    )
 
 Variables such as integrated water vapor
 (`IWV <https://vocabulary.actris.nilu.no/skosmos/actris_vocab/en/page/watervapourtotalcolumncontent>`_)
@@ -90,10 +107,9 @@ can be plotted from the newly generated file.
 
 .. code-block:: python
 
-    import os
     from mwrpy.plots.generate_plots import generate_figure
-    PACKAGE_DIR = os.getcwd()
-    generate_figure('mwr-single.nc', ['iwv'], save_path=f"{PACKAGE_DIR}/")
+
+    generate_figure(f"{data_path}/mwr-single.nc", ['iwv'], save_path=f"{data_path}/")
 
 .. figure:: _static/20230406_hyytiala_iwv.png
 
@@ -107,98 +123,115 @@ product:
 .. code-block:: python
 
     from mwrpy.level2.lev2_collocated import generate_lev2_multi
-    mwr_prod = generate_lev2_multi("hyytiala", "mwr_1c.nc", "mwr-multi.nc")
+
+    mwr_prod = generate_lev2_multi(
+        mwr_l1c_file=f"{data_path}/mwr_1c.nc",
+        output_file=f"{data_path}/mwr-multi.nc",
+        data_format="e-profile",
+    )
 
 Variables such as temperature profiles can be plotted from the newly generated file.
 
 .. code-block:: python
 
-    import os
     from mwrpy.plots.generate_plots import generate_figure
-    PACKAGE_DIR = os.getcwd()
-    generate_figure('mwr-multi.nc', ['temperature'], save_path=f"{PACKAGE_DIR}/")
+
+    generate_figure(f"{data_path}/mwr-multi.nc", ['temperature'], save_path=f"{data_path}/")
 
 .. figure:: _static/20230406_hyytiala_temperature.png
 
-Command line usage
-~~~~~~~~~~~~~~~~~~
+Cloudnet format
+---------------
+In this example the `Cloudnet API client <https://github.com/actris-cloudnet/cloudnet-api-client/>`_ is used to fetch
+data and retrieval files and the Cloudnet data format is selected for processing (default).
 
-After defining the instrument type and site specific configuration files (including input/output data paths) in
-``mwrpy/site_config/``, MWRpy can also be run using the command line tool `mwrpy/cli.py`:
+Using Cloudnet API to fetch data and retrieval files
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Download raw data (binary files):
 
-.. code-block::
+.. code-block:: python
 
-    mwrpy/cli.py [-h] -s SITE [-d YYYY-MM-DD] [--start YYYY-MM-DD]
-                           [--stop YYYY-MM-DD] [-p ...] [{process,plot}]
+    from cloudnet_api_client import APIClient
 
-.. list-table:: Arguments
-   :widths: 10 20 20 50
-   :header-rows: 1
+    date = "2023-04-06"
+    instrument_pid = "https://hdl.handle.net/21.12132/3.f360a2375f3e4e4f" # check https://cloudnet.fmi.fi/instruments to find the PID of your instrument
+    client = APIClient()
+    instruments = client.instruments()
+    i_type = [i.instrument_id for i in instruments if i.pid == instrument_pid][0]
+    files = client.raw_files(site_id=site_name, instrument_id=i_type, date=date)
+    binary_files = [f for f in files]
 
-   * - Short
-     - Long
-     - Default
-     - Description
-   * - `-h`
-     - `--help`
-     -
-     - Show help and exit.
-   * - `-s`
-     - `--site`
-     -
-     - Site to process data from, e.g, `hyytiala`. Required.
-   * - `-d`
-     - `--date`
-     -
-     - Single date to be processed. Alternatively, `--start` and `--stop` can be defined.
-   * -
-     - `--start`
-     - `current day - 1`
-     - Starting date.
-   * -
-     - `--stop`
-     - `current day`
-     - Stopping date.
-   * - `-p`
-     - `--products`
-     - 1C01, single, multi
-     - Processed products, e.g, `1C01, 2I02, 2P03, single`, see Data Types below.
+    binary_filepaths = await client.adownload(binary_files, data_path)
 
-.. list-table:: Commands
-   :widths: 20 30
-   :header-rows: 1
+Download retrieval files:
 
-   * - Command
-     - Description
-   * - `process`
-     - Process data and generate plots (default).
-   * - `plot`
-     - Only generate plots.
-   * - `no-plot`
-     - Only generate products.
-   * - `reprocess`
-     - Like `process`, but skips days when data processing fails.
+.. code-block:: python
 
-Data Types
-~~~~~~~~~~
+    import requests
 
-Level 1
+    calibration = client.calibration(instrument_pid, date)
+    retrieval = calibration["data"]
 
-- 1B01: MWR brightness temperatures from .BRT and .BLB/.BLS files + retrieved spectrum
-- 1B11: IR brightness temperatures from .IRT files
-- 1B21: Weather station data from .MET files
-- 1C01: Combined data type with time corresponding to 1B01
+    retrieval_files = []
+    for file in retrieval["coefficientLinks"]:
+        filename = f"{data_path}/{file.split('/')[-1]}"
+        response = requests.get(file)
+        with open(filename, "wb") as f:
+            f.write(response.content)
+            retrieval_files.append(str(filename))
 
-Level 2
+Process and plot Level 1 data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In contrast to the E-PROFILE data format, no additional metadata needs to be defined in the configuration file. The
+fetched retrieval files are set as an argument together with site information (e.g. site name, altitude, etc.).
 
-- 2I01: Liquid water path (LWP)
-- 2I02: Integrated water vapor (IWV)
-- 2I06: Stability Indices
-- 2P01: Temperature profiles from single-pointing observations
-- 2P02: Temperature profiles from multiple-pointing observations
-- 2P03: Absolute humidity profiles
-- 2P04: Relative humidity profiles (derived from 2P01/2P02 + 2P03)
-- 2P07: Potential temperature (derived from 2P01/2P02 + 2P03)
-- 2P08: Equivalent potential temperature (derived from 2P01/2P02 + 2P03)
-- single: Single pointing data product (including 2I01, 2I02, 2I06, 2P01, 2P03, and derived products)
-- multi: Multiple pointing data product (including 2P02, and derived products)
+.. code-block:: python
+
+    site_info = client.site(site_id=site_name)
+    site_meta = {
+        "site": site_info.id,
+        "altitude": site_info.altitude,
+        "latitude": site_info.latitude,
+        "longitude": site_info.longitude,
+    }
+
+    from mwrpy.level1.write_lev1_nc import lev1_to_nc
+    mwr_raw = lev1_to_nc(
+        path_to_files=data_path,
+        output_file=f"{data_path}/mwr_1c.nc",
+        coeff_files=retrieval_files,
+        instrument_config=site_meta,
+    )
+
+In this example, the figure is only displayed and not saved.
+
+.. code-block:: python
+
+    from mwrpy.plots.generate_plots import generate_figure
+    fig_name = generate_figure(f"{data_path}/mwr_1c.nc", ['tb'], show=True)
+
+Process and plot Level 2 data (single & multiple pointing)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Again, no plots are saved, only displayed.
+
+.. code-block:: python
+
+    from mwrpy.level2.lev2_collocated import generate_lev2_single
+    mwr_prod = generate_lev2_single(
+        mwr_l1c_file=f"{data_path}/mwr_1c.nc",
+        output_file=f"{data_path}/mwr-single.nc",
+        coeff_files=retrieval_files,
+    )
+
+    from mwrpy.plots.generate_plots import generate_figure
+    fig_name = generate_figure(f"{data_path}/mwr-single.nc", ['iwv'], show=True)
+
+    from mwrpy.level2.lev2_collocated import generate_lev2_multi
+    mwr_prod = generate_lev2_multi(
+        mwr_l1c_file=f"{data_path}/mwr_1c.nc",
+        output_file=f"{data_path}/mwr-multi.nc",
+        coeff_files=retrieval_files,
+    )
+
+    from mwrpy.plots.generate_plots import generate_figure
+    fig_name = generate_figure(f"{data_path}/mwr-multi.nc", ['temperature'], show=True)
