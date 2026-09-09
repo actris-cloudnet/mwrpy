@@ -19,8 +19,7 @@ from mwrpy.level2.lev2_meta_nc import get_data_attributes
 from mwrpy.level2.lwp_offset import correct_lwp_offset
 from mwrpy.utils import (
     get_coeff_list,
-    interpol_2d,
-    interpolate_2d,
+    interpolate_2d_nearest,
     isbit,
     read_config,
 )
@@ -487,19 +486,13 @@ def get_products(
                     axis=0,
                 )
                 ibl = np.append(ibl, [ix0v + np.flip(ind_ang)], axis=0)
-                tb = np.ma.concatenate(
-                    (
-                        tb,
-                        np.ma.expand_dims(
-                            np.ma.array(
-                                lev1["tb"][np.ix_(ix0v + np.flip(ind_ang), freq_ind)].T,
-                                np.float32,
-                            ),
-                            2,
-                        ),
+                tb_add = ma.asanyarray(
+                    np.expand_dims(
+                        lev1["tb"][np.ix_(ix0v + np.flip(ind_ang), freq_ind)].T, 2
                     ),
-                    axis=2,
+                    np.float32,
                 )
+                tb = ma.concatenate((tb, tb_add), axis=2)
 
         if len(ibl) <= 1:
             raise MissingInputData(
@@ -590,20 +583,13 @@ def get_products(
             else tem_dat.variables["altitude"][:]
         )
 
-        if len(hum_height) == len(tem_height):
-            hum_int = interpol_2d(
-                hum_time,
-                hum_dat.variables["absolute_humidity"][:, :],
-                tem_time,
-            )
-        else:
-            hum_int = interpolate_2d(
-                hum_time,
-                hum_height,
-                hum_dat.variables["absolute_humidity"][:, :],
-                tem_time,
-                tem_height,
-            )
+        hum_int = interpolate_2d_nearest(
+            hum_time,
+            hum_dat.variables["height"][:],
+            hum_dat.variables["absolute_humidity"][:, :],
+            tem_time,
+            tem_dat.variables["height"][:],
+        )
 
         rpg_dat["height"] = tem_height
         pres = np.interp(tem_time, lev1["time"][:], lev1["air_pressure"][:])
@@ -623,9 +609,10 @@ def get_products(
             mr_dry = atmoslib.mixing_ratio(vp, p_dry)
             q = mr_dry / (1 + mr_dry)
             p_baro = atmoslib.hydrostatic_pressure(T, q, rpg_dat["height"], pres)
-            theta = atmoslib.potential_temperature(T, p_baro)
             if data_type == "2P07":
-                rpg_dat["potential_temperature"] = theta
+                rpg_dat["potential_temperature"] = atmoslib.potential_temperature(
+                    T, p_baro
+                )
             else:
                 mr = atmoslib.mixing_ratio(vp, p_baro)
                 q_moist = mr / (1 + mr)
@@ -788,6 +775,17 @@ def retrieval_input(lev1: dict, coeff: dict) -> np.ndarray:
         ret_in = lev1["tb"][:, :]
     elif coeff["RT"] in (0, 1):
         ret_in = lev1["tb"][:, freq_ind]
+        if coeff["RT"] == 1:
+            _data = coeff.get("PS")
+            assert _data is not None and len(_data) > 0
+            if _data[0] == 1:
+                ret_in = np.concatenate(
+                    (
+                        ret_in,
+                        np.reshape(lev1["air_pressure"][:], (len(lev1["time"][:]), 1)),
+                    ),
+                    axis=1,
+                )
     else:
         ret_in = np.concatenate((bias, lev1["tb"][:, freq_ind]), axis=1)
 
