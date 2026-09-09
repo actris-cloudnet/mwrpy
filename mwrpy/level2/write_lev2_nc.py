@@ -577,7 +577,7 @@ def get_products(
             if "height" in hum_dat.variables
             else hum_dat.variables["altitude"][:]
         )
-        tem_height = (
+        rpg_dat["height"] = (
             tem_dat.variables["height"][:]
             if "height" in tem_dat.variables
             else tem_dat.variables["altitude"][:]
@@ -585,13 +585,12 @@ def get_products(
 
         hum_int = interpolate_2d_nearest(
             hum_time,
-            hum_dat.variables["height"][:],
+            hum_height,
             hum_dat.variables["absolute_humidity"][:, :],
             tem_time,
-            tem_dat.variables["height"][:],
+            rpg_dat["height"],
         )
 
-        rpg_dat["height"] = tem_height
         pres = np.interp(tem_time, lev1["time"][:], lev1["air_pressure"][:])
         T = tem_dat.variables["temperature"][:, :]
         # hum_int is absolute humidity (kg m-3) from the 2P03 product; vapor
