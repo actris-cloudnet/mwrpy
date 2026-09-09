@@ -433,15 +433,13 @@ def get_products(
                     axis=0,
                 )
                 ibl = np.append(ibl, [ix0v + np.flip(ind_ang)], axis=0)
-                tb = np.concatenate(
-                    (
-                        tb,
-                        np.expand_dims(
-                            lev1["tb"][np.ix_(ix0v + np.flip(ind_ang), freq_ind)].T, 2
-                        ),
+                tb_add = np.ma.asanyarray(
+                    np.expand_dims(
+                        lev1["tb"][np.ix_(ix0v + np.flip(ind_ang), freq_ind)].T, 2
                     ),
-                    axis=2,
+                    np.float32,
                 )
+                tb = np.concatenate((tb, tb_add), axis=2)
 
         if len(ibl) <= 1:
             raise MissingInputData(
