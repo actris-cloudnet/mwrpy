@@ -14,7 +14,7 @@ import pandas as pd
 import yaml
 from numpy import ma
 from scipy import signal
-from scipy.interpolate import RectBivariateSpline
+from scipy.interpolate import RegularGridInterpolator
 from yaml.loader import SafeLoader
 
 SECONDS_PER_MINUTE = 60
@@ -160,63 +160,39 @@ def setbit(array: np.ndarray, nth_bit: int) -> np.ndarray:
     return array
 
 
-def interpol_2d(
-    x_in: np.ndarray,
-    array: ma.MaskedArray,
-    x_new: np.ndarray,
-) -> ma.MaskedArray:
-    """Interpolates 2-D data in one dimension.
-
-    Args:
-        x_in: 1-D array with shape (n,).
-        array: 2-D input data with shape (n, m).
-        x_new: 1-D target vector with shape (N,).
-
-    Returns:
-        array: Interpolated data with shape (N, m).
-
-    Notes:
-        0-values are masked in the returned array.
-    """
-    result = np.zeros((len(x_new), array.shape[1]))
-    array_screened = ma.masked_invalid(array, copy=True)  # data may contain nan-values
-    for ind, values in enumerate(array_screened.T):
-        if ma.is_masked(array):
-            mask = ~values.mask
-            if ma.any(values[mask]):
-                result[:, ind] = np.interp(x_new, x_in[mask], values[mask])
-        else:
-            result[:, ind] = np.interp(x_new, x_in, values)
-    result[~np.isfinite(result)] = 0
-    masked = ma.make_mask(result)
-    return ma.array(result, mask=np.invert(masked))
-
-
-def interpolate_2d(
+def interpolate_2d_nearest(
     x: np.ndarray,
     y: np.ndarray,
     z: ma.MaskedArray,
     x_new: np.ndarray,
     y_new: np.ndarray,
 ) -> ma.MaskedArray:
-    """Linear interpolation of gridded 2d data.
+    """2D nearest neighbor interpolation preserving mask.
 
     Args:
-        x: 1-D array.
-        y: 1-D array.
-        z: 2-D array at points (x, y).
-        x_new: 1-D array.
-        y_new: 1-D array.
+        x: 1D array, x-coordinates.
+        y: 1D array, y-coordinates.
+        z: 2D masked array, data values.
+        x_new: 1D array, new x-coordinates.
+        y_new: 1D array, new y-coordinates.
 
     Returns:
-        Interpolated data.
+        Interpolated 2D masked array.
 
     Notes:
-        Does not work with nans. Ignores mask of masked data. Does not extrapolate.
+        Points outside the original range will be interpolated but masked.
 
     """
-    fun = RectBivariateSpline(x, y, z, kx=1, ky=1)
-    return fun(x_new, y_new)
+    data = ma.filled(z, np.nan)
+    fun = RegularGridInterpolator(
+        (x, y),
+        data,
+        method="nearest",
+        bounds_error=False,
+    )
+    xx, yy = np.meshgrid(x_new, y_new)
+    zz = fun((xx, yy)).T
+    return ma.masked_where(np.isnan(zz), zz)
 
 
 def add_interpol1d(
