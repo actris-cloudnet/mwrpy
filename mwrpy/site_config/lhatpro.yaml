@@ -1,6 +1,54 @@
 # Config file for all LHATPRO instruments
 
+# Missing entries can also be filled with site specific config file
 params:
+  altitude:
+  longitude:
+  latitude:
+
+  # path to raw input data and processed files
+  data_in: /path/to/raw/data/
+  data_out: /path/to/processed/files/
+
+  # path to retrieval coefficients (optional, default: mwrpy/site_config/'site'/coefficients/)
+  coeff_path:
+
+  # path to Cloudnet lidar file and lidar model (optional)
+  path_to_lidar:
+  lidar_model:
+
+  # path to ABSCAL.HIS file (optional)
+  path_to_cal:
+
+  # availability of IR
+  ir_flag: True
+
+  # quality flag status for level 1 data; 0: flag active
+  # Bit 1: missing_tb
+  # Bit 2: tb_below_threshold
+  # Bit 3: tb_above_threshold
+  # Bit 4: spectral_consistency_above_threshold
+  # Bit 5: receiver_sanity_failed
+  # Bit 6: rain_detected
+  # Bit 7: sun_moon_in_beam
+  # Bit 8: tb_offset_above_threshold
+  flag_status: [0, 0, 0, 0, 0, 0, 0, 1]
+
+  # integration time for BL scans in seconds
+  scan_time: 100.
+
+  # integration time of measurements in seconds
+  int_time: 1
+
+  # Azimuth angle is transformed to geographical coordinates (E=90 and W=270).
+  # This is needed in older RPG software versions.
+  azi_cor: False
+  # Azimuth offset correction; needed if the instrument is not aligned to the North.
+  # Set const_azi to the angle that RPG software gives when instrument is pointing to the North.
+  const_azi:
+
+  # some default values:
+  # -------------------
   receiver_nb: [2, 1]
   receiver: [2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1]
 
@@ -69,38 +117,8 @@ params:
       [0., 100.],
     ]
 
-  # some default values:
-  # -------------------
-
-  # path to level1 data and path for processed files
-  data_in: /tmp/data/
-  data_out: /tmp/data/
-
-  # availability of IR
-  ir_flag: True
-
-  # quality flag status for level 1 data; 0: flag active
-  # Bit 1: missing_tb
-  # Bit 2: tb_below_threshold
-  # Bit 3: tb_above_threshold
-  # Bit 4: spectral_consistency_above_threshold
-  # Bit 5: receiver_sanity_failed
-  # Bit 6: rain_detected
-  # Bit 7: sun_moon_in_beam
-  # Bit 8: tb_offset_above_threshold
-  flag_status: [0, 0, 0, 0, 0, 0, 0, 1]
-
-  # integration time of measurements in seconds
-  int_time: 1
-
-  # Azimuth angle is transformed to geographical coordinates (E=90 and W=270), currently only for RPG scanners.
-  # If you do not want to transform the coordinates set azi_cor to -999.
-  azi_cor: -999.
-
-  const_azi: -999.
-
-# Missing entries are filled with site specific config file
-global_specs:
+# Metadata for E-Profile data format
+e-profile_specs:
   # Name of the conventions followed by the dataset
   conventions: CF-1.8
 

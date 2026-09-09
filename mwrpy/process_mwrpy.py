@@ -1,14 +1,15 @@
 """Module for processing."""
 
 import datetime
-import glob
 import logging
 import os
 import time
+from typing import Literal
 
 import netCDF4 as nc
 import pandas as pd
 
+import mwrpy.utils
 from mwrpy.level1.write_lev1_nc import lev1_to_nc, prepare_data
 from mwrpy.level2.lev2_collocated import (
     generate_lev2_lhumpro,
@@ -17,14 +18,6 @@ from mwrpy.level2.lev2_collocated import (
 )
 from mwrpy.level2.write_lev2_nc import lev2_to_nc
 from mwrpy.plots.generate_plots import generate_figure
-from mwrpy.utils import (
-    _get_filename,
-    _read_site_config_yaml,
-    date_range,
-    get_processing_dates,
-    isodate2date,
-    read_config,
-)
 
 PRODUCT_NAME = {
     "1B01": [
@@ -93,41 +86,70 @@ f_names_stability = list(
         "ko_index",
     ]
 )
+IType = Literal["hatpro", "lhatpro", "lhumpro_u90"]
 
 
 def main(args):
     """Main function for processing and plotting MWR data."""
     logging.basicConfig(level="INFO")
-    _start_date, _stop_date = get_processing_dates(args)
-    start_date = isodate2date(_start_date)
-    stop_date = isodate2date(_stop_date)
+    _start_date, _stop_date = mwrpy.utils.get_processing_dates(args)
+    start_date = mwrpy.utils.isodate2date(_start_date)
+    stop_date = mwrpy.utils.isodate2date(_stop_date)
 
-    for date in date_range(start_date, stop_date):
+    for date in mwrpy.utils.date_range(start_date, stop_date):
         for product in args.products:
             if product not in PRODUCT_NAME:
                 logging.error(f"Product {product} not recognised")
                 continue
+            if args.format == "cloudnet":
+                if product not in ("1C01", "single", "multi"):
+                    logging.error(
+                        f"Product {product} not available in cloudnet format. Skipping."
+                    )
+                    continue
             start = time.process_time()
             if args.command != "plot":
                 logging.info(f"Processing {product} product, {args.site} {date}")
                 if args.command == "reprocess":
                     try:
-                        process_product(product, date, args.site)
+                        output_file = process_product(
+                            product,
+                            date,
+                            args.site,
+                            args.format,
+                            args.instrument,
+                        )
                     except Exception as e:
                         logging.error(
                             f"Error in processing products: {e}. Incomplete or no processing for {date}."
                         )
+                        output_file = None
                 else:
-                    process_product(product, date, args.site)
+                    output_file = process_product(
+                        product,
+                        date,
+                        args.site,
+                        args.format,
+                        args.instrument,
+                    )
+                if output_file:
+                    logging.info("Processed %s: %s", product, output_file)
+
             if args.command != "no-plot":
                 logging.info(f"Plotting {product} product, {args.site} {date}")
-                plot_product(product, date, args.site)
+                plot_product(product, date, args.site, args.format, args.instrument)
 
             elapsed_time = time.process_time() - start
             logging.info(f"Processing took {elapsed_time:.1f} seconds")
 
 
-def process_product(prod: str, date: datetime.date, site: str):
+def process_product(
+    prod: str,
+    date: datetime.date,
+    site: str,
+    data_format: str,
+    instrument: IType,
+):
     """Process a given product for a specific date and site.
     This function handles the processing of different products based on their type
     (level 1, level 2, single, multi) and manages the necessary file
@@ -137,11 +159,17 @@ def process_product(prod: str, date: datetime.date, site: str):
         prod: Product code (e.g., '1C01', '2I01', 'single', 'multi').
         date: Date for which the product is to be processed.
         site: Site identifier.
+        data_format: Data format of the netCDF file (cloudnet, e-profile).
+        instrument: Specific instrument type (hatpro, lhatpro, etc.).
 
     Returns:
-        None
+        output_file: Name of output file.
     """
-    output_file = _get_filename(prod, date, site)
+    filename = getattr(
+        mwrpy.utils,
+        "get_filename_cloudnet" if data_format == "cloudnet" else "get_filename",
+    )
+    output_file = filename(prod, date, site, instrument)
     output_dir = os.path.dirname(output_file)
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
@@ -154,8 +182,8 @@ def process_product(prod: str, date: datetime.date, site: str):
             date + datetime.timedelta(days=iday + 1),
         ]
         offset_file = [
-            _get_filename("lwp_offset", xday[0], site),
-            _get_filename("lwp_offset", xday[1], site),
+            filename("lwp_offset", xday[0], site, instrument),
+            filename("lwp_offset", xday[1], site, instrument),
         ]
         if (
             (prod in ("2I01", "single"))
@@ -179,52 +207,68 @@ def process_product(prod: str, date: datetime.date, site: str):
                 ].values[0]
     lwp_offset_tuple = (lwp_offset[0], lwp_offset[1])
 
-    itype = _read_site_config_yaml(site)["type"]
+    l1_filename = filename("1C01", date, site, instrument)
     # Process level 1 data
     if prod[0] == "1":
+        params = mwrpy.utils.read_config(site, instrument, "params")
         lev1_to_nc(
+            mwrpy.utils.get_raw_file_path(date, site, instrument),
             prod,
-            _get_raw_file_path(date, site),
+            data_format,
             site=site,
             output_file=output_file,
-            lidar_path=_get_lidar_file_path(date, site),
+            lidar_path=mwrpy.utils.get_lidar_file_path(date, site, params),
             date=date,
+            instrument_type=instrument,
         )
 
     # Process level 2 single products
     elif prod[0] == "2":
         if prod in ("2P04", "2P07", "2P08"):
-            temp_file = _get_filename("2P02", date, site)
+            temp_file = filename("2P02", date, site, instrument)
             if len(temp_file) == 0:
-                temp_file = _get_filename("2P01", date, site)
-            hum_file = _get_filename("2P03", date, site)
+                temp_file = filename("2P01", date, site, instrument)
+            hum_file = filename("2P03", date, site, instrument)
         else:
             temp_file = None
             hum_file = None
         lev2_to_nc(
             prod,
-            _get_filename("1C01", date, site),
-            output_file=output_file,
-            site=site,
+            filename("1C01", date, site, instrument),
+            output_file,
+            data_format,
             temp_file=temp_file,
             hum_file=hum_file,
             lwp_offset=lwp_offset_tuple,
         )
 
     # Process level 2 combined products
-    elif prod == "single" and itype != "lhumpro_u90":
+    elif prod == "single" and instrument != "lhumpro_u90":
         generate_lev2_single(
-            site, _get_filename("1C01", date, site), output_file, lwp_offset_tuple
+            l1_filename,
+            output_file,
+            data_format,
+            lwp_offset_tuple,
+            None,
         )
-    elif itype == "lhumpro_u90":
+    elif instrument == "lhumpro_u90":
         generate_lev2_lhumpro(
-            site, _get_filename("1C01", date, site), output_file, lwp_offset_tuple
+            l1_filename,
+            output_file,
+            data_format,
+            lwp_offset_tuple,
+            None,
         )
     elif prod == "multi":
-        generate_lev2_multi(site, _get_filename("1C01", date, site), output_file)
+        generate_lev2_multi(
+            l1_filename,
+            output_file,
+            data_format,
+            None,
+        )
 
     # Update LWP offset file if necessary
-    offset_current = _get_filename("lwp_offset", date, site)
+    offset_current = filename("lwp_offset", date, site, instrument)
     if (
         (prod in ("2I01", "single"))
         and (os.path.isfile(output_file))
@@ -270,8 +314,10 @@ def process_product(prod: str, date: datetime.date, site: str):
             )
             csv_off.to_csv(offset_current, index=False)
 
+    return output_file
 
-def plot_product(prod: str, date: datetime.date, site: str):
+
+def plot_product(prod: str, date, site: str, data_format: str, instrument: IType):
     """Plot a given product for a specific date and site.
     Plotting covariance data without 1C01 file is supported.
 
@@ -279,16 +325,24 @@ def plot_product(prod: str, date: datetime.date, site: str):
         prod: Product code (e.g., '1C01', '2I01', 'single', 'multi').
         date: Date for which the product is to be plotted.
         site: Site identifier.
+        data_format: Data format of the netCDF file (cloudnet, e-profile).
+        instrument: Specific instrument type (hatpro, lhatpro, etc.).
 
     Returns:
         None
     """
-    filename = _get_filename(prod, date, site)
-    params = read_config(site, None, "params")
-    output_dir = f"{os.path.dirname(filename)}/"
+    filename = getattr(
+        mwrpy.utils,
+        "get_filename_cloudnet" if data_format == "cloudnet" else "get_filename",
+    )
+    input_file = filename(prod, date, site, instrument)
+    if not os.path.isfile(input_file):
+        logging.warning("Nothing to plot for product " + prod)
+    params = mwrpy.utils.read_config(site, instrument, "params")
+    output_dir = f"{os.path.dirname(input_file)}/"
 
     # Plot level 1 data
-    if os.path.isfile(filename) and prod[0] == "1":
+    if os.path.isfile(input_file) and prod[0] == "1":
         keymap = {
             "tb": ["tb"],
             "tb_spectrum": ["tb_spectrum"],
@@ -329,12 +383,12 @@ def plot_product(prod: str, date: datetime.date, site: str):
                         site=site,
                     )
                 else:
-                    logging.warning("No to plot for product " + prod)
+                    logging.warning("Nothing to plot for product " + prod)
             else:
                 output_dir = params["path_to_cal"] if key == "cov" else output_dir
                 if output_dir is not None:
                     generate_figure(
-                        filename,
+                        input_file,
                         variables,
                         ele_range=ele_range,
                         save_path=output_dir + "COVARIANCE/"
@@ -344,7 +398,7 @@ def plot_product(prod: str, date: datetime.date, site: str):
                     )
 
     # Plot level 2 single products
-    elif os.path.isfile(filename) and (prod[0] == "2"):
+    elif os.path.isfile(input_file) and (prod[0] == "2"):
         for key in PRODUCT_NAME[prod]:
             elevation = (
                 (
@@ -361,7 +415,7 @@ def plot_product(prod: str, date: datetime.date, site: str):
             if prod == "2I06":
                 f_names = f_names_stability
                 generate_figure(
-                    filename,
+                    input_file,
                     f_names,
                     ele_range=elevation,
                     save_path=output_dir,
@@ -370,7 +424,7 @@ def plot_product(prod: str, date: datetime.date, site: str):
                 )
             elif key in ("lwp_scan", "iwv_scan"):
                 generate_figure(
-                    filename,
+                    input_file,
                     [key.rstrip("_scan")],
                     ele_range=elevation,
                     save_path=output_dir,
@@ -379,7 +433,7 @@ def plot_product(prod: str, date: datetime.date, site: str):
                 )
             else:
                 generate_figure(
-                    filename,
+                    input_file,
                     [key],
                     ele_range=elevation,
                     save_path=output_dir,
@@ -388,7 +442,7 @@ def plot_product(prod: str, date: datetime.date, site: str):
                 )
 
     # Plot level 2 combined products
-    elif os.path.isfile(filename) and (prod in ("single", "multi")):
+    elif os.path.isfile(input_file) and (prod in ("single", "multi")):
         for var_name in PRODUCT_NAME[prod]:
             elevation = (
                 (
@@ -419,7 +473,7 @@ def plot_product(prod: str, date: datetime.date, site: str):
             for key, variables in keymap.items():
                 if key in ("lwp_scan", "iwv_scan"):
                     generate_figure(
-                        filename,
+                        input_file,
                         [key.rstrip("_scan")],
                         ele_range=elevation,
                         save_path=output_dir,
@@ -428,7 +482,7 @@ def plot_product(prod: str, date: datetime.date, site: str):
                     )
                 else:
                     generate_figure(
-                        filename,
+                        input_file,
                         variables,
                         ele_range=elevation,
                         save_path=output_dir,
@@ -438,7 +492,7 @@ def plot_product(prod: str, date: datetime.date, site: str):
                     )
 
     # Plot covariance data and calibration history even if 1C01 file is not available
-    elif prod == "1C01" and not os.path.isfile(filename):
+    elif prod == "1C01" and not os.path.isfile(input_file):
         output_dir = params["path_to_cal"]
         cov_data = prepare_data(
             "", "cov", params, None, date=time.mktime(date.timetuple())
@@ -474,46 +528,3 @@ def plot_product(prod: str, date: datetime.date, site: str):
             logging.warning("Nothing to plot for product " + prod)
     else:
         logging.warning("Nothing to plot for product " + prod)
-
-
-def _get_raw_file_path(date_in: datetime.date, site: str) -> str:
-    """Get the raw file path for a given date and site.
-
-    Args:
-        date_in: Date for which the raw file path is needed.
-        site: Site identifier.
-
-    Returns:
-        The raw file path as a string.
-    """
-    params = read_config(site, None, "params")
-    return os.path.join(params["data_in"], date_in.strftime("%Y/%m/%d/"))
-
-
-def _get_lidar_file_path(date_in: datetime.date, site: str) -> str | None:
-    """Get the lidar file path for a given date and site.
-
-    Args:
-        date_in: Date for which the lidar file path is needed.
-        site: Site identifier.
-
-    Returns:
-        The lidar file path as a string or None if not found.
-    """
-    params, path = read_config(site, None, "params"), ""
-    lidar_model = params.get("lidar_model", "unknown")
-    lidar_model = "unknown" if lidar_model is None else lidar_model.lower()
-    if "path_to_lidar" in params and params["path_to_lidar"] is not None:
-        path = os.path.join(
-            params["path_to_lidar"],
-            date_in.strftime("%Y/%m/%d/"),
-        )
-    file = glob.glob(
-        path + date_in.strftime("%Y%m%d") + "_" + site + "_" + lidar_model + "*.nc"
-    )
-    if len(file) == 0:
-        logging.info(
-            "No lidar file of type " + lidar_model + " found in directory " + str(path)
-        )
-        return None
-    return file[0]

@@ -2,7 +2,6 @@
 
 import glob
 import locale
-import logging
 from datetime import date, datetime, timezone
 
 import atmoslib
@@ -90,7 +89,6 @@ def generate_figure(
         91.0,
     ),
     pointing: int = 0,
-    instrument_type: str | None = None,
     dpi: int = 120,
     image_name: str | None = None,
     sub_title: bool = True,
@@ -109,7 +107,6 @@ def generate_figure(
         max_y (int, optional): Upper limit in the plots (km). Default is 12.
         ele_range (tuple, optional): Range of elevation angles to be plotted.
         pointing (int, optional): Type of observation (0: single pointing, 1: BL scan).
-        instrument_type (str, optional): Type of instrument (hatpro, lhatpro, lhumpro).
         dpi (int, optional): Figure quality (if saved). Higher value means
             more pixels, i.e., better image quality. Default is 120.
         image_name (str, optional): Name (and full path) of the output image.
@@ -125,7 +122,7 @@ def generate_figure(
 
     Examples:
         >>> from mwrpy.plots import generate_figure
-        >>> generate_figure('lev2_file.nc', ['lwp'], instrument_type='hatpro')
+        >>> generate_figure('lev2_file.nc', ['lwp'])
     """
     if (
         nc_file == ""
@@ -187,85 +184,81 @@ def generate_figure(
         valid_fields, valid_names = _find_valid_fields(nc_file, field_names)
     if len(valid_fields) == 0:
         return None
-    file_name = None
-    try:
-        fig, axes = _initialize_figure(len(valid_fields), dpi)
-        time = _read_time_vector(nc_file)
 
-        for ax, field, name in zip(axes, valid_fields, valid_names):
-            ax.set_facecolor(_COLORS["lightgray"])
-            is_height = _is_height_dimension(nc_file, name)
-            if image_name and "_scan" in image_name:
-                name = image_name
-            pl_source = ATTRIBUTES[name].source
-            if "angle" not in name and pl_source not in (
-                "met",
-                "met2",
-                "irt",
-                "qf",
-                "mqf",
-                "hkd",
-                "scan",
-                "cov",
-            ):
-                if pointing == 0:
-                    if ax == axes[0]:
-                        time = _elevation_azimuth_filter(nc_file, time, ele_range)
-                    field = _elevation_azimuth_filter(nc_file, field, ele_range)
-            elif pl_source in ("met", "met2", "irt", "qf", "mqf", "hkd"):
+    fig, axes = _initialize_figure(len(valid_fields), dpi)
+    time = _read_time_vector(nc_file)
+    instrument_type = _read_instrument_type(nc_file)
+
+    for ax, field, name in zip(axes, valid_fields, valid_names):
+        ax.set_facecolor(_COLORS["lightgray"])
+        is_height = _is_height_dimension(nc_file, name)
+        if image_name and "_scan" in image_name:
+            name = image_name
+        pl_source = ATTRIBUTES[name].source
+        if "angle" not in name and pl_source not in (
+            "met",
+            "met2",
+            "irt",
+            "qf",
+            "mqf",
+            "hkd",
+            "scan",
+            "cov",
+        ):
+            if pointing == 0:
                 if ax == axes[0]:
-                    time = _elevation_filter(nc_file, time, ele_range)
-                field = _elevation_filter(nc_file, field, ele_range)
-            if title:
-                _set_title(ax, name, nc_file, "")
-            if not is_height:
-                fig = _plot_instrument_data(
-                    ax,
-                    field,
-                    name,
-                    pl_source,
-                    time,
-                    fig,
-                    nc_file,
-                    ele_range,
-                    pointing,
-                    instrument_type,
-                )
-            else:
-                ax_value = _read_ax_values(nc_file)
-                ax_value = (time, ax_value[1])
-                field, ax_value = _screen_high_altitudes(field, ax_value, max_y)
-                _set_ax(ax, max_y)
-
-                plot_type = ATTRIBUTES[name].plot_type
-                if plot_type == "mesh":
-                    _plot_colormesh_data(
-                        ax, field, name, ax_value, nc_file, instrument_type
-                    )
-
-        if axes[-1].get_title() != "empty":
-            if {"tb_cov_ln2", "tb_cov_amb"} & set(field_names):
-                case_date = _get_cal_date(nc_file)
-                site_name = _read_location(nc_file)
-                _add_subtitle(fig, case_date, site_name)
-                fig.set_size_inches(9.0, 7.0 * len(axes))
-            else:
-                case_date = (
-                    _read_date(nc_file)
-                    if image_name and "_scan" in image_name
-                    else _set_labels(fig, axes[-1], nc_file, sub_title, instrument_type)
-                )
-            file_name = handle_saving(
-                nc_file, image_name, save_path, show, case_date, valid_names
+                    time = _elevation_azimuth_filter(nc_file, time, ele_range)
+                field = _elevation_azimuth_filter(nc_file, field, ele_range)
+        elif pl_source in ("met", "met2", "irt", "qf", "mqf", "hkd"):
+            if ax == axes[0]:
+                time = _elevation_filter(nc_file, time, ele_range)
+            field = _elevation_filter(nc_file, field, ele_range)
+        if title:
+            _set_title(ax, name, nc_file, "")
+        if not is_height:
+            fig = _plot_instrument_data(
+                ax,
+                field,
+                name,
+                pl_source,
+                time,
+                fig,
+                nc_file,
+                ele_range,
+                pointing,
+                instrument_type,
             )
         else:
-            return None
+            height = _read_height_vector(nc_file)
+            ax_value = (time, height)
+            field, ax_value = _screen_high_altitudes(field, ax_value, max_y)
+            _set_ax(ax, max_y)
 
-    except Exception as e:
-        logging.error(f"Error in plotting: {e}.")
-    finally:
-        plt.close()
-        return file_name
+            plot_type = ATTRIBUTES[name].plot_type
+            if plot_type == "mesh":
+                _plot_colormesh_data(
+                    ax, field, name, ax_value, nc_file, instrument_type
+                )
+
+    if axes[-1].get_title() != "empty":
+        if {"tb_cov_ln2", "tb_cov_amb"} & set(field_names):
+            case_date = _get_cal_date(nc_file)
+            site_name = _read_location(nc_file)
+            _add_subtitle(fig, case_date, site_name)
+            fig.set_size_inches(9.0, 7.0 * len(axes))
+        else:
+            case_date = (
+                _read_date(nc_file)
+                if image_name and "_scan" in image_name
+                else _set_labels(fig, axes[-1], nc_file, sub_title, instrument_type)
+            )
+        file_name = handle_saving(
+            nc_file, image_name, save_path, show, case_date, valid_names
+        )
+    else:
+        return None
+
+    return file_name
 
 
 def _mark_gaps(
@@ -397,7 +390,9 @@ def _find_valid_fields(nc_file: str, names: list) -> tuple[list, list]:
 def _is_height_dimension(full_path: str, var_name: str) -> bool:
     """Checks for height dimension in netCDF file."""
     with netCDF4.Dataset(full_path) as nc:
-        is_height = "height" in nc.variables[var_name].dimensions
+        is_height = bool(
+            set(nc.variables[var_name].dimensions) & {"height", "altitude"}
+        )
     return is_height
 
 
@@ -467,19 +462,33 @@ def _initialize_figure(n_subplots: int, dpi) -> tuple[Figure, list[Axes]]:
     return fig, axes_list
 
 
-def _read_ax_values(full_path: str) -> tuple[ndarray, ndarray]:
-    """Returns time and height arrays."""
-    time = read_nc_fields(full_path, "time")
-    height = read_nc_fields(full_path, "height")
-    height_km = height / 1000
-    return time, height_km
+def _read_height_vector(nc_file: str) -> ndarray:
+    """Converts height vector to km."""
+    with netCDF4.Dataset(nc_file) as nc:
+        height = (
+            nc.variables["height"][:]
+            if "height" in nc.variables
+            else nc.variables["altitude"][:]
+        )
+    return height / 1000.0
 
 
 def _read_time_vector(nc_file: str) -> ndarray:
     """Converts time vector to fraction hour."""
     with netCDF4.Dataset(nc_file) as nc:
         time = nc.variables["time"][:]
-    return seconds2hours(time)
+    return seconds2hours(time) if time.max() > 24 else time
+
+
+def _read_instrument_type(nc_file: str) -> str:
+    """Reads instrument type from netCDF file."""
+    with netCDF4.Dataset(nc_file) as nc:
+        instrument_type = (
+            nc.instrument_model.lower()
+            if "instrument_model" in nc.ncattrs()
+            else nc.source.split()[2].lower()
+        )
+    return instrument_type
 
 
 def _screen_high_altitudes(data_field: ndarray, ax_values: tuple, max_y: int) -> tuple:
@@ -531,7 +540,11 @@ def _read_date(nc_file: str) -> date:
     """Returns measurement date."""
     locale.setlocale(locale.LC_TIME, "en_US.UTF-8")
     with netCDF4.Dataset(nc_file) as nc:
-        case_date = datetime.strptime(nc.date, "%Y-%m-%d")
+        case_date = (
+            datetime.strptime(nc.date, "%Y-%m-%d")
+            if "date" in nc.ncattrs()
+            else datetime.strptime(f"{nc.year}-{nc.month}-{nc.day}", "%Y-%m-%d")
+        )
     return case_date
 
 
@@ -615,11 +628,8 @@ def _plot_segment_data(
         colorbar = _init_colorbar(pl, ax)
         colorbar.set_ticks(np.arange(len(clabel)))
         if name == "quality_flag_3":
-            if instrument_type is None:
-                site = _read_location(nc_file)
-                params = read_config(site, None, "params")
-            else:
-                params = read_config(None, instrument_type, "params")
+            site = _read_location(nc_file)
+            params = read_config(site, instrument_type, "params")
             clabel[2] = clabel[2] + " (" + str(params["TB_threshold"][1]) + " K)"
             clabel[1] = clabel[1] + " (" + str(params["TB_threshold"][0]) + " K)"
         colorbar.ax.set_yticklabels(clabel, fontsize=13)
@@ -696,7 +706,12 @@ def _plot_colormesh_data(
         "potential_temperature",
         "equivalent_potential_temperature",
     ):
-        hum_time = seconds2hours(read_nc_fields(hum_file, "time"))
+        hum_time = read_nc_fields(hum_file, "time")
+        hum_time = (
+            seconds2hours(read_nc_fields(hum_file, "time"))
+            if hum_time.max() > 24
+            else hum_time
+        )
         hum_flag = _get_ret_flag(
             hum_file, hum_time, "absolute_humidity", instrument_type=instrument_type
         )
@@ -840,7 +855,7 @@ def _plot_instrument_data(
     elif product == "sen":
         _plot_sen(ax, data, name, time, nc_file)
     elif product == "hkd":
-        _plot_hkd(ax, data, name, time)
+        _plot_hkd(ax, data, name, time, nc_file)
     elif product == "cov":
         _plot_covariance(ax, data, name, nc_file)
 
@@ -850,9 +865,11 @@ def _plot_instrument_data(
     return fig
 
 
-def _plot_hkd(ax, data_in: ndarray, name: str, time: ndarray):
+def _plot_hkd(ax, data_in: ndarray, name: str, time: ndarray, nc_file: str):
     """Plot for housekeeping data."""
     time = _nan_time_gaps(time)
+    pointing_flag = read_nc_fields(nc_file, "pointing_flag")
+    data_in[pointing_flag == 1, :] = np.nan
     if name == "t_amb":
         data_in[data_in == -999.0] = np.nan
         if (data_in[:, 0].all() is ma.masked) | (data_in[:, 1].all() is ma.masked):
@@ -1065,11 +1082,8 @@ def _plot_qf(
     instrument_type: str | None = None,
 ):
     """Plot for Level 1 quality flags."""
-    if instrument_type is None:
-        site = _read_location(nc_file)
-        params = read_config(site, None, "params")
-    else:
-        params = read_config(None, instrument_type, "params")
+    site = _read_location(nc_file)
+    params = read_config(site, instrument_type, "params")
 
     plt.close(fig)
     nsub = 4 if params["flag_status"][3] == 0 else 3
@@ -1192,11 +1206,8 @@ def _plot_tb(
     instrument_type: str | None = None,
 ):
     """Plot for microwave brightness temperatures."""
-    if instrument_type is None:
-        site = _read_location(nc_file)
-        params = read_config(site, None, "params")
-    else:
-        params = read_config(None, instrument_type, "params")
+    site = _read_location(nc_file)
+    params = read_config(site, instrument_type, "params")
     frequency = read_nc_fields(nc_file, "frequency")
     quality_flag = read_nc_fields(nc_file, "quality_flag")
     if name == "tb_spectrum":

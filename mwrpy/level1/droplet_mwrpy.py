@@ -259,7 +259,7 @@ def find_lwcl_free(
         index_rem = np.array(range(len(lev1["time"])))
         if path_to_lidar:
             # Use lidar data (Cloudnet format) to identify liquid water clouds
-            lidar = read_lidar(path_to_lidar)
+            lidar, _ = read_lidar(path_to_lidar)
             mwr_ind = [
                 i
                 for i, tt in enumerate(lev1["time"])

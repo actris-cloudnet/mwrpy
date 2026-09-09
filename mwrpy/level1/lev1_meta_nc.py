@@ -6,12 +6,13 @@ from typing import TypeAlias
 from mwrpy.utils import MetaData
 
 
-def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
+def get_data_attributes(rpg_variables: dict, data_type: str, data_format: str) -> dict:
     """Adds Metadata for RPG MWR Level 1 variables for NetCDF file writing.
 
     Args:
         rpg_variables: RpgArray instances.
         data_type: Data type of the netCDF file.
+        data_format: Data format of the netCDF file (cloudnet, e-profile).
 
     Returns:
         Dictionary
@@ -23,18 +24,25 @@ def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
         from level1.lev1_meta_nc import get_data_attributes
         att = get_data_attributes('data','data_type')
     """
-    if data_type in ("1B01", "1B11", "1B21"):
-        read_att = att_reader[data_type]
-        attributes = dict(ATTRIBUTES_COM, **read_att)
-
-    elif data_type == "1C01":
-        attributes = dict(
-            ATTRIBUTES_COM, **ATTRIBUTES_1B01, **ATTRIBUTES_1B11, **ATTRIBUTES_1B21
-        )
-    else:
+    if data_type not in (
+        "1B01",
+        "1B11",
+        "1B21",
+        "1C01",
+    ):
         raise RuntimeError(
             ["Data type " + data_type + " not supported for file writing."]
         )
+
+    if data_type in ("1B01", "1B11", "1B21"):
+        attributes = att_reader[data_type]
+    else:
+        attributes = dict(ATTRIBUTES_1B01, **ATTRIBUTES_1B11, **ATTRIBUTES_1B21)
+    attributes = (
+        dict(ATTRIBUTES_CN, **attributes)
+        if data_format == "cloudnet"
+        else dict(ATTRIBUTES_EP, **attributes)
+    )
 
     for key in list(rpg_variables):
         if key in attributes:
@@ -50,17 +58,14 @@ def get_data_attributes(rpg_variables: dict, data_type: str) -> dict:
     return rpg_variables
 
 
-ATTRIBUTES_COM = {
+ATTRIBUTES_CN = {
     "time": MetaData(
-        long_name="Time (UTC) of the measurement",
-        units="seconds since 1970-01-01 00:00:00.000",
         comment="Time indication of samples is at end of integration-time",
+        units="hours since ",
+        long_name="Time UTC",
+        standard_name="time",
+        calendar="standard",
         dimensions=("time",),
-    ),
-    "time_bnds": MetaData(
-        long_name="Start and end time (UTC) of the measurements",
-        units="seconds since 1970-01-01 00:00:00.000",
-        dimensions=("time", "bnds"),
     ),
     "latitude": MetaData(
         long_name="Latitude of measurement station",
@@ -83,7 +88,46 @@ ATTRIBUTES_COM = {
 }
 
 
-DEFINITIONS_1B01 = {
+ATTRIBUTES_EP = {
+    "time": MetaData(
+        long_name="Time (UTC) of the measurement",
+        units="seconds since 1970-01-01 00:00:00.000",
+        comment="Time indication of samples is at end of integration-time",
+        dimensions=("time",),
+    ),
+    "time_bnds": MetaData(
+        long_name="Start and end time (UTC) of the measurements",
+        units="seconds since 1970-01-01 00:00:00.000",
+        dimensions=("time", "bnds"),
+    ),
+    "station_latitude": MetaData(
+        long_name="Latitude of measurement station",
+        standard_name="latitude",
+        units="degree_north",
+        dimensions=("time",),
+    ),
+    "station_longitude": MetaData(
+        long_name="Longitude of measurement station",
+        standard_name="longitude",
+        units="degree_east",
+        dimensions=("time",),
+    ),
+    "station_altitude": MetaData(
+        long_name="Altitude above mean sea level of measurement station",
+        standard_name="altitude",
+        units="m",
+        dimensions=("time",),
+    ),
+    "altitude": MetaData(
+        long_name="Height above mean sea level",
+        standard_name="height_above_mean_sea_level",
+        units="m",
+        dimensions=("altitude",),
+    ),
+}
+
+
+DEFINITIONS_QF = {
     "quality_flag": (
         "\n"
         "Bit 1: missing_tb\n"
@@ -179,6 +223,13 @@ ATTRIBUTES_1B01 = {
         comment="0=horizon, 90=zenith",
         dimensions=("time",),
     ),
+    "zenith_angle": MetaData(
+        units="degree",
+        long_name="Zenith angle",
+        standard_name="zenith_angle",
+        comment="Angle to the local vertical. A value of zero is directly overhead.",
+        dimensions=("time",),
+    ),
     "tb_cov_amb": MetaData(
         long_name="Error covariance matrix of brightness temperature channels on ambient target.",
         units="K*K",
@@ -194,7 +245,7 @@ ATTRIBUTES_1B01 = {
     "quality_flag": MetaData(
         long_name="Quality flag",
         units="1",
-        definition=DEFINITIONS_1B01["quality_flag"],
+        definition=DEFINITIONS_QF["quality_flag"],
         comment="0 indicates data with good quality according to applied tests.\n"
         "The list of (not) applied tests is encoded in quality_flag_status",
         dimensions=("time", "frequency"),
@@ -202,7 +253,7 @@ ATTRIBUTES_1B01 = {
     "quality_flag_status": MetaData(
         long_name="Quality flag status",
         units="1",
-        definition=DEFINITIONS_1B01["quality_flag_status"],
+        definition=DEFINITIONS_QF["quality_flag_status"],
         comment="Checks not executed in determination of quality_flag.\n"
         "0 indicates quality check has been applied.",
         dimensions=("time", "frequency"),
@@ -288,6 +339,12 @@ ATTRIBUTES_1B11 = {
         long_name="Infrared sensor elevation angle",
         units="degree",
         comment="0=horizon, 90=zenith",
+        dimensions=("time",),
+    ),
+    "ir_zenith_angle": MetaData(
+        units="degree",
+        long_name="Infrared sensor elevation angle",
+        comment="90=horizon, 0=zenith",
         dimensions=("time",),
     ),
 }
