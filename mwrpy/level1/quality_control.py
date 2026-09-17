@@ -74,7 +74,7 @@ def apply_qc(
         data["quality_flag_status"] = setbit(data["quality_flag_status"], 3)
     else:
         try:
-            ind = spectral_consistency(data, site, coeff_files)
+            ind = spectral_consistency(data, params, site, coeff_files)
             data["quality_flag"][ind] = setbit(data["quality_flag"][ind], 3)
         except MissingCoefficientsError as e:
             logging.error(
@@ -118,8 +118,8 @@ def orbpos(data: dict, params: dict) -> np.ndarray:
             for t in data["time"]
         ]
     )
-    lat = data["latitude"]
-    lng = data["longitude"]
+    lat = data["latitude"] if "latitude" in data else data["station_latitude"]
+    lng = data["longitude"] if "longitude" in data else data["station_longitude"]
     sol = suncalc.get_position(time, lat=lat, lng=lng)
     lun = suncalc.suncalc.getMoonPosition(time, lat=lat, lng=lng)
     sun = {
@@ -184,7 +184,10 @@ def orbpos(data: dict, params: dict) -> np.ndarray:
 
 
 def spectral_consistency(
-    data: dict, site: str | None, coeff_files: Sequence[str | PathLike] | None
+    data: dict,
+    params: dict,
+    site: str | None,
+    coeff_files: Sequence[str | PathLike] | None,
 ) -> np.ndarray:
     """Applies spectral consistency coefficients for given frequency index,
     writes 2S02 product and returns indices to be flagged.
@@ -205,11 +208,12 @@ def spectral_consistency(
         + 1.0
     )
 
+    coeff_dir = params.get("coeff_path", None)
     prefix = "ins"
-    c_list = get_coeff_list(site, prefix, coeff_files)
+    c_list = get_coeff_list(site, prefix, coeff_files, coeff_dir)
     if len(c_list) == 0:
         prefix = "spc"
-        c_list = get_coeff_list(site, prefix, coeff_files)
+        c_list = get_coeff_list(site, prefix, coeff_files, coeff_dir)
 
     if len(c_list) > 0:
         # pylint: disable=unbalanced-tuple-unpacking
@@ -222,7 +226,7 @@ def spectral_consistency(
             weights1,
             weights2,
             factor,
-        ) = get_mvr_coeff(site, prefix, data["frequency"][:], coeff_files)
+        ) = get_mvr_coeff(site, prefix, data["frequency"][:], coeff_files, coeff_dir)
         ret_in = retrieval_input(data, coeff)
         ele_ind = np.where(
             (np.abs(data["elevation_angle"][:] - 90.0) < 0.5)
@@ -344,7 +348,7 @@ def spectral_consistency(
                 ] = True
 
     else:
-        c_list = get_coeff_list(site, "tbx", coeff_files)
+        c_list = get_coeff_list(site, "tbx", coeff_files, coeff_dir)
 
         if not c_list:
             raise MissingCoefficientsError("No coefficients found")

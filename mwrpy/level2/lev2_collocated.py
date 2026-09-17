@@ -10,11 +10,11 @@ from mwrpy.utils import copy_global, copy_variables
 
 
 def generate_lev2_single(
-    site: str | None,
     mwr_l1c_file: str | PathLike,
     output_file: str | PathLike,
     lwp_offset: tuple[float | None, float | None] = (None, None),
     coeff_files: Sequence[str | PathLike] | None = None,
+    data_format: str = "cloudnet",
 ):
     with (
         NamedTemporaryFile() as lwp_file,
@@ -41,8 +41,8 @@ def generate_lev2_single(
             lev2_to_nc(
                 prod,
                 mwr_l1c_file,
-                output_file=file,
-                site=site,
+                file,
+                data_format,
                 temp_file=t_prof_file.name
                 if prod in ("2P04", "2P07", "2P08")
                 else None,
@@ -63,9 +63,16 @@ def generate_lev2_single(
             netCDF4.Dataset(t_pot_file.name, "r") as nc_t_pot,
             netCDF4.Dataset(eq_temp_file.name, "r") as nc_eq_temp,
         ):
-            nc_output.createDimension("height", len(nc_t_prof.variables["height"][:]))
             nc_output.createDimension("time", len(nc_lwp.variables["time"][:]))
-            nc_output.createDimension("bnds", 2)
+            if data_format == "e-profile":
+                nc_output.createDimension(
+                    "altitude", len(nc_t_prof.variables["altitude"][:])
+                )
+                nc_output.createDimension("bnds", 2)
+            else:
+                nc_output.createDimension(
+                    "height", len(nc_t_prof.variables["height"][:])
+                )
 
             for source, variables in (
                 (
@@ -94,7 +101,7 @@ def generate_lev2_single(
                         "temperature",
                         "temperature_random_error",
                         "temperature_systematic_error",
-                        "height",
+                        "height" if data_format == "cloudnet" else "altitude",
                         "temperature_quality_flag",
                         "temperature_quality_flag_status",
                     ),
@@ -104,9 +111,13 @@ def generate_lev2_single(
                     (
                         "time",
                         "time_bnds",
-                        "latitude",
-                        "longitude",
-                        "altitude",
+                        "latitude" if data_format == "cloudnet" else "station_latitude",
+                        "longitude"
+                        if data_format == "cloudnet"
+                        else "station_longitude",
+                        "altitude" if data_format == "cloudnet" else "station_altitude",
+                        "quality_flag",
+                        "quality_flag_status",
                         "lwp",
                         "lwp_offset",
                         "lwp_random_error",
@@ -152,8 +163,8 @@ def generate_lev2_single(
                     lev2_to_nc(
                         prod,
                         mwr_l1c_file,
-                        output_file=file,
-                        site=site,
+                        file,
+                        data_format,
                         temp_file=t_prof_file.name
                         if prod in ("2P04", "2P07", "2P08")
                         else None,
@@ -185,11 +196,11 @@ def generate_lev2_single(
 
 
 def generate_lev2_lhumpro(
-    site: str | None,
     mwr_l1c_file: str | PathLike,
     output_file: str | PathLike,
     lwp_offset: tuple[float | None, float | None] = (None, None),
     coeff_files: Sequence[str | PathLike] | None = None,
+    data_format: str = "cloudnet",
 ):
     with (
         NamedTemporaryFile() as lwp_file,
@@ -208,8 +219,8 @@ def generate_lev2_lhumpro(
             lev2_to_nc(
                 prod,
                 mwr_l1c_file,
-                output_file=file,
-                site=site,
+                file,
+                data_format,
                 temp_file=None,
                 hum_file=None,
                 lwp_offset=lwp_offset,
@@ -222,9 +233,16 @@ def generate_lev2_lhumpro(
             netCDF4.Dataset(iwv_file.name, "r") as nc_iwv,
             netCDF4.Dataset(abs_hum_file.name, "r") as nc_abs_hum,
         ):
-            nc_output.createDimension("height", len(nc_abs_hum.variables["height"][:]))
             nc_output.createDimension("time", len(nc_lwp.variables["time"][:]))
-            nc_output.createDimension("bnds", 2)
+            if data_format == "e-profile":
+                nc_output.createDimension(
+                    "altitude", len(nc_abs_hum.variables["altitude"][:])
+                )
+                nc_output.createDimension("bnds", 2)
+            else:
+                nc_output.createDimension(
+                    "height", len(nc_abs_hum.variables["height"][:])
+                )
 
             for source, variables in (
                 (
@@ -240,7 +258,7 @@ def generate_lev2_lhumpro(
                 (
                     nc_abs_hum,
                     (
-                        "height",
+                        "height" if data_format == "cloudnet" else "altitude",
                         "absolute_humidity",
                         "absolute_humidity_random_error",
                         "absolute_humidity_systematic_error",
@@ -253,9 +271,13 @@ def generate_lev2_lhumpro(
                     (
                         "time",
                         "time_bnds",
-                        "latitude",
-                        "longitude",
-                        "altitude",
+                        "latitude" if data_format == "cloudnet" else "station_latitude",
+                        "longitude"
+                        if data_format == "cloudnet"
+                        else "station_longitude",
+                        "altitude" if data_format == "cloudnet" else "station_altitude",
+                        "quality_flag",
+                        "quality_flag_status",
                         "lwp",
                         "lwp_offset",
                         "lwp_random_error",
@@ -275,10 +297,10 @@ def generate_lev2_lhumpro(
 
 
 def generate_lev2_multi(
-    site: str | None,
     mwr_l1c_file: str | PathLike,
     output_file: str | PathLike,
     coeff_files: Sequence[str | PathLike] | None = None,
+    data_format: str = "cloudnet",
 ):
     with (
         NamedTemporaryFile() as temperature_file,
@@ -301,8 +323,8 @@ def generate_lev2_multi(
             lev2_to_nc(
                 prod,
                 mwr_l1c_file,
-                output_file=file,
-                site=site,
+                file,
+                data_format,
                 temp_file=temperature_file.name
                 if prod not in ("2P02", "2P03")
                 else None,
@@ -319,8 +341,13 @@ def generate_lev2_multi(
             netCDF4.Dataset(eq_temp_file.name, "r") as nc_eq_temp,
         ):
             nc_output.createDimension("time", len(nc_temp.variables["time"][:]))
-            nc_output.createDimension("height", len(nc_temp.variables["height"][:]))
-            nc_output.createDimension("bnds", 2)
+            if data_format == "e-profile":
+                nc_output.createDimension(
+                    "altitude", len(nc_temp.variables["altitude"][:])
+                )
+                nc_output.createDimension("bnds", 2)
+            else:
+                nc_output.createDimension("height", len(nc_temp.variables["height"][:]))
 
             for source, variables in (
                 (
@@ -328,10 +355,14 @@ def generate_lev2_multi(
                     (
                         "time",
                         "time_bnds",
-                        "height",
-                        "latitude",
-                        "longitude",
-                        "altitude",
+                        "height" if data_format == "cloudnet" else "altitude",
+                        "latitude" if data_format == "cloudnet" else "station_latitude",
+                        "longitude"
+                        if data_format == "cloudnet"
+                        else "station_longitude",
+                        "altitude" if data_format == "cloudnet" else "station_altitude",
+                        "quality_flag",
+                        "quality_flag_status",
                         "elevation_angle",
                         "azimuth_angle",
                         "temperature",
