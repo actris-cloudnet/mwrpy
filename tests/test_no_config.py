@@ -70,4 +70,6 @@ def test_lev2(l1_file, tmp_path, fun, file_type, variable):
         assert nc.location == "nowhere"
         assert nc.cloudnet_file_type == file_type
         assert variable in nc.variables
+        assert nc.variables["quality_flag"].long_name == "Quality flag"
+        assert nc.variables["quality_flag_status"].long_name == "Quality flag status"
         assert nc.variables["time"].units.startswith("hours since 2023-04-06")

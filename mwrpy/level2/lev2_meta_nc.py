@@ -61,6 +61,13 @@ def get_data_attributes(
         attributes = dict(ATTRIBUTES_EP, **attributes)
         if "altitude" in rpg_variables:
             rpg_variables["altitude"].set_attributes(attributes["altitude"])
+    else:
+        # Cloudnet uses the same long names as in Level 1
+        for key, name in (
+            ("quality_flag", "Quality flag"),
+            ("quality_flag_status", "Quality flag status"),
+        ):
+            attributes[key] = attributes[key]._replace(long_name=name)
     for key in list(rpg_variables):
         if key in attributes:
             if getattr(attributes[key], "retrieval_type") is not None:
