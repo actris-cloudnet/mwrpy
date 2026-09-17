@@ -64,6 +64,7 @@ quality flag status variable contains information whether the flag is active.
     from mwrpy.level1.write_lev1_nc import lev1_to_nc
 
     mwr_raw = lev1_to_nc(
+        data_type="1C01",
         path_to_files=data_path,
         data_format="e-profile",
         site=site_name,
@@ -197,6 +198,7 @@ fetched retrieval files are set as an argument together with site information (e
 
     from mwrpy.level1.write_lev1_nc import lev1_to_nc
     mwr_raw = lev1_to_nc(
+        data_type="1C01",
         path_to_files=data_path,
         output_file=f"{data_path}/mwr_1c.nc",
         coeff_files=retrieval_files,

@@ -67,6 +67,12 @@ ATTRIBUTES_CN = {
         calendar="standard",
         dimensions=("time",),
     ),
+    # Not written to file, kept for the returned object
+    "time_bnds": MetaData(
+        long_name="Start and end time (UTC) of the measurements",
+        units="seconds since 1970-01-01 00:00:00.000",
+        dimensions=("time", "bnds"),
+    ),
     "latitude": MetaData(
         long_name="Latitude of measurement station",
         standard_name="latitude",

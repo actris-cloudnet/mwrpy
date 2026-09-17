@@ -33,8 +33,8 @@ IType = Literal["hatpro", "lhatpro", "lhumpro_u90"]
 
 
 def lev1_to_nc(
+    data_type: str,
     path_to_files: str | PathLike,
-    data_type: str = "1C01",
     data_format: str = "cloudnet",
     site: str | None = None,
     output_file: str | PathLike | None = None,
@@ -51,8 +51,8 @@ def lev1_to_nc(
     adds attributes and writes it into netCDF file.
 
     Args:
-        path_to_files: Folder containing one day of RPG MWR binary files.
         data_type: Data type of the netCDF file (1C01, 1B01, etc.).
+        path_to_files: Folder containing one day of RPG MWR binary files.
         data_format: Data format of the netCDF file (cloudnet, e-profile).
         site: Name of site.
         output_file: Output file name.

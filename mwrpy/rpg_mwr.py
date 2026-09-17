@@ -1,7 +1,9 @@
 """RpgArray Class."""
 
+import copy
 import datetime
 from os import PathLike
+from pathlib import Path
 
 import netCDF4
 import numpy as np
@@ -176,8 +178,11 @@ def save_rpg(
 ) -> None:
     """Saves the RPG MWR file."""
     if data_format == "cloudnet":
-        Rpg.convert_time_to_hours(rpg)
-        Rpg.add_zenith_angle(rpg)
+        # Work on a copy to keep the caller's object intact
+        rpg = copy.copy(rpg)
+        rpg.data = dict(rpg.data)
+        rpg.convert_time_to_hours()
+        rpg.add_zenith_angle()
     if data_type == "1B01":
         dims = {
             "time": len(rpg.data["time"][:]),
@@ -341,5 +346,5 @@ def _add_cloudnet_global_attributes(
             value = ""
         setattr(nc_file, name, value)
     nc_file.mwrpy_coefficients = ", ".join(
-        [file.split("/")[-1] for file in add_global["coeff_files"]]
+        Path(file).name for file in add_global["coeff_files"]
     )

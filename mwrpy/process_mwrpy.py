@@ -212,8 +212,8 @@ def process_product(
     if prod[0] == "1":
         params = mwrpy.utils.read_config(site, instrument, "params")
         lev1_to_nc(
-            mwrpy.utils.get_raw_file_path(date, site, instrument),
             prod,
+            mwrpy.utils.get_raw_file_path(date, site, instrument),
             data_format,
             site=site,
             output_file=output_file,
@@ -247,24 +247,21 @@ def process_product(
         generate_lev2_single(
             l1_filename,
             output_file,
-            data_format,
             lwp_offset_tuple,
-            None,
+            data_format=data_format,
         )
     elif instrument == "lhumpro_u90":
         generate_lev2_lhumpro(
             l1_filename,
             output_file,
-            data_format,
             lwp_offset_tuple,
-            None,
+            data_format=data_format,
         )
     elif prod == "multi":
         generate_lev2_multi(
             l1_filename,
             output_file,
-            data_format,
-            None,
+            data_format=data_format,
         )
 
     # Update LWP offset file if necessary

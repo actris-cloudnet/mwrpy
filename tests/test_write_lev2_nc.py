@@ -20,7 +20,7 @@ COEFF_FILES = glob.glob(f"{COEFFICIENTS_DIR}/{SITE}/coefficients/*.ret")
 def l1_file(request):
     fd, path = tempfile.mkstemp()
     os.close(fd)
-    lev1_to_nc(DATA_DIR, "1C01", DATA_FORMAT, SITE, path)
+    lev1_to_nc("1C01", DATA_DIR, DATA_FORMAT, SITE, path)
 
     def delete_file():
         os.unlink(path)
@@ -32,7 +32,7 @@ def l1_file(request):
 def test_generate_lev2_single_site(l1_file):
     fd, path = tempfile.mkstemp()
     os.close(fd)
-    generate_lev2_single(l1_file, path, DATA_FORMAT)
+    generate_lev2_single(l1_file, path, data_format=DATA_FORMAT)
     os.unlink(path)
 
 
@@ -42,7 +42,7 @@ def test_generate_lev2_single_no_site(l1_file):
     generate_lev2_single(
         l1_file,
         path,
-        DATA_FORMAT,
+        data_format=DATA_FORMAT,
         coeff_files=COEFF_FILES,
     )
     os.unlink(path)
@@ -51,7 +51,7 @@ def test_generate_lev2_single_no_site(l1_file):
 def test_generate_lev2_multi_site(l1_file):
     fd, path = tempfile.mkstemp()
     os.close(fd)
-    generate_lev2_multi(l1_file, path, DATA_FORMAT)
+    generate_lev2_multi(l1_file, path, data_format=DATA_FORMAT)
     os.unlink(path)
 
 
@@ -61,6 +61,6 @@ def test_generate_lev2_multi_no_site(l1_file):
     generate_lev2_multi(
         l1_file,
         path,
-        DATA_FORMAT,
+        data_format=DATA_FORMAT,
         coeff_files=COEFF_FILES,
     )
