@@ -32,15 +32,15 @@ E-PROFILE format
 
 First E-Profile specific metadata can be configured in the instrument type configuration file
 (``mwrpy/site_config/hatpro.yaml``), which also includes instrument specific information. An optional site specific
-configuration file (e.g. ``mwrpy/site_config/{site_name}/config.yaml``) can be configured, when dealing with multiple
- instruments of the same type.
+configuration file (e.g. ``mwrpy/site_config/{site_name}/config.yaml``) can be configured, when dealing with
+multiple instruments of the same type.
 
 Level 1c
 ~~~~~~~~~
 
 Now we convert RPG microwave radiometer (MWR) binary files, including brightness temperature (TB) and
-housekeeping data (\*.BRT, \*.HKD), into a Level 1c netCDF file (1C01, default). Data from optional elevation scans (\*
-.BLB, \*.BLS), weather station (\*.MET) and infrared radiometer (\*.IRT) are combined in this process and the
+housekeeping data (\*.BRT, \*.HKD), into a Level 1c netCDF file (1C01). Data from optional elevation scans
+(\*.BLB, \*.BLS), weather station (\*.MET) and infrared radiometer (\*.IRT) are combined in this process and the
 following quality flags are derived:
 
 - Bit 1: missing_tb

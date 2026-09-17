@@ -3,12 +3,13 @@ Command line usage
 ==================
 
 With the instrument type configuration (``mwrpy/site_config/{instrument_type}.yaml``) and retrieval files in
-``mwrpy/site_config/{site}/coefficients/``, MWRpy can also be run using the command line tool `mwrpy/cli.py`:
+``mwrpy/site_config/{site}/coefficients/``, MWRpy can also be run using the command line tool ``python -m mwrpy.cli``:
 
 .. code-block::
 
-    mwrpy/cli.py [-h] -s SITE [-d YYYY-MM-DD] [--start YYYY-MM-DD]
-                           [--stop YYYY-MM-DD] [-p ...] [{process,plot}]
+    python -m mwrpy.cli [-h] -s SITE [-d YYYY-MM-DD] [--start YYYY-MM-DD]
+                        [--stop YYYY-MM-DD] [-p PRODUCTS] [-f FORMAT]
+                        [-i INSTRUMENT] [{process,plot,no-plot,reprocess}]
 
 .. list-table:: Arguments
    :widths: 10 20 20 50
@@ -33,11 +34,11 @@ With the instrument type configuration (``mwrpy/site_config/{instrument_type}.ya
    * -
      - `--start`
      - `current day - 1`
-     - Starting date.
+     - Starting date (included).
    * -
      - `--stop`
-     - `current day`
-     - Stopping date.
+     - `current day + 1`
+     - Stopping date (excluded).
    * - `-p`
      - `--products`
      - 1C01, single, multi
@@ -75,10 +76,10 @@ To process and plot Level 1 & 2 data (1C01, single, multi) for the site `Hyytial
 
 .. code-block::
 
-    python mwrpy/cli.py -s hyytiala -d 2023-04-06
+    python -m mwrpy.cli -s hyytiala -d 2023-04-06
 
 Run the following command for the E-Profile format and no plots:
 
 .. code-block::
 
-    python mwrpy/cli.py -s hyytiala -d 2023-04-06 -f e-profile no-plot
+    python -m mwrpy.cli -s hyytiala -d 2023-04-06 -f e-profile no-plot
