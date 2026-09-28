@@ -73,7 +73,7 @@ def lev2_to_nc(
     with nc.Dataset(lev1_file) as lev1:
         site = lev1.location if data_format == "cloudnet" else lev1.site_location
         instrument_type = (
-            lev1.source.split()[2].lower()
+            lev1.source.split()[2].lower().replace("-", "_")
             if data_format == "cloudnet"
             else lev1.instrument_model.lower()
         )
