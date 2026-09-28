@@ -183,7 +183,7 @@ def interpolate_2d_nearest(
         Interpolated 2D masked array.
 
     Notes:
-        Points outside the original range will be interpolated but masked.
+        Points outside the original range will be extrapolated.
 
     """
     data = ma.filled(z, np.nan)
@@ -192,6 +192,7 @@ def interpolate_2d_nearest(
         data,
         method="nearest",
         bounds_error=False,
+        fill_value=None,
     )
     xx, yy = np.meshgrid(x_new, y_new)
     zz = fun((xx, yy)).T
