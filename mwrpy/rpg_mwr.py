@@ -333,7 +333,7 @@ def _add_cloudnet_global_attributes(
     }
     if "history" in add_global and add_global["history"]:
         att_global["source"] = (
-            (f"{att_global['source']}\n" f"{add_global['source']}")
+            (f"{att_global['source']}\n{add_global['source']}")
             if data_type == "1C01"
             else f"{add_global['source']}"
         )

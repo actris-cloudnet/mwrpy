@@ -47,7 +47,7 @@ pip3 install --upgrade pip
 pip3 install .
 ```
 
-MWRpy requires Python 3.10 or newer.
+MWRpy requires Python 3.11 or newer.
 
 ## Configuration
 

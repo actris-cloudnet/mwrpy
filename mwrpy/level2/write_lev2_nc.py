@@ -130,7 +130,7 @@ def lev2_to_nc(
             _del_att(global_attributes)
             global_attributes["site_location"] = site
             global_attributes["dependencies"] = (
-                (f"{lev1.dependencies}\n" f"{str(lev1_file).split('/')[-1]}")
+                (f"{lev1.dependencies}\n{str(lev1_file).split('/')[-1]}")
                 if lev1.dependencies
                 else str(lev1_file).split("/")[-1]
             )
