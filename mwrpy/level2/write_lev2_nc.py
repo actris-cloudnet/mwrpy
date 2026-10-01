@@ -122,7 +122,7 @@ def get_products(
 
         coeff = get_mvr_coeff(site, product, lev1["frequency"][:], coeff_files)
         if coeff[0]["RT"] < 2:
-            coeff, offset, lin, quad = get_mvr_coeff(
+            coeff, offset, lin, quad, slin, squad = get_mvr_coeff(
                 site, product, lev1["frequency"][:], coeff_files
             )
         else:
@@ -154,6 +154,11 @@ def get_products(
             coeff_offset = offset(lev1["elevation_angle"][index])
             coeff_lin = lin(lev1["elevation_angle"][index])
             coeff_quad = quad(lev1["elevation_angle"][index])
+            if coeff["PS"][0] == 1:
+                sen_lin = slin(lev1["elevation_angle"][index])
+                sen_quad = squad(lev1["elevation_angle"][index])
+                coeff_lin = np.concatenate((coeff_lin, sen_lin), axis=1)
+                coeff_quad = np.concatenate((coeff_quad, sen_quad), axis=1)
             tmp_product = (
                 np.squeeze(coeff_offset[:])
                 + np.einsum("ij,ij->i", ret_in[index, :], coeff_lin)
@@ -279,7 +284,7 @@ def get_products(
 
         coeff = get_mvr_coeff(site, ret, lev1["frequency"][:], coeff_files)
         if coeff[0]["RT"] < 2:
-            coeff, offset, lin, quad = get_mvr_coeff(
+            coeff, offset, lin, quad, slin, squad = get_mvr_coeff(
                 site, ret, lev1["frequency"][:], coeff_files
             )
         else:
@@ -314,6 +319,29 @@ def get_products(
             coeff_offset = offset(lev1["elevation_angle"][index])
             coeff_lin = lin(lev1["elevation_angle"][index])
             coeff_quad = quad(lev1["elevation_angle"][index])
+            if coeff["PS"][0] == 1:
+                sen_lin = slin(lev1["elevation_angle"][index])
+                sen_quad = squad(lev1["elevation_angle"][index])
+                coeff_lin = np.concatenate(
+                    (
+                        coeff_lin,
+                        np.broadcast_to(
+                            np.expand_dims(sen_lin, axis=0),
+                            (coeff_lin.shape[0], coeff_lin.shape[1], 1),
+                        ),
+                    ),
+                    axis=2,
+                )
+                coeff_quad = np.concatenate(
+                    (
+                        coeff_quad,
+                        np.broadcast_to(
+                            np.expand_dims(sen_quad, axis=0),
+                            (coeff_quad.shape[0], coeff_quad.shape[1], 1),
+                        ),
+                    ),
+                    axis=2,
+                )
             tmp_dat = (
                 coeff_offset
                 + np.einsum("ijk,ik->ij", coeff_lin, ret_in[index, :])
@@ -380,7 +408,7 @@ def get_products(
     elif data_type == "2P02":
         coeff = get_mvr_coeff(site, "tpb", lev1["frequency"][:], coeff_files)
         if coeff[0]["RT"] < 2:
-            coeff, offset, lin, quad = get_mvr_coeff(
+            coeff, offset, lin, quad, slin, squad = get_mvr_coeff(
                 site, "tpb", lev1["frequency"][:], coeff_files
             )
         else:
@@ -460,10 +488,56 @@ def get_products(
                     tb_alg = np.append(
                         tb_alg, np.squeeze(tb[freq_bl[ifq], :, :]), axis=0
                     )
-
-            rpg_dat["temperature"] = np.transpose(offset(0)) + np.einsum(
-                "jk,ij->ik", lin(0), np.transpose(tb_alg)
-            )
+            if coeff["PS"][0] == 1:
+                rpg_dat["temperature"] = (
+                    np.transpose(offset(0))
+                    + np.einsum(
+                        "ij,ik->kj",
+                        np.concatenate((lin(0), slin(0).T)),
+                        np.concatenate(
+                            (
+                                np.reshape(
+                                    tb,
+                                    (len(coeff["AG"]) * len(coeff["FR"]), len(index)),
+                                    order="F",
+                                ),
+                                np.expand_dims(lev1["air_pressure"][index], axis=0),
+                            )
+                        ),
+                    )
+                    + np.einsum(
+                        "ij,ik->kj",
+                        np.concatenate(
+                            (
+                                np.reshape(
+                                    quad(0),
+                                    (
+                                        len(coeff["AL"]),
+                                        len(coeff["AG"]) * len(coeff["FR"]),
+                                    ),
+                                    order="F",
+                                ).T,
+                                squad(0).T,
+                            )
+                        ),
+                        np.concatenate(
+                            (
+                                np.reshape(
+                                    tb,
+                                    (len(coeff["AG"]) * len(coeff["FR"]), len(index)),
+                                    order="F",
+                                )
+                                ** 2,
+                                np.expand_dims(lev1["air_pressure"][index], axis=0)
+                                ** 2,
+                            )
+                        ),
+                    )
+                )
+            else:
+                rpg_dat["temperature"] = np.transpose(offset(0)) + np.einsum(
+                    "jk,ij->ik", lin(0), np.transpose(tb_alg)
+                )
 
         else:
             ret_in = retrieval_input(lev1, coeff)

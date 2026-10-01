@@ -88,7 +88,8 @@ def get_mvr_coeff(
 
                 coeff["FR"][freq_ind, i_file] = c_file["freq"][freq_coeff]
                 coeff["TL"][i_file, freq_ind] = c_file["coefficient_mvr"][freq_coeff]
-                if c_file.regression_type == "quadratic":
+                regression_type = _get_regression_type(c_file)
+                if regression_type == "quadratic":
                     coeff["TQ"][i_file, freq_ind] = c_file["coefficient_mvr"][
                         freq_coeff + len(freq_coeff)
                     ]
@@ -121,7 +122,8 @@ def get_mvr_coeff(
                 coeff["TL"][i_file, :, freq_ind] = c_file["coefficient_mvr"][
                     freq_coeff, :
                 ]
-                if c_file.regression_type == "quadratic":
+                regression_type = _get_regression_type(c_file)
+                if regression_type == "quadratic":
                     coeff["TQ"][i_file, :, freq_ind] = c_file["coefficient_mvr"][
                         freq_coeff + len(freq_coeff), :
                     ]
@@ -164,11 +166,19 @@ def get_mvr_coeff(
             ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
             return coeff["TL"][ind]
 
+        def s_lin(x):
+            ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
+            return coeff["SL"][ind]
+
         if coeff["RT"] in (1, -1):
 
             def f_quad(x):
                 ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
                 return coeff["TQ"][ind]
+
+            def s_quad(x):
+                ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
+                return coeff["SQ"][ind]
 
     elif (coeff["RT"] < 2) and (len(coeff["AL"]) > 1) and (prefix != "tpb"):
 
@@ -183,6 +193,9 @@ def get_mvr_coeff(
             ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
             return coeff["TL"][ind]
 
+        def s_lin(x):
+            return coeff["SL"]
+
         if coeff["RT"] in (1, -1):
             if coeff["RT"] == 1:
                 coeff["TQ"] = coeff["TQ"][np.newaxis, :, :]
@@ -190,6 +203,9 @@ def get_mvr_coeff(
             def f_quad(x):
                 ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
                 return coeff["TQ"][ind]
+
+            def s_quad(x):
+                return coeff["SQ"]
 
     elif (coeff["RT"] < 2) and (len(coeff["AL"]) > 1) and (prefix == "tpb"):
 
@@ -200,7 +216,13 @@ def get_mvr_coeff(
             return coeff["TL"]
 
         def f_quad(_x):
-            return np.empty(0)
+            return coeff["TQ"]
+
+        def s_lin(_x):
+            return coeff["SL"]
+
+        def s_quad(_x):
+            return coeff["SQ"]
 
     elif coeff["RT"] == 2:
 
@@ -252,14 +274,14 @@ def get_mvr_coeff(
         coeff["retrieval_description"] = "RPG retrieval"
 
     elif str(c_list[0][-2:]).lower() == "nc":
-        coeff["retrieval_type"] = c_file.regression_type
+        coeff["retrieval_type"] = _get_regression_type(c_file)
         coeff["retrieval_elevation_angles"] = coeff["AG"]
         coeff["retrieval_frequencies"] = c_file["freq"]
         coeff["retrieval_auxiliary_input"] = c_file.surface_mode
         coeff["retrieval_description"] = c_file.retrieval_version
 
     return (
-        (coeff, f_offset, f_lin, f_quad)
+        (coeff, f_offset, f_lin, f_quad, s_lin, s_quad)
         if (coeff["RT"] < 2)
         else (
             coeff,
@@ -282,7 +304,7 @@ def read_coeff_ascii(coeff_file: str) -> dict:
     for line in lines:
         if "=" in line[:3]:
             key = line[:2]
-            if key not in ("NS", "SL", "SQ"):
+            if key != "NS":
                 coeff[key] = _parse_lines(f"{key}=", lines)
     return coeff
 
@@ -350,3 +372,16 @@ def _reshape_array(data: list, n_rows: int, prefix: str) -> np.ndarray:
 def _split_line(line: str) -> list[str]:
     delimiter = ":" if ":" in line else "="
     return line.split(delimiter)[1].split("#")[0].split()
+
+
+def _get_regression_type(c_file: nc.Dataset) -> str:
+    if "regression_type" in c_file.__dict__:
+        regression_type = c_file.regression_type
+    elif (
+        np.mod(c_file.dimensions["n_freq_ret"].size, c_file.dimensions["n_coeff"].size)
+        > 0
+    ):
+        regression_type = "quadratic"
+    else:
+        regression_type = "linear"
+    return regression_type
