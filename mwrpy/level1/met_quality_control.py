@@ -2,16 +2,18 @@
 
 import atmoslib
 import numpy as np
+from numpy import ma
 
 from mwrpy.utils import setbit
 
 
-def apply_met_qc(data: dict, params: dict) -> None:
+def apply_met_qc(data: dict, params: dict, altitude: float | None) -> None:
     """This function performs quality control of meteorological sensor data.
 
     Args:
         data: Level 1 data.
         params: Site specific parameters.
+        altitude: Altitude of the site in meters.
 
     Returns:
         None
@@ -38,7 +40,9 @@ def apply_met_qc(data: dict, params: dict) -> None:
         if name not in data:
             continue
         if name == "air_pressure":
-            pressure = atmoslib.isa_pressure(params["altitude"])
+            alt = params.get("altitude", altitude)
+            alt = ma.masked if alt is None else alt
+            pressure = atmoslib.isa_pressure(alt)
             threshold_low = pressure - 10000
             threshold_high = pressure + 10000
         else:

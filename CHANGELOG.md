@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.7.2 – 2026-09-28
+
+- Extrapolate humidity in potential temperature calculation
+- Fix `lhumpro_u90` processing for Cloudnet data format
+
+## 1.7.1 – 2026-09-17
+
+- Use Level 1 quality flag long names in Cloudnet format Level 2 files
+
+## 1.7.0 – 2026-09-17
+
+- Add Cloudnet and E-PROFILE output formats and support processing without site config (#33)
+- Update interpolation method for derived products
+
 ## 1.6.0 – 2026-06-09
 
 - Implement support for covariance data

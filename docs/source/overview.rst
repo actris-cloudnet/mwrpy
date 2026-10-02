@@ -10,9 +10,10 @@ framework of `ACTRIS`_ (Aerosol, Clouds and Trace Gases Research Infrastructure,
 gain information on the vertical structure of the atmosphere, especially in the lower troposphere, and profiles of
 temperature and humidity are retrieved together with integrated quantities of water vapor and the cloud liquid water
 path (LWP). The code is an advancement of the IDL based processing software `mwr_pro`_ and is able to handle raw data
-from instruments of the manufacturer Radiometer Physics GmbH (RPG, https://www.radiometer-physics.de/). The output
-format, including metadata information, variable names, and file naming of is designed to be compliant with the data
-structure and naming convention developed together with the EUMETNET Profiling Programme E-PROFILE (`Rüfenacht 2021`_).
+from instruments of the manufacturer Radiometer Physics GmbH (RPG, https://www.radiometer-physics.de/). An additional
+output format, including metadata information, variable names, and file naming of is included and designed to be
+compliant with the data structure and naming convention developed together with the EUMETNET Profiling Programme
+E-PROFILE (`Rüfenacht 2021`_).
 
 One of the key components within the ACTRIS center for cloud remote sensing (CCRES) is the synergistic algorithm
 Cloudnet (`Illingworth 2007`_), which classifies hydrometeors in the atmosphere by combining several ground-based remote
