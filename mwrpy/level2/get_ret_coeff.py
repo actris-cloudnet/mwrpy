@@ -187,7 +187,7 @@ def get_mvr_coeff(
             ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
             return coeff["OS"][:, ind].T
 
-        if rt_num in (0, 1):
+        if str(c_list[0][-3:]).lower() == "ret":
             coeff["TL"] = coeff["TL"][np.newaxis, :, :]
 
         def f_lin(x):
