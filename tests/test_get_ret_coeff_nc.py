@@ -52,7 +52,7 @@ class TestLWP:
                 case "DY" | "PS" | "DB" | "RB":
                     data = (1, 1, 1)
                 case "RT":
-                    data = (-1, -1, -1)
+                    data = (1, 1, 1)
                 case "VN":
                     data = (110, 110, 110)
                 case "ND":
@@ -122,7 +122,7 @@ class TestLWP:
                 case "RP" | "DB" | "PS" | "DY":
                     data = (1, 1, 1)
                 case "RT":
-                    data = (-1, -1, -1)
+                    data = (1, 1, 1)
                 case "VN":
                     data = (110, 110, 110)
                 case "ND":
@@ -185,7 +185,7 @@ class TestLWP:
                 case "RP":
                     data = (4, 4, 4)
                 case "RT":
-                    data = (-1, -1, -1)
+                    data = (1, 1, 1)
                 case "VN":
                     data = (110, 110, 110)
                 case "ND":
@@ -250,7 +250,7 @@ class TestLWP:
                 case "RP":
                     data = (5, 5, 5)
                 case "RT":
-                    data = (-1, -1, -1)
+                    data = (1, 1, 1)
                 case "VN":
                     data = (110, 110, 110)
                 case "ND":
@@ -325,7 +325,7 @@ class TestLWP:
                 case "RP":
                     data = (3, 3, 3)
                 case "RT":
-                    data = (-1, -1, -1)
+                    data = (1, 1, 1)
                 case "VN":
                     data = (110, 110, 110)
                 case "ND":

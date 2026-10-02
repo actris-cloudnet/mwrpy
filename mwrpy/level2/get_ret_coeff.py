@@ -198,7 +198,7 @@ def get_mvr_coeff(
             return coeff["SL"]
 
         if rt_num == 1:
-            if str(c_list[0][-2:]).lower() == "nc":
+            if str(c_list[0][-3:]).lower() == "ret":
                 coeff["TQ"] = coeff["TQ"][np.newaxis, :, :]
 
             def f_quad(x):

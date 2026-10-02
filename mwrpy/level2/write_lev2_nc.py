@@ -152,9 +152,9 @@ def get_products(
         np.empty([0], np.int32),
     )
     coeff_path = params.get("coeff_path", None)
-    c_list = get_coeff_list(site, L2_PRODUCTS[data_type], coeff_files, coeff_path)
-    rt_num = get_rt_number(c_list)
     product = L2_PRODUCTS[data_type]
+    c_list = get_coeff_list(site, product, coeff_files, coeff_path)
+    rt_num = get_rt_number(c_list) if len(c_list) > 0 else -1
 
     if data_type in ("2I01", "2I02", "2I06"):
         if rt_num < 2:
@@ -311,10 +311,9 @@ def get_products(
                 rpg_dat[prd] = ret_product
 
     elif data_type in ("2P01", "2P03"):
-        ret = "tpt" if product == "temperature" else "hpt"
         if rt_num < 2:
             coeff, offset, lin, quad, slin, squad = get_mvr_coeff(
-                site, ret, lev1["frequency"][:], coeff_files, coeff_path
+                site, product, lev1["frequency"][:], coeff_files, coeff_path
             )
         else:
             # pylint: disable-next=unbalanced-tuple-unpacking
@@ -327,7 +326,9 @@ def get_products(
                 weights1,
                 weights2,
                 factor,
-            ) = get_mvr_coeff(site, ret, lev1["frequency"][:], coeff_files, coeff_path)
+            ) = get_mvr_coeff(
+                site, product, lev1["frequency"][:], coeff_files, coeff_path
+            )
 
         ret_in = retrieval_input(lev1, coeff)
 
@@ -427,12 +428,11 @@ def get_products(
                 axis=1,
             )
         )[0]  # type: ignore
-        rpg_dat[product] = ma.masked_all(
-            (len(index), len(rpg_dat["height"])), np.float32
-        )
-        rpg_dat[product][index_ret, :] = tmp_dat[index_ret, :]
+        vname = "temperature" if product == "tpt" else "absolute_humidity"
+        rpg_dat[vname] = ma.masked_all((len(index), len(rpg_dat["height"])), np.float32)
+        rpg_dat[vname][index_ret, :] = tmp_dat[index_ret, :]
 
-        _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
+        _get_qf(rpg_dat, lev1, coeff, index, index_ret, vname)
 
     elif data_type == "2P02":
         if rt_num < 2:
