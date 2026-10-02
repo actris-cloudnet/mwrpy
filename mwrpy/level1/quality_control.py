@@ -13,7 +13,7 @@ from numpy import ma
 
 from mwrpy.exceptions import MissingCoefficientsError
 from mwrpy.level1.rpg_bin import RpgBin
-from mwrpy.level2.get_ret_coeff import get_mvr_coeff
+from mwrpy.level2.get_ret_coeff import get_mvr_coeff, get_rt_number
 from mwrpy.level2.write_lev2_nc import retrieval_input
 from mwrpy.utils import get_coeff_list, setbit
 
@@ -216,14 +216,8 @@ def spectral_consistency(
         c_list = get_coeff_list(site, prefix, coeff_files, coeff_dir)
 
     if len(c_list) > 0:
-        coeff = get_mvr_coeff(
-            site,
-            prefix,
-            data["frequency"][:],
-            coeff_files,
-            coeff_dir,
-        )
-        if coeff[0]["RT"] < 2:
+        rt_num = get_rt_number(c_list)
+        if rt_num < 2:
             coeff, offset, lin, quad, slin, squad = get_mvr_coeff(
                 site,
                 prefix,
@@ -262,7 +256,7 @@ def spectral_consistency(
             data["frequency"], coeff["AL"], return_indices=True
         )
 
-        if coeff["RT"] < 2:
+        if rt_num < 2:
             coeff_offset = offset(data["elevation_angle"][:])
             coeff_lin = lin(data["elevation_angle"][:])
             coeff_quad = quad(data["elevation_angle"][:])

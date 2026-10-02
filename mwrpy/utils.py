@@ -22,6 +22,17 @@ SECONDS_PER_HOUR = 3600
 SECONDS_PER_DAY = 86400
 Epoch = tuple[int, int, int]
 IType = Literal["hatpro", "lhatpro", "lhumpro_u90"]
+L2_PRODUCTS = {
+    "2P01": "temperature",
+    "2P02": "tpb",
+    "2P03": "absolute_humidity",
+    "2P04": "relative_humidity",
+    "2P07": "potential_temperature",
+    "2P08": "equivalent_potential_temperature",
+    "2I01": "lwp",
+    "2I02": "iwv",
+    "2I06": "stability",
+}
 
 
 class MetaData(NamedTuple):

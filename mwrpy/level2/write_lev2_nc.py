@@ -14,10 +14,11 @@ from numpy import ma
 
 from mwrpy import rpg_mwr
 from mwrpy.exceptions import MissingInputData
-from mwrpy.level2.get_ret_coeff import get_mvr_coeff
+from mwrpy.level2.get_ret_coeff import get_mvr_coeff, get_rt_number
 from mwrpy.level2.lev2_meta_nc import get_data_attributes
 from mwrpy.level2.lwp_offset import correct_lwp_offset
 from mwrpy.utils import (
+    L2_PRODUCTS,
     get_coeff_list,
     interpolate_2d_nearest,
     isbit,
@@ -57,17 +58,7 @@ def lev2_to_nc(
         coeff_files: List of coefficient files.
 
     """
-    if data_type not in (
-        "2P01",
-        "2P02",
-        "2P03",
-        "2P04",
-        "2P07",
-        "2P08",
-        "2I01",
-        "2I02",
-        "2I06",
-    ):
+    if data_type not in L2_PRODUCTS.keys():
         raise ValueError(f"Data type {data_type} not recognised")
 
     with nc.Dataset(lev1_file) as lev1:
@@ -161,20 +152,12 @@ def get_products(
         np.empty([0], np.int32),
     )
     coeff_path = params.get("coeff_path", None)
+    c_list = get_coeff_list(site, L2_PRODUCTS[data_type], coeff_files, coeff_path)
+    rt_num = get_rt_number(c_list)
+    product = L2_PRODUCTS[data_type]
 
     if data_type in ("2I01", "2I02", "2I06"):
-        product = (
-            "lwp"
-            if data_type == "2I01"
-            else "iwv"
-            if data_type == "2I02"
-            else "stability"
-        )
-
-        coeff = get_mvr_coeff(
-            site, product, lev1["frequency"][:], coeff_files, coeff_path
-        )
-        if coeff[0]["RT"] < 2:
+        if rt_num < 2:
             coeff, offset, lin, quad, slin, squad = get_mvr_coeff(
                 site, product, lev1["frequency"][:], coeff_files, coeff_path
             )
@@ -203,7 +186,7 @@ def get_products(
         )
         coeff["retrieval_frequencies"] = _get_retrieval_frequencies(coeff)
 
-        if coeff["RT"] < 2:
+        if rt_num < 2:
             coeff_offset = offset(lev1["elevation_angle"][index])
             coeff_lin = lin(lev1["elevation_angle"][index])
             coeff_quad = quad(lev1["elevation_angle"][index])
@@ -328,13 +311,8 @@ def get_products(
                 rpg_dat[prd] = ret_product
 
     elif data_type in ("2P01", "2P03"):
-        if data_type == "2P01":
-            product, ret = "temperature", "tpt"
-        else:
-            product, ret = "absolute_humidity", "hpt"
-
-        coeff = get_mvr_coeff(site, ret, lev1["frequency"][:], coeff_files, coeff_path)
-        if coeff[0]["RT"] < 2:
+        ret = "tpt" if product == "temperature" else "hpt"
+        if rt_num < 2:
             coeff, offset, lin, quad, slin, squad = get_mvr_coeff(
                 site, ret, lev1["frequency"][:], coeff_files, coeff_path
             )
@@ -366,7 +344,7 @@ def get_products(
 
         rpg_dat["height"] = coeff["AL"][:] + params["altitude"]
 
-        if coeff["RT"] < 2:
+        if rt_num < 2:
             coeff_offset = offset(lev1["elevation_angle"][index])
             coeff_lin = lin(lev1["elevation_angle"][index])
             coeff_quad = quad(lev1["elevation_angle"][index])
@@ -398,7 +376,7 @@ def get_products(
                 + np.einsum("ijk,ik->ij", coeff_lin, ret_in[index, :])
                 + np.einsum("ijk,ik->ij", coeff_quad, ret_in[index, :] ** 2)
             )
-            if (coeff["RT"] == 1) and (data_type == "2P03"):
+            if (rt_num == 1) and (data_type == "2P03"):
                 tmp_dat[:, :] = tmp_dat[:, :] / 1000.0
 
         else:
@@ -457,17 +435,14 @@ def get_products(
         _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
 
     elif data_type == "2P02":
-        coeff = get_mvr_coeff(
-            site, "tpb", lev1["frequency"][:], coeff_files, coeff_path
-        )
-        if coeff[0]["RT"] < 2:
+        if rt_num < 2:
             coeff, offset, lin, quad, slin, squad = get_mvr_coeff(
-                site, "tpb", lev1["frequency"][:], coeff_files, coeff_path
+                site, product, lev1["frequency"][:], coeff_files, coeff_path
             )
         else:
             # pylint: disable-next=unbalanced-tuple-unpacking
             coeff, _, _, _, _, _, _, _ = get_mvr_coeff(
-                site, "tpb", lev1["frequency"][:], coeff_files, coeff_path
+                site, product, lev1["frequency"][:], coeff_files, coeff_path
             )
 
         coeff["AG"] = np.flip(np.sort(coeff["AG"]))
@@ -530,7 +505,7 @@ def get_products(
         index = ibl[:, -1]  # type: ignore
         rpg_dat["height"] = coeff["AL"][:] + params["altitude"]
 
-        if coeff["RT"] < 2:
+        if rt_num < 2:
             tb_alg: np.ndarray = np.array([])
             if len(freq_ind) - len(freq_bl) > 0:
                 tb_alg = np.squeeze(tb[0 : len(freq_ind) - len(freq_bl), 0, :])
@@ -833,11 +808,6 @@ def retrieval_input(lev1: dict, coeff: dict) -> np.ndarray:
     )
     bias = np.ones((len(lev1["time"][:]), 1), np.float32)
 
-    latitude = (
-        float(ma.median(lev1["latitude"]))
-        if "latitude" in lev1
-        else float(ma.median(lev1["station_latitude"]))
-    )
     longitude = (
         float(ma.median(lev1["longitude"]))
         if "longitude" in lev1

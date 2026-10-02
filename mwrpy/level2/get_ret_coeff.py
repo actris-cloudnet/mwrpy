@@ -31,19 +31,19 @@ def get_mvr_coeff(
         >>> get_mvr_coeff('site_name', 'lwp', np.array([22, 31.4]))
     """
     c_list = get_coeff_list(site, prefix, coeff_files, coeff_dir)
-
+    rt_num = get_rt_number(c_list)
     coeff: dict = {}
 
     if (str(c_list[0][-3:]).lower() == "ret") and (len(c_list) == 1):
         coeff = read_coeff_ascii(c_list[0])
         if "AL" not in coeff:
             coeff["AL"] = [0]
-        if (prefix == "tpb") and (coeff["RT"] == 2):
+        if (prefix == "tpb") and (rt_num == 2):
             for key in ("W1", "W2"):
                 coeff[key] = coeff[key].squeeze(axis=2)
             for key in ("input_offset", "input_scale", "output_offset", "output_scale"):
                 coeff[key] = coeff[key].squeeze(axis=0)
-        elif (prefix == "tpb") and (coeff["RT"] < 2):
+        elif (prefix == "tpb") and (rt_num < 2):
             coeff["TL"] = np.reshape(
                 np.transpose(coeff["TL"]),
                 (len(coeff["AG"]) * len(coeff["FR"]), len(coeff["AL"])),
@@ -66,7 +66,6 @@ def get_mvr_coeff(
         coeff["FR_BL"] = coeff["FR"]
 
     elif (str(c_list[0][-2:]).lower() == "nc") and (len(c_list) > 0):
-        coeff["RT"] = -1
         N = len(c_list)
 
         if prefix in ("lwp", "iwv"):
@@ -158,7 +157,7 @@ def get_mvr_coeff(
                 ]
             )
 
-    if (coeff["RT"] < 2) and (len(coeff["AL"]) == 1):
+    if (rt_num < 2) and (len(coeff["AL"]) == 1):
 
         def f_offset(x):
             ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
@@ -172,7 +171,7 @@ def get_mvr_coeff(
             ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
             return coeff["SL"][ind]
 
-        if coeff["RT"] in (1, -1):
+        if rt_num == 1:
 
             def f_quad(x):
                 ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
@@ -182,34 +181,34 @@ def get_mvr_coeff(
                 ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
                 return coeff["SQ"][ind]
 
-    elif (coeff["RT"] < 2) and (len(coeff["AL"]) > 1) and (prefix != "tpb"):
+    elif (rt_num < 2) and (len(coeff["AL"]) > 1) and (prefix != "tpb"):
 
         def f_offset(x):
             ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
             return coeff["OS"][:, ind].T
 
-        if coeff["RT"] in (0, 1):
+        if rt_num in (0, 1):
             coeff["TL"] = coeff["TL"][np.newaxis, :, :]
 
         def f_lin(x):
             ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
             return coeff["TL"][ind]
 
-        def s_lin(x):
+        def s_lin(_x):
             return coeff["SL"]
 
-        if coeff["RT"] in (1, -1):
-            if coeff["RT"] == 1:
+        if rt_num == 1:
+            if str(c_list[0][-2:]).lower() == "nc":
                 coeff["TQ"] = coeff["TQ"][np.newaxis, :, :]
 
             def f_quad(x):
                 ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
                 return coeff["TQ"][ind]
 
-            def s_quad(x):
+            def s_quad(_x):
                 return coeff["SQ"]
 
-    elif (coeff["RT"] < 2) and (len(coeff["AL"]) > 1) and (prefix == "tpb"):
+    elif (rt_num < 2) and (len(coeff["AL"]) > 1) and (prefix == "tpb"):
 
         def f_offset(_x):
             return coeff["OS"]
@@ -226,7 +225,7 @@ def get_mvr_coeff(
         def s_quad(_x):
             return coeff["SQ"]
 
-    elif coeff["RT"] == 2:
+    elif rt_num == 2:
 
         def input_scale(x):
             ind = np.argmin(np.abs(x - coeff["AG"][:, np.newaxis]), axis=0)
@@ -266,7 +265,7 @@ def get_mvr_coeff(
 
     if str(c_list[0][-3:]).lower() == "ret":
         retrieval_type = ["linear regression", "quadratic regression", "neural network"]
-        coeff["retrieval_type"] = retrieval_type[int(coeff["RT"][0])]
+        coeff["retrieval_type"] = retrieval_type[rt_num]
         coeff["retrieval_elevation_angles"] = coeff["AG"]
         coeff["retrieval_frequencies"] = coeff["FR"]
         if coeff["TS"] == 0:
@@ -284,7 +283,7 @@ def get_mvr_coeff(
 
     return (
         (coeff, f_offset, f_lin, f_quad, s_lin, s_quad)
-        if (coeff["RT"] < 2)
+        if (rt_num < 2)
         else (
             coeff,
             input_scale,
@@ -387,3 +386,21 @@ def _get_regression_type(c_file: nc.Dataset) -> str:
     else:
         regression_type = "linear"
     return regression_type
+
+
+def get_rt_number(c_list: list[str]) -> int:
+    """Get the regression type number from the coefficient file(s)."""
+    if (str(c_list[0][-3:]).lower() == "ret") and (len(c_list) == 1):
+        coeff = read_coeff_ascii(c_list[0])
+        return int(coeff["RT"][0])
+    elif (str(c_list[0][-2:]).lower() == "nc") and (len(c_list) > 0):
+        c_file = nc.Dataset(c_list[0])
+        regression_type = _get_regression_type(c_file)
+        if regression_type == "linear":
+            return 0
+        else:
+            return 1
+    else:
+        raise RuntimeError(
+            ["Coefficient file(s) not recognized for retrieval coefficient file(s)."]
+        )
