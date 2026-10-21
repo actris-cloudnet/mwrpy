@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.7.3 – 2026-10-21
+
+- Fix rain flag for zero/unreliable rainfall rate
+
 ## 1.7.2 – 2026-09-28
 
 - Extrapolate humidity in potential temperature calculation
