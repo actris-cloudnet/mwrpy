@@ -14,10 +14,11 @@ from numpy import ma
 
 from mwrpy import rpg_mwr
 from mwrpy.exceptions import MissingInputData
-from mwrpy.level2.get_ret_coeff import get_mvr_coeff
+from mwrpy.level2.get_ret_coeff import get_mvr_coeff, get_rt_number
 from mwrpy.level2.lev2_meta_nc import get_data_attributes
 from mwrpy.level2.lwp_offset import correct_lwp_offset
 from mwrpy.utils import (
+    L2_PRODUCTS,
     get_coeff_list,
     interpolate_2d_nearest,
     isbit,
@@ -57,17 +58,7 @@ def lev2_to_nc(
         coeff_files: List of coefficient files.
 
     """
-    if data_type not in (
-        "2P01",
-        "2P02",
-        "2P03",
-        "2P04",
-        "2P07",
-        "2P08",
-        "2I01",
-        "2I02",
-        "2I06",
-    ):
+    if data_type not in L2_PRODUCTS.keys():
         raise ValueError(f"Data type {data_type} not recognised")
 
     with nc.Dataset(lev1_file) as lev1:
@@ -161,21 +152,13 @@ def get_products(
         np.empty([0], np.int32),
     )
     coeff_path = params.get("coeff_path", None)
+    product = L2_PRODUCTS[data_type]
+    c_list = get_coeff_list(site, product, coeff_files, coeff_path)
+    rt_num = get_rt_number(c_list) if len(c_list) > 0 else -1
 
     if data_type in ("2I01", "2I02", "2I06"):
-        product = (
-            "lwp"
-            if data_type == "2I01"
-            else "iwv"
-            if data_type == "2I02"
-            else "stability"
-        )
-
-        coeff = get_mvr_coeff(
-            site, product, lev1["frequency"][:], coeff_files, coeff_path
-        )
-        if coeff[0]["RT"] < 2:
-            coeff, offset, lin, quad = get_mvr_coeff(
+        if rt_num < 2:
+            coeff, offset, lin, quad, slin, squad = get_mvr_coeff(
                 site, product, lev1["frequency"][:], coeff_files, coeff_path
             )
         else:
@@ -203,10 +186,15 @@ def get_products(
         )
         coeff["retrieval_frequencies"] = _get_retrieval_frequencies(coeff)
 
-        if coeff["RT"] < 2:
+        if rt_num < 2:
             coeff_offset = offset(lev1["elevation_angle"][index])
             coeff_lin = lin(lev1["elevation_angle"][index])
             coeff_quad = quad(lev1["elevation_angle"][index])
+            if coeff["PS"][0] == 1:
+                sen_lin = slin(lev1["elevation_angle"][index])
+                sen_quad = squad(lev1["elevation_angle"][index])
+                coeff_lin = np.concatenate((coeff_lin, sen_lin), axis=1)
+                coeff_quad = np.concatenate((coeff_quad, sen_quad), axis=1)
             tmp_product = (
                 np.squeeze(coeff_offset[:])
                 + np.einsum("ij,ij->i", ret_in[index, :], coeff_lin)
@@ -323,15 +311,9 @@ def get_products(
                 rpg_dat[prd] = ret_product
 
     elif data_type in ("2P01", "2P03"):
-        if data_type == "2P01":
-            product, ret = "temperature", "tpt"
-        else:
-            product, ret = "absolute_humidity", "hpt"
-
-        coeff = get_mvr_coeff(site, ret, lev1["frequency"][:], coeff_files, coeff_path)
-        if coeff[0]["RT"] < 2:
-            coeff, offset, lin, quad = get_mvr_coeff(
-                site, ret, lev1["frequency"][:], coeff_files, coeff_path
+        if rt_num < 2:
+            coeff, offset, lin, quad, slin, squad = get_mvr_coeff(
+                site, product, lev1["frequency"][:], coeff_files, coeff_path
             )
         else:
             # pylint: disable-next=unbalanced-tuple-unpacking
@@ -344,7 +326,9 @@ def get_products(
                 weights1,
                 weights2,
                 factor,
-            ) = get_mvr_coeff(site, ret, lev1["frequency"][:], coeff_files, coeff_path)
+            ) = get_mvr_coeff(
+                site, product, lev1["frequency"][:], coeff_files, coeff_path
+            )
 
         ret_in = retrieval_input(lev1, coeff)
 
@@ -361,16 +345,39 @@ def get_products(
 
         rpg_dat["height"] = coeff["AL"][:] + params["altitude"]
 
-        if coeff["RT"] < 2:
+        if rt_num < 2:
             coeff_offset = offset(lev1["elevation_angle"][index])
             coeff_lin = lin(lev1["elevation_angle"][index])
             coeff_quad = quad(lev1["elevation_angle"][index])
+            if coeff["PS"][0] == 1:
+                sen_lin = slin(lev1["elevation_angle"][index])
+                sen_quad = squad(lev1["elevation_angle"][index])
+                coeff_lin = np.concatenate(
+                    (
+                        coeff_lin,
+                        np.broadcast_to(
+                            np.expand_dims(sen_lin, axis=0),
+                            (coeff_lin.shape[0], coeff_lin.shape[1], 1),
+                        ),
+                    ),
+                    axis=2,
+                )
+                coeff_quad = np.concatenate(
+                    (
+                        coeff_quad,
+                        np.broadcast_to(
+                            np.expand_dims(sen_quad, axis=0),
+                            (coeff_quad.shape[0], coeff_quad.shape[1], 1),
+                        ),
+                    ),
+                    axis=2,
+                )
             tmp_dat = (
                 coeff_offset
                 + np.einsum("ijk,ik->ij", coeff_lin, ret_in[index, :])
                 + np.einsum("ijk,ik->ij", coeff_quad, ret_in[index, :] ** 2)
             )
-            if (coeff["RT"] == 1) and (data_type == "2P03"):
+            if (rt_num == 1) and (data_type == "2P03"):
                 tmp_dat[:, :] = tmp_dat[:, :] / 1000.0
 
         else:
@@ -421,25 +428,21 @@ def get_products(
                 axis=1,
             )
         )[0]  # type: ignore
-        rpg_dat[product] = ma.masked_all(
-            (len(index), len(rpg_dat["height"])), np.float32
-        )
-        rpg_dat[product][index_ret, :] = tmp_dat[index_ret, :]
+        vname = "temperature" if product == "tpt" else "absolute_humidity"
+        rpg_dat[vname] = ma.masked_all((len(index), len(rpg_dat["height"])), np.float32)
+        rpg_dat[vname][index_ret, :] = tmp_dat[index_ret, :]
 
-        _get_qf(rpg_dat, lev1, coeff, index, index_ret, product)
+        _get_qf(rpg_dat, lev1, coeff, index, index_ret, vname)
 
     elif data_type == "2P02":
-        coeff = get_mvr_coeff(
-            site, "tpb", lev1["frequency"][:], coeff_files, coeff_path
-        )
-        if coeff[0]["RT"] < 2:
-            coeff, offset, lin, quad = get_mvr_coeff(
-                site, "tpb", lev1["frequency"][:], coeff_files, coeff_path
+        if rt_num < 2:
+            coeff, offset, lin, quad, slin, squad = get_mvr_coeff(
+                site, product, lev1["frequency"][:], coeff_files, coeff_path
             )
         else:
             # pylint: disable-next=unbalanced-tuple-unpacking
             coeff, _, _, _, _, _, _, _ = get_mvr_coeff(
-                site, "tpb", lev1["frequency"][:], coeff_files, coeff_path
+                site, product, lev1["frequency"][:], coeff_files, coeff_path
             )
 
         coeff["AG"] = np.flip(np.sort(coeff["AG"]))
@@ -502,7 +505,7 @@ def get_products(
         index = ibl[:, -1]  # type: ignore
         rpg_dat["height"] = coeff["AL"][:] + params["altitude"]
 
-        if coeff["RT"] < 2:
+        if rt_num < 2:
             tb_alg: np.ndarray = np.array([])
             if len(freq_ind) - len(freq_bl) > 0:
                 tb_alg = np.squeeze(tb[0 : len(freq_ind) - len(freq_bl), 0, :])
@@ -513,10 +516,56 @@ def get_products(
                     tb_alg = np.append(
                         tb_alg, np.squeeze(tb[freq_bl[ifq], :, :]), axis=0
                     )
-
-            rpg_dat["temperature"] = np.transpose(offset(0)) + np.einsum(
-                "jk,ij->ik", lin(0), np.transpose(tb_alg)
-            )
+            if coeff["PS"][0] == 1:
+                rpg_dat["temperature"] = (
+                    np.transpose(offset(0))
+                    + np.einsum(
+                        "ij,ik->kj",
+                        np.concatenate((lin(0), slin(0).T)),
+                        np.concatenate(
+                            (
+                                np.reshape(
+                                    tb,
+                                    (len(coeff["AG"]) * len(coeff["FR"]), len(index)),
+                                    order="F",
+                                ),
+                                np.expand_dims(lev1["air_pressure"][index], axis=0),
+                            )
+                        ),
+                    )
+                    + np.einsum(
+                        "ij,ik->kj",
+                        np.concatenate(
+                            (
+                                np.reshape(
+                                    quad(0),
+                                    (
+                                        len(coeff["AL"]),
+                                        len(coeff["AG"]) * len(coeff["FR"]),
+                                    ),
+                                    order="F",
+                                ).T,
+                                squad(0).T,
+                            )
+                        ),
+                        np.concatenate(
+                            (
+                                np.reshape(
+                                    tb,
+                                    (len(coeff["AG"]) * len(coeff["FR"]), len(index)),
+                                    order="F",
+                                )
+                                ** 2,
+                                np.expand_dims(lev1["air_pressure"][index], axis=0)
+                                ** 2,
+                            )
+                        ),
+                    )
+                )
+            else:
+                rpg_dat["temperature"] = np.transpose(offset(0)) + np.einsum(
+                    "jk,ij->ik", lin(0), np.transpose(tb_alg)
+                )
 
         else:
             ret_in = retrieval_input(lev1, coeff)
@@ -759,11 +808,6 @@ def retrieval_input(lev1: dict, coeff: dict) -> np.ndarray:
     )
     bias = np.ones((len(lev1["time"][:]), 1), np.float32)
 
-    latitude = (
-        float(ma.median(lev1["latitude"]))
-        if "latitude" in lev1
-        else float(ma.median(lev1["station_latitude"]))
-    )
     longitude = (
         float(ma.median(lev1["longitude"]))
         if "longitude" in lev1

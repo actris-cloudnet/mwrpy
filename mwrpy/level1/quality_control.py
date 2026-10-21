@@ -13,7 +13,7 @@ from numpy import ma
 
 from mwrpy.exceptions import MissingCoefficientsError
 from mwrpy.level1.rpg_bin import RpgBin
-from mwrpy.level2.get_ret_coeff import get_mvr_coeff
+from mwrpy.level2.get_ret_coeff import get_mvr_coeff, get_rt_number
 from mwrpy.level2.write_lev2_nc import retrieval_input
 from mwrpy.utils import get_coeff_list, setbit
 
@@ -216,17 +216,29 @@ def spectral_consistency(
         c_list = get_coeff_list(site, prefix, coeff_files, coeff_dir)
 
     if len(c_list) > 0:
-        # pylint: disable=unbalanced-tuple-unpacking
-        (
-            coeff,
-            input_scale,
-            input_offset,
-            output_scale,
-            output_offset,
-            weights1,
-            weights2,
-            factor,
-        ) = get_mvr_coeff(site, prefix, data["frequency"][:], coeff_files, coeff_dir)
+        rt_num = get_rt_number(c_list)
+        if rt_num < 2:
+            coeff, offset, lin, quad, slin, squad = get_mvr_coeff(
+                site,
+                prefix,
+                data["frequency"][:],
+                coeff_files,
+                coeff_dir,
+            )
+        else:
+            # pylint: disable=unbalanced-tuple-unpacking
+            (
+                coeff,
+                input_scale,
+                input_offset,
+                output_scale,
+                output_offset,
+                weights1,
+                weights2,
+                factor,
+            ) = get_mvr_coeff(
+                site, prefix, data["frequency"][:], coeff_files, coeff_dir
+            )
         ret_in = retrieval_input(data, coeff)
         ele_ind = np.where(
             (np.abs(data["elevation_angle"][:] - 90.0) < 0.5)
@@ -243,34 +255,70 @@ def spectral_consistency(
         _, freq_ind, coeff_ind = np.intersect1d(
             data["frequency"], coeff["AL"], return_indices=True
         )
-        c_w1, c_w2, fac = (
-            weights1(data["elevation_angle"][:]),
-            weights2(data["elevation_angle"][:]),
-            factor(data["elevation_angle"][:]),
-        )
-        in_sc, in_os = (
-            input_scale(data["elevation_angle"][:]),
-            input_offset(data["elevation_angle"][:]),
-        )
-        op_sc, op_os = (
-            output_scale(data["elevation_angle"][:]),
-            output_offset(data["elevation_angle"][:]),
-        )
 
-        ret_in[:, 1:] = (ret_in[:, 1:] - in_os) * in_sc
-        hidden_layer = np.ones((len(ret_rm), c_w1.shape[2] + 1), np.float32)
-        hidden_layer[:, 1:] = np.tanh(
-            fac[:].reshape((len(ret_rm), 1))
-            * np.einsum("ijk,ij->ik", c_w1, ret_in[:, :])
-        )
-        data["tb_spectrum"][:, freq_ind] = (
-            np.tanh(
-                fac[:].reshape((len(ret_rm), 1))
-                * np.einsum("ijk,ik->ij", c_w2[:, coeff_ind, :], hidden_layer)
+        if rt_num < 2:
+            coeff_offset = offset(data["elevation_angle"][:])
+            coeff_lin = lin(data["elevation_angle"][:])
+            coeff_quad = quad(data["elevation_angle"][:])
+            if coeff["PS"][0] == 1:
+                sen_lin = slin(data["elevation_angle"][:])
+                sen_quad = squad(data["elevation_angle"][:])
+                coeff_lin = np.concatenate(
+                    (
+                        coeff_lin,
+                        np.broadcast_to(
+                            np.expand_dims(sen_lin, axis=0),
+                            (coeff_lin.shape[0], coeff_lin.shape[1], 1),
+                        ),
+                    ),
+                    axis=2,
+                )
+                coeff_quad = np.concatenate(
+                    (
+                        coeff_quad,
+                        np.broadcast_to(
+                            np.expand_dims(sen_quad, axis=0),
+                            (coeff_quad.shape[0], coeff_quad.shape[1], 1),
+                        ),
+                    ),
+                    axis=2,
+                )
+            data["tb_spectrum"][:, freq_ind] = (
+                np.squeeze(coeff_offset[:, coeff_ind])
+                + np.einsum("ijk,ik->ij", coeff_lin[:, coeff_ind, :], ret_in[:, :])
+                + np.einsum(
+                    "ijk,ik->ij", coeff_quad[:, coeff_ind, :], ret_in[:, :] ** 2
+                )
             )
-            * op_sc[:, coeff_ind]
-            + op_os[:, coeff_ind]
-        )
+        else:
+            c_w1, c_w2, fac = (
+                weights1(data["elevation_angle"][:]),
+                weights2(data["elevation_angle"][:]),
+                factor(data["elevation_angle"][:]),
+            )
+            in_sc, in_os = (
+                input_scale(data["elevation_angle"][:]),
+                input_offset(data["elevation_angle"][:]),
+            )
+            op_sc, op_os = (
+                output_scale(data["elevation_angle"][:]),
+                output_offset(data["elevation_angle"][:]),
+            )
+
+            ret_in[:, 1:] = (ret_in[:, 1:] - in_os) * in_sc
+            hidden_layer = np.ones((len(ret_rm), c_w1.shape[2] + 1), np.float32)
+            hidden_layer[:, 1:] = np.tanh(
+                fac[:].reshape((len(ret_rm), 1))
+                * np.einsum("ijk,ij->ik", c_w1, ret_in[:, :])
+            )
+            data["tb_spectrum"][:, freq_ind] = (
+                np.tanh(
+                    fac[:].reshape((len(ret_rm), 1))
+                    * np.einsum("ijk,ik->ij", c_w2[:, coeff_ind, :], hidden_layer)
+                )
+                * op_sc[:, coeff_ind]
+                + op_os[:, coeff_ind]
+            )
 
         for ifreq, _ in enumerate(data["frequency"]):
             tb_z = pd.DataFrame(
@@ -468,7 +516,11 @@ def ele_retrieval(ele_obs: np.ndarray, pointing: np.ndarray, coeff: dict) -> np.
 
 def rm_retrieval(ele_obs: np.ndarray, coeff: dict, freq) -> np.ndarray:
     """Extracts retrieval uncertainty."""
-    rm_ret = coeff["RM"]
+    rm_ret = (
+        coeff["RM"]
+        if "RM" in coeff
+        else np.ones((len(coeff["AL"]), len(coeff["AL"])), np.float32) * 0.3
+    )
     freq_ind = np.array([(np.abs(coeff["AL"] - v)).argmin() for v in freq])
     if rm_ret.shape == ():
         rm_ret = np.array([rm_ret])
