@@ -3,14 +3,15 @@ name = "mwrpy"
 description = "Python package for Microwave Radiometer processing in ACTRIS"
 authors = [{name = "University of Cologne", email = "actris-ccres-mwr@uni-koeln.de"}]
 readme = "README.md"
-license = {file = "LICENSE"}
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
-  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Atmospheric Science",
 ]
 dependencies = [
   "atmoslib>=2.3.0",
