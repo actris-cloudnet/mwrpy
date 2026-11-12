@@ -4,7 +4,7 @@ from collections.abc import Callable
 from typing import TypeAlias
 
 from mwrpy.level1.lev1_meta_nc import ATTRIBUTES_CN, ATTRIBUTES_EP, DEFINITIONS_QF
-from mwrpy.utils import MetaData
+from mwrpy.utils import L2_PRODUCTS, MetaData
 
 
 def get_data_attributes(
@@ -28,17 +28,7 @@ def get_data_attributes(
         from level2.lev2_meta_nc import get_data_attributes
         att = get_data_attributes('data','data_type')
     """
-    if data_type not in (
-        "2P01",
-        "2P02",
-        "2P03",
-        "2P04",
-        "2P07",
-        "2P08",
-        "2I01",
-        "2I02",
-        "2I06",
-    ):
+    if data_type not in L2_PRODUCTS.keys():
         raise RuntimeError(
             ["Data type " + data_type + " not supported for file writing."]
         )
